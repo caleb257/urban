@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Urban — Coralstone Capital Underwriter</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg2:#111118;--bg3:#18181f;--border:#22222e;--border2:#2e2e3e;--text:#e8e8f0;--muted:#666680;--accent:#c8a96e;--accent2:#e8c98e;--hot:#ff4444;--buy:#44cc88;--review:#f0a030;--pass:#6688aa;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Bebas Neue',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:20px}
+#login-screen h1{font-family:var(--display);font-size:80px;color:var(--accent);letter-spacing:6px}
+#login-screen .sub{color:var(--muted);font-size:11px;letter-spacing:3px;text-transform:uppercase}
+#login-form{display:flex;gap:10px}
+#login-form input{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:12px 20px;border-radius:4px;font-family:var(--mono);font-size:14px;width:240px;outline:none}
+#login-form input:focus{border-color:var(--accent)}
+#login-btn{background:var(--accent);color:#000;border:none;padding:12px 28px;border-radius:4px;font-family:var(--sans);font-weight:700;cursor:pointer;font-size:14px;letter-spacing:1px}
+#login-err{color:var(--hot);font-size:12px;display:none}
+#app{display:none;height:100vh;overflow:hidden}
+#sidebar{position:fixed;left:0;top:0;bottom:0;width:310px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100}
+#main{margin-left:310px;height:100vh;overflow-y:auto;position:relative}
+#sidebar-header{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+#sidebar-header h1{font-family:var(--display);font-size:38px;color:var(--accent);letter-spacing:4px}
+#sidebar-header p{color:var(--muted);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+#stats-bar{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:12px 18px;border-bottom:1px solid var(--border)}
+.stat-chip{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 10px;text-align:center}
+.stat-chip .val{font-family:var(--display);font-size:22px;color:var(--accent)}
+.stat-chip .lbl{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+#search-wrap{padding:10px 18px;border-bottom:1px solid var(--border)}
+#search-input{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:4px;font-family:var(--sans);font-size:13px;outline:none}
+#search-input:focus{border-color:var(--accent)}
+#filter-bar{display:flex;padding:8px 18px;gap:5px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.ftab{padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-weight:500;letter-spacing:.5px;transition:all .15s}
+.ftab:hover{border-color:var(--accent);color:var(--accent)}
+.ftab.on{background:var(--accent);border-color:var(--accent);color:#000}
+#deal-list{flex:1;overflow-y:auto}
+.di{padding:12px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.di:hover{background:var(--bg3)}
+.di.active{background:var(--bg3);border-left:3px solid var(--accent);padding-left:15px}
+.di-addr{font-size:13px;font-weight:500;margin-bottom:3px}
+.di-city{font-size:11px;color:var(--muted);margin-bottom:5px}
+.di-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.di-price{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:1px;text-transform:uppercase}
+.b-HOT{background:rgba(255,68,68,.2);color:var(--hot);border:1px solid rgba(255,68,68,.4)}
+.b-BUY{background:rgba(68,204,136,.2);color:var(--buy);border:1px solid rgba(68,204,136,.4)}
+.b-REVIEW{background:rgba(240,160,48,.2);color:var(--review);border:1px solid rgba(240,160,48,.4)}
+.b-PASS{background:rgba(102,136,170,.2);color:var(--pass);border:1px solid rgba(102,136,170,.4)}
+.b-HARDNO{background:rgba(68,17,34,.4);color:#cc4466;border:1px solid rgba(204,68,102,.3)}
+.b-PENDING{background:rgba(100,100,120,.2);color:var(--muted);border:1px solid var(--border2)}
+.di-score{font-family:var(--mono);font-size:11px;color:var(--muted)}
+#ref-btn{margin:10px 18px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:8px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-family:var(--sans);width:calc(100% - 36px);transition:all .15s}
+#ref-btn:hover{border-color:var(--accent);color:var(--accent)}
+#main-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:14px}
+#main-empty h2{font-family:var(--display);font-size:52px;color:var(--border2);letter-spacing:5px}
+#main-empty p{font-size:13px}
+#dv{display:none;padding:28px;max-width:1100px}
+.dv-addr{font-family:var(--display);font-size:44px;letter-spacing:2px;line-height:1}
+.dv-city{font-size:14px;color:var(--muted);margin-top:6px;letter-spacing:.5px}
+.dv-hm{display:flex;align-items:center;gap:14px;margin-top:14px;flex-wrap:wrap}
+.verdict-big{font-family:var(--display);font-size:30px;letter-spacing:3px;padding:6px 20px;border-radius:4px}
+.vHOT{background:rgba(255,68,68,.15);color:var(--hot);border:2px solid rgba(255,68,68,.5)}
+.vBUY{background:rgba(68,204,136,.15);color:var(--buy);border:2px solid rgba(68,204,136,.5)}
+.vREVIEW{background:rgba(240,160,48,.15);color:var(--review);border:2px solid rgba(240,160,48,.5)}
+.vPASS{background:rgba(102,136,170,.15);color:var(--pass);border:2px solid rgba(102,136,170,.5)}
+.vHARDNO{background:rgba(68,17,34,.3);color:#cc4466;border:2px solid rgba(204,68,102,.4)}
+.vPENDING{background:var(--bg3);color:var(--muted);border:2px solid var(--border2)}
+.sc{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;border:2px solid var(--accent);color:var(--accent);background:rgba(200,169,110,.1)}
+.vr{color:var(--muted);font-size:14px;font-style:italic;flex:1;min-width:200px}
+.act-row{display:flex;gap:8px;margin:20px 0;flex-wrap:wrap}
+.btn{padding:9px 18px;border-radius:4px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500;transition:all .15s;display:flex;align-items:center;gap:5px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#000;border-color:var(--accent)}
+.btn.primary:hover{background:var(--accent2)}
+#pending-card{background:var(--bg2);border:1px dashed var(--border2);border-radius:6px;padding:40px;text-align:center;margin-bottom:20px;display:none}
+#pending-card h3{font-family:var(--display);font-size:28px;color:var(--muted);letter-spacing:2px;margin-bottom:10px}
+#pending-card p{color:var(--muted);font-size:13px;margin-bottom:18px}
+#loading-state{display:none;text-align:center;padding:60px}
+.spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{font-size:13px;color:var(--muted);font-family:var(--mono)}
+#uw-content{display:none}
+.stabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;gap:0;overflow-x:auto}
+.stab{padding:9px 16px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap;letter-spacing:.5px}
+.stab:hover{color:var(--text)}
+.stab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:20px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:18px}
+.ct{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;font-weight:600}
+.m{margin-bottom:10px}
+.ml{font-size:11px;color:var(--muted);margin-bottom:3px}
+.mv{font-family:var(--mono);font-size:14px;color:var(--text)}
+.mv.big{font-family:var(--display);font-size:26px;color:var(--accent)}
+.mv.g{color:var(--buy)}.mv.r{color:var(--hot)}.mv.y{color:var(--review)}.mv.mu{color:var(--muted)}
+hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
+.arv-cmp{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-radius:6px;overflow:hidden;margin-bottom:14px}
+.arv-s{background:var(--bg2);padding:18px;text-align:center}
+.arv-l{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.arv-v{font-family:var(--display);font-size:30px}
+.arv-v.ws{color:var(--review)}.arv-v.ur{color:var(--buy)}
+.arv-dn{padding:10px 18px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:13px;color:var(--muted);text-align:center;margin-bottom:14px}
+.conf{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:1px}
+.conf-HIGH{background:rgba(68,204,136,.2);color:var(--buy)}
+.conf-MEDIUM{background:rgba(240,160,48,.2);color:var(--review)}
+.conf-LOW{background:rgba(255,68,68,.2);color:var(--hot)}
+.ri{display:flex;flex-direction:column;gap:5px}
+.rr{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.rr:last-child{border-bottom:none}
+.rn{font-size:12px;color:var(--muted);text-transform:capitalize}
+.rv{font-family:var(--mono);font-size:13px;color:var(--text)}
+.rt{display:flex;justify-content:space-between;padding:10px 0 0}
+.rt .rn{color:var(--text);font-weight:600}
+.rt .rv{color:var(--accent);font-size:14px}
+.rrange{font-size:11px;color:var(--muted);margin-top:6px;font-family:var(--mono)}
+.scope-tag{display:inline-block;padding:3px 10px;border-radius:3px;font-size:11px;font-weight:600;letter-spacing:1px;margin-bottom:10px}
+.sc-FULL{background:rgba(255,68,68,.15);color:var(--hot);border:1px solid rgba(255,68,68,.3)}
+.sc-MEDIUM{background:rgba(240,160,48,.15);color:var(--review);border:1px solid rgba(240,160,48,.3)}
+.sc-LIGHT{background:rgba(68,204,136,.15);color:var(--buy);border:1px solid rgba(68,204,136,.3)}
+.fr{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+.fr:last-child{border-bottom:none}
+.fl{font-size:13px;color:var(--muted)}
+.fv{font-family:var(--mono);font-size:13px;color:var(--text)}
+.fr.tot .fl{color:var(--text);font-weight:600}
+.fr.tot .fv{color:var(--accent);font-size:14px}
+.fr.g .fv{color:var(--buy)}.fr.r .fv{color:var(--hot)}
+.flags{display:flex;flex-direction:column;gap:8px}
+.flag{padding:12px 14px;border-radius:4px;border-left:3px solid;background:var(--bg3)}
+.flag-HIGH{border-color:var(--hot)}.flag-MEDIUM{border-color:var(--review)}.flag-LOW{border-color:var(--pass)}
+.fn{font-size:12px;font-weight:600;margin-bottom:4px}
+.flag-HIGH .fn{color:var(--hot)}.flag-MEDIUM .fn{color:var(--review)}.flag-LOW .fn{color:var(--pass)}
+.fd{font-size:12px;color:var(--muted);line-height:1.5}
+.rec-box{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:22px;margin-bottom:20px}
+.rec-txt{font-size:14px;line-height:1.8;color:var(--text);margin-bottom:14px}
+.off-strat{font-size:13px;line-height:1.7;color:var(--accent);font-style:italic}
+.ov-input{background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:13px;width:140px;outline:none}
+.ov-input:focus{border-color:var(--accent)}
+.ov-row{display:flex;gap:8px;margin-top:10px;align-items:center}
+.ov-lbl{font-size:12px;color:var(--muted)}
+.ov-btn{padding:6px 12px;border-radius:4px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;font-size:12px;transition:all .15s}
+.ov-btn:hover{border-color:var(--accent);color:var(--accent)}
+.comps-t{width:100%;border-collapse:collapse;font-size:12px}
+.comps-t th{padding:7px 10px;text-align:left;color:var(--muted);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.comps-t td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+.comps-t tr:last-child td{border-bottom:none}
+.comps-t td.p{font-family:var(--mono);color:var(--accent)}
+#chat-panel{position:fixed;right:0;top:0;bottom:0;width:370px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s ease;z-index:200}
+#chat-panel.open{transform:translateX(0)}
+#chat-hdr{padding:18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+#chat-hdr h3{font-family:var(--display);font-size:24px;color:var(--accent);letter-spacing:2px}
+#chat-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px}
+#chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.cm{max-width:88%}
+.cm.u{align-self:flex-end}
+.cm.u .bbl{background:var(--accent);color:#000;padding:9px 13px;border-radius:12px 12px 2px 12px;font-size:13px;line-height:1.5}
+.cm.a .bbl{background:var(--bg3);color:var(--text);padding:9px 13px;border-radius:12px 12px 12px 2px;font-size:13px;line-height:1.6;border:1px solid var(--border2)}
+.cts{font-size:10px;color:var(--muted);margin-top:3px}
+.cm.a .cts{text-align:left}
+.cm.u .cts{text-align:right}
+#chat-in-wrap{padding:14px;border-top:1px solid var(--border)}
+.auth-sel{display:flex;gap:7px;margin-bottom:8px}
+.auth-btn{flex:1;padding:6px;border-radius:4px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+.auth-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(200,169,110,.1)}
+#chat-in{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:4px;font-family:var(--sans);font-size:13px;outline:none;resize:none;min-height:65px;line-height:1.5}
+#chat-in:focus{border-color:var(--accent)}
+#chat-send{width:100%;margin-top:7px;background:var(--bg3);border:1px solid var(--border2);color:var(--accent);padding:9px;border-radius:4px;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:600;transition:all .15s}
+#chat-send:hover{background:var(--accent);color:#000;border-color:var(--accent)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <h1>URBAN</h1>
+  <p class="sub">Coralstone Capital Group · Underwriter</p>
+  <div id="login-form">
+    <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
+    <button id="login-btn">ENTER</button>
+  </div>
+  <p id="login-err">Wrong password</p>
+</div>
+
+<div id="app">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h1>URBAN</h1>
+      <p>Coralstone Underwriter</p>
+    </div>
+    <div id="stats-bar">
+      <div class="stat-chip"><div class="val" id="st-total">—</div><div class="lbl">Underwritten</div></div>
+      <div class="stat-chip"><div class="val" id="st-avg">—</div><div class="lbl">Avg Score</div></div>
+      <div class="stat-chip"><div class="val" id="st-hot">—</div><div class="lbl">🔥 Hot</div></div>
+      <div class="stat-chip"><div class="val" id="st-lessons">—</div><div class="lbl">Lessons</div></div>
+    </div>
+    <div id="search-wrap">
+      <input type="text" id="search-input" placeholder="Search address, city, wholesaler...">
+    </div>
+    <div id="filter-bar">
+      <div class="ftab on" data-f="ALL">All</div>
+      <div class="ftab" data-f="HOT">🔥</div>
+      <div class="ftab" data-f="BUY">Buy</div>
+      <div class="ftab" data-f="REVIEW">Review</div>
+      <div class="ftab" data-f="PASS">Pass</div>
+      <div class="ftab" data-f="PENDING">Pending</div>
+    </div>
+    <div id="deal-list"></div>
+    <button id="ref-btn">↻ Pull from Derek's Sheet</button>
+  </div>
+
+  <div id="main">
+    <div id="main-empty">
+      <h2>SELECT A DEAL</h2>
+      <p>Pull deals from Derek's sheet, then click one to underwrite</p>
+    </div>
+    <div id="dv">
+      <div class="dv-addr" id="dv-addr"></div>
+      <div class="dv-city" id="dv-city"></div>
+      <div class="dv-hm">
+        <div class="verdict-big" id="dv-v"></div>
+        <div class="sc" id="dv-sc">?</div>
+        <div class="vr" id="dv-vr"></div>
+      </div>
+      <div class="act-row">
+        <button class="btn primary" id="btn-uw">⚡ Underwrite</button>
+        <button class="btn" id="btn-reuw">↻ Re-underwrite</button>
+        <button class="btn" id="btn-chat">💬 Chat with Urban</button>
+        <button class="btn" id="btn-sheet">📊 Open Sheet</button>
+      </div>
+
+      <div id="pending-card">
+        <h3>NOT YET UNDERWRITTEN</h3>
+        <p>Urban hasn't analyzed this deal yet. Click below to start.</p>
+        <button class="btn primary" onclick="doUnderwrite(false)">⚡ Underwrite Now</button>
+      </div>
+
+      <div id="loading-state">
+        <div class="spinner"></div>
+        <div class="load-txt" id="load-msg">Initializing...</div>
+      </div>
+
+      <div id="uw-content">
+        <div class="stabs">
+          <div class="stab on" data-t="overview">Overview</div>
+          <div class="stab" data-t="arv">ARV Analysis</div>
+          <div class="stab" data-t="rehab">Rehab</div>
+          <div class="stab" data-t="financials">Financials</div>
+          <div class="stab" data-t="rental">Rental</div>
+          <div class="stab" data-t="newconstruction">New Construction</div>
+          <div class="stab" data-t="flags">Risk Flags</div>
+          <div class="stab" data-t="property">Property</div>
+        </div>
+
+        <!-- OVERVIEW -->
+        <div class="tc" id="t-overview">
+          <div class="rec-box">
+            <div class="ct">Urban's Recommendation</div>
+            <div class="rec-txt" id="ov-rec"></div>
+            <div class="off-strat" id="ov-off"></div>
+          </div>
+          <div class="grid">
+            <div class="card">
+              <div class="ct">Key Numbers</div>
+              <div class="m"><div class="ml">Urban's TRUE ARV</div><div class="mv big" id="ov-arv"></div></div>
+              <div class="m"><div class="ml">Rehab Estimate</div><div class="mv" id="ov-rehab"></div></div>
+              <div class="m"><div class="ml">MAO (Max Offer)</div><div class="mv" id="ov-mao"></div></div>
+              <div class="m"><div class="ml">Asking Price</div><div class="mv" id="ov-ask"></div></div>
+              <hr class="d">
+              <div class="m"><div class="ml">Net Profit @ Asking</div><div class="mv" id="ov-profit"></div></div>
+            </div>
+            <div class="card">
+              <div class="ct">ARV Comparison</div>
+              <div class="m"><div class="ml">Wholesaler's ARV</div><div class="mv y" id="ov-warv"></div></div>
+              <div class="m"><div class="ml">ARV Variance</div><div class="mv" id="ov-arvdiff"></div></div>
+              <div class="m"><div class="ml">Wholesaler Credibility</div><div class="mv" id="ov-cred"></div></div>
+              <div class="m"><div class="ml">Market Trend</div><div class="mv" id="ov-trend"></div></div>
+              <div class="m"><div class="ml">Estimated Hold</div><div class="mv" id="ov-hold"></div></div>
+            </div>
+            <div class="card">
+              <div class="ct">Criteria Check</div>
+              <div class="m"><div class="ml">$40k Min Profit</div><div class="mv" id="cc-profit"></div></div>
+              <div class="m"><div class="ml">In Market</div><div class="mv" id="cc-mkt"></div></div>
+              <div class="m"><div class="ml">Flood Zone</div><div class="mv" id="cc-flood"></div></div>
+              <div class="m"><div class="ml">High Risk Flags</div><div class="mv" id="cc-risk"></div></div>
+              <div class="m"><div class="ml">Rehab Scope</div><div class="mv" id="cc-scope"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ARV -->
+        <div class="tc" id="t-arv" style="display:none">
+          <div class="arv-cmp">
+            <div class="arv-s"><div class="arv-l">Wholesaler's ARV</div><div class="arv-v ws" id="arv-ws"></div></div>
+            <div class="arv-s"><div class="arv-l">Urban's TRUE ARV</div><div class="arv-v ur" id="arv-ur"></div></div>
+          </div>
+          <div class="arv-dn" id="arv-dn"></div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="ct">Urban's Analysis <span class="conf" id="arv-conf"></span></div>
+            <p style="font-size:13px;color:var(--text);line-height:1.6" id="arv-notes"></p>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="ct">Comparable Sales</div>
+            <table class="comps-t"><thead><tr><th>Address</th><th>Beds/Bath</th><th>Sqft</th><th>Sale Price</th><th>Date</th><th>Distance</th></tr></thead>
+            <tbody id="comps-body"></tbody></table>
+          </div>
+          <div class="card">
+            <div class="ct">Override ARV</div>
+            <div class="ov-row"><span class="ov-lbl">New ARV: $</span><input type="number" class="ov-input" id="ov-arv-in" placeholder="285000"><button class="ov-btn" onclick="applyOv('urbanARV',document.getElementById('ov-arv-in').value)">Apply & Recalc</button></div>
+          </div>
+        </div>
+
+        <!-- REHAB -->
+        <div class="tc" id="t-rehab" style="display:none">
+          <div class="card" style="margin-bottom:14px">
+            <div class="ct">Scope & Line Items</div>
+            <div id="rehab-scope"></div>
+            <div class="ri" id="rehab-li"></div>
+            <div class="rrange" id="rehab-rng"></div>
+            <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:12px" id="rehab-notes"></p>
+            <div style="margin-top:10px;padding:9px;background:var(--bg3);border-radius:4px;font-size:12px;color:var(--review)" id="rehab-miss"></div>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="ct">Wholesaler vs Urban</div>
+            <div class="fr"><span class="fl">Wholesaler's Estimate</span><span class="fv y" id="rh-ws"></span></div>
+            <div class="fr"><span class="fl">Urban's Estimate</span><span class="fv" id="rh-ur"></span></div>
+            <div class="fr"><span class="fl">Confidence</span><span class="fv" id="rh-conf"></span></div>
+          </div>
+          <div class="card">
+            <div class="ct">Override Rehab</div>
+            <div class="ov-row"><span class="ov-lbl">New Rehab: $</span><input type="number" class="ov-input" id="ov-rehab-in" placeholder="45000"><button class="ov-btn" onclick="applyOv('rehab',document.getElementById('ov-rehab-in').value)">Apply & Recalc</button></div>
+          </div>
+        </div>
+
+        <!-- FINANCIALS -->
+        <div class="tc" id="t-financials" style="display:none">
+          <div class="grid">
+            <div class="card">
+              <div class="ct">Deal Economics</div>
+              <div class="fr"><span class="fl">Asking Price</span><span class="fv" id="fi-ask"></span></div>
+              <div class="fr"><span class="fl">Urban's ARV</span><span class="fv" id="fi-arv"></span></div>
+              <div class="fr"><span class="fl">Rehab Budget</span><span class="fv" id="fi-reh"></span></div>
+              <div class="fr tot"><span class="fl">MAO (ARV×70%−Repairs)</span><span class="fv" id="fi-mao"></span></div>
+              <div class="fr"><span class="fl">Over/Under MAO</span><span class="fv" id="fi-oum"></span></div>
+            </div>
+            <div class="card">
+              <div class="ct">Hard Money · 9.5% Interest Only</div>
+              <div class="fr"><span class="fl">Loan (90% LTV)</span><span class="fv" id="fi-loan"></span></div>
+              <div class="fr"><span class="fl">Monthly Payment</span><span class="fv" id="fi-mo"></span></div>
+              <div class="fr"><span class="fl">Hold Time</span><span class="fv" id="fi-hold"></span></div>
+              <div class="fr"><span class="fl">Total Interest</span><span class="fv" id="fi-int"></span></div>
+              <div class="fr"><span class="fl">Origination (2 pts)</span><span class="fv" id="fi-pts"></span></div>
+            </div>
+            <div class="card">
+              <div class="ct">All-In Cost Breakdown</div>
+              <div class="fr"><span class="fl">Purchase Price</span><span class="fv" id="fi-pp"></span></div>
+              <div class="fr"><span class="fl">Rehab</span><span class="fv" id="fi-rh2"></span></div>
+              <div class="fr"><span class="fl">Financing (interest + pts)</span><span class="fv" id="fi-fin"></span></div>
+              <div class="fr"><span class="fl">Holding Costs</span><span class="fv" id="fi-hc"></span></div>
+              <div class="fr"><span class="fl">Selling (6% agent + 2% close)</span><span class="fv" id="fi-sc"></span></div>
+              <div class="fr tot"><span class="fl">Total All-In</span><span class="fv" id="fi-tot"></span></div>
+            </div>
+            <div class="card">
+              <div class="ct">Profit</div>
+              <div class="fr"><span class="fl">Net Profit @ Asking</span><span class="fv" id="fi-pa" style="font-size:17px"></span></div>
+              <div class="fr g"><span class="fl">Net Profit @ MAO</span><span class="fv" id="fi-pm" style="font-size:17px"></span></div>
+              <div class="fr"><span class="fl">ROI</span><span class="fv" id="fi-roi"></span></div>
+              <div class="fr"><span class="fl">Meets $40k Minimum</span><span class="fv" id="fi-min"></span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RENTAL -->
+        <div class="tc" id="t-rental" style="display:none">
+          <div class="grid">
+            <div class="card">
+              <div class="ct">Rental Metrics</div>
+              <div class="m"><div class="ml">Market Rent</div><div class="mv big" id="rn-rent"></div></div>
+              <div class="m"><div class="ml">Gross Yield</div><div class="mv" id="rn-gy"></div></div>
+              <div class="m"><div class="ml">Net Yield</div><div class="mv" id="rn-ny"></div></div>
+              <div class="m"><div class="ml">Monthly Cash Flow</div><div class="mv" id="rn-cf"></div></div>
+              <div class="m"><div class="ml">Cap Rate</div><div class="mv" id="rn-cap"></div></div>
+            </div>
+            <div class="card">
+              <div class="ct">Urban's Rental Take</div>
+              <p style="font-size:13px;color:var(--text);line-height:1.7" id="rn-notes"></p>
+              <div style="margin-top:14px"><div class="ml">Worth Considering?</div><div class="mv" id="rn-worth"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NEW CONSTRUCTION -->
+        <div class="tc" id="t-newconstruction" style="display:none">
+          <div class="card">
+            <div class="ct">New Construction Potential</div>
+            <div class="grid" style="margin-bottom:14px">
+              <div class="m"><div class="ml">Est. Lot Value</div><div class="mv big" id="nc-lot"></div></div>
+              <div class="m"><div class="ml">Build Cost (@ $150/sqft)</div><div class="mv" id="nc-build"></div></div>
+              <div class="m"><div class="ml">Est. New ARV</div><div class="mv" id="nc-arv"></div></div>
+            </div>
+            <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:14px" id="nc-notes"></p>
+            <div style="font-size:12px;color:var(--muted);padding:10px;background:var(--bg3);border-radius:4px">⚠️ New construction data is for reference only. Urban does not underwrite new builds — Caleb and Grant evaluate separately.</div>
+          </div>
+        </div>
+
+        <!-- FLAGS -->
+        <div class="tc" id="t-flags" style="display:none">
+          <div class="flags" id="flags-list"></div>
+          <div style="margin-top:14px;font-size:12px;color:var(--muted);padding:10px;background:var(--bg3);border-radius:4px">🚩 All risk flags are informational. High-severity flags do not automatically disqualify a deal — exceptional deals still get pursued.</div>
+        </div>
+
+        <!-- PROPERTY -->
+        <div class="tc" id="t-property" style="display:none">
+          <div class="grid">
+            <div class="card">
+              <div class="ct">Property Details</div>
+              <div class="m"><div class="ml">Type</div><div class="mv" id="pp-type"></div></div>
+              <div class="m"><div class="ml">Beds / Baths</div><div class="mv" id="pp-beds"></div></div>
+              <div class="m"><div class="ml">Sqft</div><div class="mv" id="pp-sqft"></div></div>
+              <div class="m"><div class="ml">Year Built</div><div class="mv" id="pp-yr"></div></div>
+              <div class="m"><div class="ml">Lot</div><div class="mv" id="pp-lot"></div></div>
+              <div class="m"><div class="ml">Construction</div><div class="mv" id="pp-con"></div></div>
+              <div class="m"><div class="ml">Foundation</div><div class="mv" id="pp-fnd"></div></div>
+              <div class="m"><div class="ml">Pool</div><div class="mv" id="pp-pool"></div></div>
+              <div class="m"><div class="ml">HOA</div><div class="mv" id="pp-hoa"></div></div>
+              <div class="m"><div class="ml">Flood Zone</div><div class="mv" id="pp-fz"></div></div>
+              <div class="m"><div class="ml">Occupancy</div><div class="mv" id="pp-occ"></div></div>
+            </div>
+            <div class="card">
+              <div class="ct">Systems</div>
+              <div class="m"><div class="ml">Roof</div><div class="mv" id="sy-roof"></div></div>
+              <div class="m"><div class="ml">AC / HVAC</div><div class="mv" id="sy-ac"></div></div>
+              <div class="m"><div class="ml">Water Heater</div><div class="mv" id="sy-wh"></div></div>
+              <div class="m"><div class="ml">Electrical</div><div class="mv" id="sy-el"></div></div>
+              <div class="m"><div class="ml">Plumbing</div><div class="mv" id="sy-pl"></div></div>
+              <div class="m"><div class="ml">Windows</div><div class="mv" id="sy-win"></div></div>
+              <div class="m"><div class="ml">Flooring</div><div class="mv" id="sy-fl"></div></div>
+            </div>
+            <div class="card">
+              <div class="ct">Wholesaler Contact</div>
+              <div class="m"><div class="ml">Name</div><div class="mv" id="ws-name"></div></div>
+              <div class="m"><div class="ml">Company</div><div class="mv" id="ws-co"></div></div>
+              <div class="m"><div class="ml">Phone</div><div class="mv" id="ws-ph"></div></div>
+              <div class="m"><div class="ml">Email</div><div class="mv" id="ws-em"></div></div>
+              <div class="m"><div class="ml">Close Date</div><div class="mv" id="ws-cd"></div></div>
+              <div class="m"><div class="ml">Inspection Period</div><div class="mv" id="ws-ip"></div></div>
+              <div class="m"><div class="ml">Earnest Money</div><div class="mv" id="ws-ern"></div></div>
+              <div class="m"><div class="ml">Cash Only?</div><div class="mv" id="ws-cash"></div></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="ct">Notes & Links</div>
+            <div class="m"><div class="ml">Highlights</div><div class="mv" id="pp-hi"></div></div>
+            <div class="m"><div class="ml">Needs Work</div><div class="mv" id="pp-nw"></div></div>
+            <div class="m"><div class="ml">Wholesaler Red Flags</div><div class="mv r" id="pp-rf"></div></div>
+            <div class="m"><div class="ml">Google Drive</div><div class="mv" id="pp-gd"></div></div>
+            <div class="m"><div class="ml">Zillow</div><div class="mv" id="pp-zl"></div></div>
+          </div>
+        </div>
+      </div><!-- /uw-content -->
+    </div><!-- /dv -->
+  </div><!-- /main -->
+
+  <!-- CHAT -->
+  <div id="chat-panel">
+    <div id="chat-hdr">
+      <h3>URBAN AI</h3>
+      <button id="chat-x">✕</button>
+    </div>
+    <div id="chat-msgs"></div>
+    <div id="chat-in-wrap">
+      <div class="auth-sel">
+        <button class="auth-btn on" data-a="caleb" onclick="setAuth('caleb')">Caleb</button>
+        <button class="auth-btn" data-a="grant" onclick="setAuth('grant')">Grant</button>
+      </div>
+      <textarea id="chat-in" placeholder="Correct a number, give Urban new info, ask anything...&#10;Urban remembers corrections and applies them to future deals."></textarea>
+      <button id="chat-send">Send ↵</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let TOKEN = '', deals = [], curDeal = null, curUW = null, curFilter = 'ALL', curTab = 'overview', author = 'caleb';
+const fmt = n => n != null && n !== '' ? '$' + parseInt(n).toLocaleString() : '—';
+const pct = n => n != null ? parseFloat(n).toFixed(1) + '%' : '—';
+const val = v => v || '—';
+
+// AUTH
+$('pw').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
+$('login-btn').addEventListener('click', doLogin);
+async function doLogin() {
+  TOKEN = $('pw').value.trim();
+  const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
+  if (r.ok) {
+    $('login-screen').style.display = 'none';
+    $('app').style.display = 'flex';
+    doLoadDeals();
+    doLoadStats();
+  } else { $('login-err').style.display = 'block'; TOKEN = ''; }
+}
+
+// STATS
+async function doLoadStats() {
+  const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
+  const s = await r.json();
+  $('st-total').textContent = s.totalUnderwritten || 0;
+  $('st-avg').textContent = s.avgScore || '—';
+  $('st-hot').textContent = (s.verdicts?.HOT) || 0;
+  $('st-lessons').textContent = s.lessonsLearned || 0;
+}
+
+// DEALS
+async function doLoadDeals() {
+  $('ref-btn').textContent = '↻ Loading...';
+  const r = await fetch('/api/deals', { headers: { 'x-urban-token': TOKEN } });
+  deals = await r.json();
+  $('ref-btn').textContent = '↻ Pull from Derek\'s Sheet';
+  renderList();
+}
+$('ref-btn').addEventListener('click', doLoadDeals);
+$('search-input').addEventListener('input', renderList);
+document.querySelectorAll('.ftab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.ftab').forEach(x => x.classList.remove('on'));
+  t.classList.add('on'); curFilter = t.dataset.f; renderList();
+}));
+
+function renderList() {
+  const q = $('search-input').value.toLowerCase();
+  const list = $('deal-list');
+  const filtered = deals.filter(d => {
+    const v = d.underwriteStatus || 'PENDING';
+    const mf = curFilter === 'ALL' || v === curFilter || (curFilter === 'PENDING' && v === 'PENDING');
+    const ms = !q || `${d.address} ${d.city} ${d.wholesalerCompany} ${d.contact1Company}`.toLowerCase().includes(q);
+    return mf && ms;
+  });
+  list.innerHTML = '';
+  if (!filtered.length) { list.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:13px;text-align:center">No deals found</div>'; return; }
+  filtered.forEach(d => {
+    const uid = d.uid || `${d.address}-${d.dateReceived}`;
+    const v = d.underwriteStatus || 'PENDING';
+    const bc = v === 'HARD NO' ? 'b-HARDNO' : `b-${v}`;
+    const price = d.askingPrice ? fmt(d.askingPrice) : 'No price';
+    const el = document.createElement('div');
+    el.className = 'di' + (curDeal && (curDeal.uid||`${curDeal.address}-${curDeal.dateReceived}`) === uid ? ' active' : '');
+    el.dataset.uid = uid;
+    el.innerHTML = `<div class="di-addr">${d.address || 'No address'}</div>
+      <div class="di-city">${d.city}, ${d.state} · ${d.beds||'?'}bd/${d.baths||'?'}ba · ${d.sqft ? parseInt(d.sqft).toLocaleString() : '?'} sqft</div>
+      <div class="di-meta"><span class="di-price">${price}</span><span class="badge ${bc}">${v}</span>${d.underwriteScore ? `<span class="di-score">${d.underwriteScore}/10</span>` : ''}</div>`;
+    el.addEventListener('click', () => selectDeal(d));
+    list.appendChild(el);
+  });
+}
+
+// SELECT DEAL
+async function selectDeal(d) {
+  curDeal = d;
+  const uid = d.uid || `${d.address}-${d.dateReceived}`;
+  document.querySelectorAll('.di').forEach(el => el.classList.toggle('active', el.dataset.uid === uid));
+  $('main-empty').style.display = 'none';
+  $('dv').style.display = 'block';
+  $('dv-addr').textContent = d.address || 'Unknown';
+  $('dv-city').textContent = `${d.city}, ${d.state} ${d.zip} · ${d.county} County · ${d.propertyType}`;
+  fillPropTab(d);
+  const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, { headers: { 'x-urban-token': TOKEN } });
+  if (r.ok) { curUW = await r.json(); renderUW(curUW); }
+  else showPending();
+}
+
+function showPending() {
+  const v = curDeal?.underwriteStatus || 'PENDING';
+  $('dv-v').textContent = v; $('dv-v').className = `verdict-big vPENDING`;
+  $('dv-sc').textContent = '?'; $('dv-vr').textContent = 'Not yet underwritten';
+  $('pending-card').style.display = 'block';
+  $('loading-state').style.display = 'none';
+  $('uw-content').style.display = 'none';
+}
+
+// UNDERWRITE
+$('btn-uw').addEventListener('click', () => doUnderwrite(false));
+$('btn-reuw').addEventListener('click', () => doUnderwrite(true));
+async function doUnderwrite(force) {
+  if (!curDeal) return;
+  const uid = curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
+  $('pending-card').style.display = 'none';
+  $('uw-content').style.display = 'none';
+  $('loading-state').style.display = 'block';
+  $('load-msg').textContent = 'Connecting to Derek...';
+  const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, {
+    method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ forceRefresh: force })
+  });
+  const reader = r.body.getReader(), dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n'); buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = JSON.parse(line.slice(6));
+      if (data.status) $('load-msg').textContent = data.status;
+      if (data.done) { curUW = data.underwrite; $('loading-state').style.display = 'none'; renderUW(data.underwrite); doLoadStats(); doLoadDeals(); }
+      if (data.error) { $('loading-state').style.display = 'none'; alert('Error: ' + data.error); }
+    }
+  }
+}
+
+// RENDER UW
+function renderUW(uw) {
+  $('pending-card').style.display = 'none';
+  $('loading-state').style.display = 'none';
+  $('uw-content').style.display = 'block';
+  const v = uw.verdict || 'REVIEW';
+  const vc = v.replace(/\s/g,'').toUpperCase();
+  $('dv-v').textContent = v; $('dv-v').className = `verdict-big v${vc}`;
+  $('dv-sc').textContent = uw.score || '?';
+  $('dv-vr').textContent = uw.verdictReason || '';
+
+  // OVERVIEW
+  const profit = uw.financials?.netProfitAtAsking;
+  $('ov-arv').textContent = fmt(uw.arv?.urbanARV);
+  $('ov-rehab').textContent = fmt(uw.rehab?.urbanEstimate);
+  $('ov-mao').textContent = fmt(uw.financials?.mao);
+  $('ov-ask').textContent = fmt(curDeal?.askingPrice);
+  $('ov-profit').textContent = fmt(profit);
+  $('ov-profit').className = `mv ${profit >= 40000 ? 'g' : profit >= 0 ? 'y' : 'r'}`;
+  $('ov-warv').textContent = fmt(uw.arv?.wholesalerARV);
+  const diff = (uw.arv?.wholesalerARV||0) - (uw.arv?.urbanARV||0);
+  $('ov-arvdiff').textContent = diff > 1000 ? `Inflated by ${fmt(diff)}` : diff < -1000 ? `Undervalued by ${fmt(Math.abs(diff))}` : 'Matches Urban';
+  $('ov-arvdiff').className = `mv ${diff > 10000 ? 'r' : diff < -10000 ? 'g' : ''}`;
+  const cred = uw.wholesalerCredibility?.assessment || 'UNKNOWN';
+  $('ov-cred').textContent = cred;
+  $('ov-cred').className = `mv ${cred === 'TRUSTED' ? 'g' : cred === 'QUESTIONABLE' ? 'y' : 'mu'}`;
+  $('ov-trend').textContent = uw.marketAnalysis?.trend || '—';
+  $('ov-hold').textContent = uw.financials?.holdMonths ? `${uw.financials.holdMonths} months` : '—';
+  $('cc-profit').textContent = uw.financials?.meetsMinimumProfit ? '✅ Yes' : '❌ No';
+  $('cc-profit').className = `mv ${uw.financials?.meetsMinimumProfit ? 'g' : 'r'}`;
+  const inMkt = ['pasco','hillsborough','polk','pinellas','hernando'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
+  $('cc-mkt').textContent = inMkt ? '✅ In Market' : '⚠️ Extended';
+  $('cc-mkt').className = `mv ${inMkt ? 'g' : 'y'}`;
+  const floodRaw = curDeal?.floodZone;
+  const hasFlood = floodRaw && !['no','n/a','','none','x'].includes(floodRaw.toLowerCase());
+  $('cc-flood').textContent = hasFlood ? `⚠️ ${floodRaw}` : '✅ None';
+  $('cc-flood').className = `mv ${hasFlood ? 'r' : 'g'}`;
+  const highFlags = (uw.riskFlags||[]).filter(f => f.severity === 'HIGH').length;
+  $('cc-risk').textContent = highFlags > 0 ? `⚠️ ${highFlags} High` : '✅ Low';
+  $('cc-risk').className = `mv ${highFlags > 0 ? 'r' : 'g'}`;
+  $('cc-scope').textContent = uw.rehab?.scopeLevel || '—';
+  $('ov-rec').textContent = uw.recommendation || '';
+  $('ov-off').textContent = uw.offerStrategy || '';
+
+  // ARV TAB
+  $('arv-ws').textContent = fmt(uw.arv?.wholesalerARV);
+  $('arv-ur').textContent = fmt(uw.arv?.urbanARV);
+  $('arv-dn').textContent = diff > 1000 ? `Wholesaler is ${fmt(diff)} (${((diff/(uw.arv?.urbanARV||1))*100).toFixed(1)}%) ABOVE Urban's TRUE ARV`
+    : diff < -1000 ? `Wholesaler is ${fmt(Math.abs(diff))} BELOW Urban's ARV — possible upside`
+    : `Urban agrees with wholesaler ARV`;
+  const arvConfEl = $('arv-conf');
+  const ac = uw.arv?.arvConfidence || 'MEDIUM';
+  arvConfEl.textContent = ac; arvConfEl.className = `conf conf-${ac}`;
+  $('arv-notes').textContent = uw.arv?.arvNotes || '';
+  const compsTb = $('comps-body');
+  compsTb.innerHTML = '';
+  (uw.comps||[]).forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${c.address||'—'}</td><td>${c.beds||'?'}/${c.baths||'?'}</td><td>${c.sqft ? parseInt(c.sqft).toLocaleString() : '—'}</td><td class="p">${fmt(c.salePrice)}</td><td>${c.saleDate||'—'}</td><td>${c.distanceMiles||'?'}mi</td>`;
+    compsTb.appendChild(tr);
+  });
+  if (!uw.comps?.length) compsTb.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No comps found — Urban estimated from market knowledge</td></tr>';
+
+  // REHAB TAB
+  const sl = (uw.rehab?.scopeLevel||'').toUpperCase();
+  const sc = sl.includes('FULL') ? 'FULL' : sl.includes('LIGHT') ? 'LIGHT' : 'MEDIUM';
+  $('rehab-scope').innerHTML = `<div class="scope-tag sc-${sc}">${uw.rehab?.scopeLevel||'MEDIUM'} · ${uw.financials?.holdMonths||5} Month Hold</div>`;
+  const liEl = $('rehab-li');
+  liEl.innerHTML = '';
+  const items = uw.rehab?.lineItems || {};
+  let tot = 0;
+  Object.entries(items).forEach(([k,v]) => {
+    if (!v) return; tot += v;
+    liEl.innerHTML += `<div class="rr"><span class="rn">${k.replace(/_/g,' ')}</span><span class="rv">${fmt(v)}</span></div>`;
+  });
+  liEl.innerHTML += `<div class="rt"><span class="rn">TOTAL</span><span class="rv">${fmt(tot)}</span></div>`;
+  const rng = uw.rehab?.urbanEstimateRange;
+  $('rehab-rng').textContent = rng ? `Range: ${fmt(rng.low)} – ${fmt(rng.high)}` : '';
+  $('rehab-notes').textContent = uw.rehab?.notes || '';
+  $('rehab-miss').textContent = uw.rehab?.missingInfo ? `⚠️ Missing: ${uw.rehab.missingInfo}` : '';
+  $('rh-ws').textContent = uw.rehab?.wholesalerEstimate ? fmt(uw.rehab.wholesalerEstimate) : 'Not provided by wholesaler';
+  $('rh-ur').textContent = fmt(uw.rehab?.urbanEstimate);
+  const rc2 = uw.rehab?.confidence || 'MEDIUM';
+  $('rh-conf').innerHTML = `<span class="conf conf-${rc2}">${rc2}</span>`;
+
+  // FINANCIALS TAB
+  const f = uw.financials || {};
+  $('fi-ask').textContent = fmt(f.askingPrice || curDeal?.askingPrice);
+  $('fi-arv').textContent = fmt(uw.arv?.urbanARV);
+  $('fi-reh').textContent = fmt(uw.rehab?.urbanEstimate);
+  $('fi-mao').textContent = fmt(f.mao);
+  const oum = f.overUnderMAO;
+  $('fi-oum').textContent = oum != null ? `${oum > 0 ? '+' : ''}${fmt(oum)} ${oum > 0 ? 'over' : 'under'} MAO` : '—';
+  $('fi-oum').className = `fv ${oum > 0 ? 'r' : 'g'}`;
+  $('fi-loan').textContent = fmt(f.hardMoney?.loanAmount);
+  $('fi-mo').textContent = fmt(f.hardMoney?.monthlyPayment);
+  $('fi-hold').textContent = f.holdMonths ? `${f.holdMonths} months` : '—';
+  $('fi-int').textContent = fmt(f.hardMoney?.totalInterest);
+  $('fi-pts').textContent = fmt(f.hardMoney?.originationPoints);
+  $('fi-pp').textContent = fmt(f.askingPrice || curDeal?.askingPrice);
+  $('fi-rh2').textContent = fmt(uw.rehab?.urbanEstimate);
+  $('fi-fin').textContent = fmt((f.hardMoney?.totalInterest||0) + (f.hardMoney?.originationPoints||0));
+  $('fi-hc').textContent = fmt(f.holdingCosts?.total);
+  $('fi-sc').textContent = fmt(f.sellingCosts?.total);
+  $('fi-tot').textContent = fmt(f.totalCost);
+  const pa = f.netProfitAtAsking;
+  $('fi-pa').textContent = fmt(pa);
+  $('fi-pa').className = `fv ${pa >= 40000 ? 'g' : pa >= 0 ? '' : 'r'}`;
+  $('fi-pm').textContent = fmt(f.netProfitAtMAO);
+  $('fi-roi').textContent = f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—';
+  $('fi-min').textContent = f.meetsMinimumProfit ? '✅ YES' : '❌ NO';
+  $('fi-min').className = `fv ${f.meetsMinimumProfit ? 'g' : 'r'}`;
+
+  // RENTAL TAB
+  const rn = uw.rental || {};
+  $('rn-rent').textContent = rn.marketRent ? fmt(rn.marketRent) + '/mo' : '—';
+  $('rn-gy').textContent = pct(rn.grossYield);
+  $('rn-ny').textContent = pct(rn.netYield);
+  const cf = rn.cashFlow;
+  $('rn-cf').textContent = cf != null ? fmt(cf) + '/mo' : '—';
+  $('rn-cf').className = `mv ${cf >= 0 ? 'g' : 'r'}`;
+  $('rn-cap').textContent = pct(rn.capRate);
+  $('rn-notes').textContent = rn.notes || '';
+  $('rn-worth').textContent = rn.worthConsidering ? '✅ Worth considering as rental' : '❌ Flip is stronger exit';
+  $('rn-worth').className = `mv ${rn.worthConsidering ? 'g' : 'mu'}`;
+
+  // NEW CONSTRUCTION
+  const nc = uw.newConstruction || {};
+  $('nc-lot').textContent = fmt(nc.lotValue);
+  $('nc-build').textContent = fmt(nc.estimatedBuildCost);
+  $('nc-arv').textContent = fmt(nc.estimatedNewARV);
+  $('nc-notes').textContent = nc.notes || '';
+
+  // FLAGS
+  const flagEl = $('flags-list');
+  flagEl.innerHTML = '';
+  (uw.riskFlags||[]).sort((a,b) => ['HIGH','MEDIUM','LOW'].indexOf(a.severity) - ['HIGH','MEDIUM','LOW'].indexOf(b.severity)).forEach(f => {
+    flagEl.innerHTML += `<div class="flag flag-${f.severity}"><div class="fn">⚑ ${f.flag} · ${f.severity}</div><div class="fd">${f.detail}</div></div>`;
+  });
+  if (!uw.riskFlags?.length) flagEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No flags identified</div>';
+
+  // CHAT HISTORY
+  renderChat(uw.chatHistory || []);
+}
+
+// PROPERTY TAB
+function fillPropTab(d) {
+  const v = x => x || '—';
+  $('pp-type').textContent = v(d.propertyType);
+  $('pp-beds').textContent = `${v(d.beds)} bd / ${v(d.baths)} ba`;
+  $('pp-sqft').textContent = d.sqft ? parseInt(d.sqft).toLocaleString() + ' sqft' : '—';
+  $('pp-yr').textContent = v(d.yearBuilt);
+  $('pp-lot').textContent = d.lotAcres ? d.lotAcres + ' acres' : '—';
+  $('pp-con').textContent = v(d.construction);
+  $('pp-fnd').textContent = v(d.foundation);
+  $('pp-pool').textContent = v(d.pool);
+  $('pp-hoa').textContent = d.hoaFee ? fmt(d.hoaFee) + '/mo' : v(d.hoa);
+  $('pp-fz').textContent = v(d.floodZone);
+  $('pp-occ').textContent = v(d.occupancy);
+  $('sy-roof').textContent = [d.roofType, d.roofAge].filter(Boolean).join(' · ') || '—';
+  $('sy-ac').textContent = v(d.acYear);
+  $('sy-wh').textContent = v(d.waterHeater);
+  $('sy-el').textContent = v(d.electrical);
+  $('sy-pl').textContent = v(d.plumbing);
+  $('sy-win').textContent = v(d.windows);
+  $('sy-fl').textContent = v(d.flooring);
+  $('ws-name').textContent = v(d.contact1Name);
+  $('ws-co').textContent = v(d.wholesalerCompany || d.contact1Company);
+  $('ws-ph').textContent = v(d.contact1Phone);
+  $('ws-em').textContent = v(d.contact1Email);
+  $('ws-cd').textContent = v(d.closeDate);
+  $('ws-ip').textContent = v(d.inspectionPeriod);
+  $('ws-ern').textContent = d.earnestMoney ? fmt(d.earnestMoney) : '—';
+  $('ws-cash').textContent = d.cashOnly ? '💰 Cash Only' : 'Financing Accepted';
+  $('pp-hi').textContent = v(d.highlights);
+  $('pp-nw').textContent = v(d.whatNeedsWork);
+  $('pp-rf').textContent = v(d.redFlags);
+  $('pp-gd').innerHTML = d.driveLink ? `<a href="${d.driveLink}" target="_blank">Open Drive →</a>` : '—';
+  $('pp-zl').innerHTML = d.zillowLink ? `<a href="${d.zillowLink}" target="_blank">Open Zillow →</a>` : '—';
+}
+
+// SECTION TABS
+document.querySelectorAll('.stab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.stab').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('.tc').forEach(x => x.style.display = 'none');
+  t.classList.add('on'); curTab = t.dataset.t;
+  $(`t-${curTab}`).style.display = 'block';
+}));
+
+// OVERRIDE
+async function applyOv(field, value) {
+  if (!curDeal || !value) return;
+  const uid = curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
+  const r = await fetch(`/api/override/${encodeURIComponent(uid)}`, {
+    method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ field, value, author })
+  });
+  if (r.ok) { curUW = await r.json(); renderUW(curUW); doLoadDeals(); }
+}
+
+// CHAT
+$('btn-chat').addEventListener('click', () => $('chat-panel').classList.add('open'));
+$('chat-x').addEventListener('click', () => $('chat-panel').classList.remove('open'));
+function setAuth(a) {
+  author = a;
+  document.querySelectorAll('.auth-btn').forEach(b => b.classList.toggle('on', b.dataset.a === a));
+}
+$('chat-send').addEventListener('click', doChat);
+$('chat-in').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) doChat(); });
+
+async function doChat() {
+  const msg = $('chat-in').value.trim();
+  if (!msg || !curDeal) return;
+  const uid = curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
+  $('chat-in').value = '';
+  addMsg('u', author.toUpperCase() + ': ' + msg);
+  addMsg('a', '...');
+  const r = await fetch(`/api/chat/${encodeURIComponent(uid)}`, {
+    method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: msg, author })
+  });
+  const data = await r.json();
+  const msgs = $('chat-msgs');
+  msgs.removeChild(msgs.lastChild);
+  if (data.reply) addMsg('a', data.reply);
+}
+
+function renderChat(history) {
+  const msgs = $('chat-msgs');
+  msgs.innerHTML = '';
+  if (!history?.length) { msgs.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">No conversation yet.<br>Ask Urban anything about this deal.</div>'; return; }
+  history.forEach(h => addMsg(h.role === 'user' ? 'u' : 'a', h.content, h.timestamp));
+}
+
+function addMsg(role, content, ts) {
+  const msgs = $('chat-msgs');
+  const d = document.createElement('div');
+  d.className = `cm ${role}`;
+  d.innerHTML = `<div class="bbl">${content.replace(/\n/g,'<br>')}</div>${ts ? `<div class="cts">${new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>` : ''}`;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// SHEET LINK
+$('btn-sheet').addEventListener('click', () => window.open('https://docs.google.com/spreadsheets/d/' + encodeURIComponent('1las1OYRL2ZgIZjq5_K4bcMM9dAhGxgMOBghfyR29ynU'), '_blank'));
+</script>
+</body>
+</html>

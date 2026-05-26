@@ -1,0 +1,4 @@
+node_modules/
+.env
+data/brain.json
+data/underwrites.json
