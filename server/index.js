@@ -387,6 +387,14 @@ Respond with a comprehensive underwriting report as a JSON object with these EXA
   }
 }
 
+// ── PUBLIC HEALTH CHECK (no auth needed for Railway) ─────────────────────────
+app.get('/health', (req, res) => res.json({ status: 'Urban is alive', ts: new Date().toISOString() }));
+app.get('/', (req, res, next) => {
+  // If requesting HTML, serve the app; otherwise health check
+  if (req.headers.accept?.includes('text/html')) return next();
+  res.json({ status: 'Urban the Underwriter — online' });
+});
+
 // ── AUTH MIDDLEWARE ───────────────────────────────────────────────────────────
 function auth(req, res, next) {
   const token = req.headers['x-urban-token'] || req.query.token;
