@@ -490,10 +490,27 @@ $('login-btn').addEventListener('click', doLogin);
 
 // Auto-login via URL param ?token=X (for testing/iframe access)
 (function() {
-  const urlToken = new URLSearchParams(window.location.search).get('token');
+  const params = new URLSearchParams(window.location.search);
+  const urlToken = params.get('token');
+  const autoUnderwrite = params.get('underwrite');
   if (urlToken) {
     $('pw').value = urlToken;
-    doLogin();
+    doLogin().then(() => {
+      if (autoUnderwrite) {
+        // Pull deals then auto-underwrite first deal
+        setTimeout(async () => {
+          await loadDeals();
+          if (deals.length > 0) {
+            const target = deals.find(d => d.askingPrice) || deals[0];
+            await selectDeal(target);
+            setTimeout(() => {
+              const uwBtn = document.getElementById('uw-btn');
+              if (uwBtn) uwBtn.click();
+            }, 1000);
+          }
+        }, 2000);
+      }
+    });
   }
 })();
 async function doLogin() {
