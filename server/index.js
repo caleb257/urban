@@ -35,11 +35,17 @@ function saveJSON(file, data) {
 }
 
 let urbanBrain = loadJSON(BRAIN_FILE, {
-  lessons: [],
-  wholesalerNotes: {},
-  marketNotes: {},
-  correctionHistory: [],
-  lastUpdated: null
+  lessons: [],                // General lessons from past underwrites
+  wholesalerNotes: {},        // Per-wholesaler email notes
+  wholesalerStats: {},        // Per-wholesaler accuracy stats
+  marketNotes: {},            // Per-city/county market observations
+  correctionHistory: [],      // When Urban was corrected by Caleb/Grant
+  dealOutcomes: {},           // Actual outcomes (bought/passed/flipped) if logged
+  arvAccuracy: [],            // Tracking Urban ARV vs actual sale price over time
+  lastUpdated: null,
+  totalUnderwritten: 0,
+  hotDeals: 0,
+  passedDeals: 0
 });
 
 let underwrites = loadJSON(UNDERWRITES_FILE, {});
@@ -352,10 +358,18 @@ async function fetchComps(address, city, state, zip) {
 }
 
 // ── URBAN'S BRAIN CONTEXT ─────────────────────────────────────────────────────
-function getBrainContext(wholesalerEmail) {
-  const lessons = urbanBrain.lessons.slice(-20).map(l => `- ${l}`).join('\n');
-  const wNotes = urbanBrain.wholesalerNotes[wholesalerEmail] || '';
-  return { lessons, wholesalerNotes: wNotes };
+function getBrainContext(wholesalerEmail, county) {
+  const lessons = urbanBrain.lessons.slice(-25).map(l => `- ${l}`).join('\n');
+  const wNotes = urbanBrain.wholesalerNotes[wholesalerEmail] || 'First time seeing this wholesaler';
+  const ws = urbanBrain.wholesalerStats[wholesalerEmail];
+  const wStats = ws
+    ? `${ws.deals} prior deals | avg ARV inflation: ${ws.avgARVInflation}% | past verdicts: ${JSON.stringify(ws.verdicts)}`
+    : 'No prior deals from this wholesaler';
+  const mn = urbanBrain.marketNotes[county];
+  const marketCtx = mn && mn.deals > 2
+    ? `${county}: ${mn.deals} deals underwritten | avg Urban ARV: $${mn.avgARV?.toLocaleString()}`
+    : `${county}: limited data`;
+  return { lessons, wholesalerNotes: wNotes, wholesalerStats: wStats, marketContext: marketCtx };
 }
 
 // ── CORE UNDERWRITING ENGINE ──────────────────────────────────────────────────
@@ -365,7 +379,7 @@ async function underwriteDeal(deal, comps, forceRefresh = false, deep = false) {
   // Return cached unless forced refresh
   if (underwrites[uid] && !forceRefresh) return underwrites[uid];
 
-  const brain = getBrainContext(deal.contact1Email);
+  const brain = getBrainContext(deal.contact1Email || deal.wholesalerEmail, deal.county || deal.city);
   const sqft = parseFloat(deal.sqft) || 0;
   const askingPrice = parseFloat(deal.askingPrice) || 0;
   const wholesalerARV = parseFloat(deal.wholesalerARV) || 0;
@@ -394,11 +408,17 @@ CORALSTONE'S CRITERIA:
 - Sometimes wholesaler ARV is LOWER than true value — note this when you see it.
 - Repair budget: Use wholesaler's number if available. If not, estimate from condition + sqft.
 
-URBAN'S BRAIN — LESSONS LEARNED:
+URBAN'S BRAIN — LESSONS LEARNED (last 25 deals):
 ${brain.lessons || 'No lessons yet — first underwrite'}
 
-WHOLESALER NOTES FOR THIS SENDER:
-${brain.wholesalerNotes || 'No prior data on this wholesaler'}
+WHOLESALER INTELLIGENCE:
+Notes: ${brain.wholesalerNotes}
+Stats: ${brain.wholesalerStats}
+
+MARKET CONTEXT (from past underwrites):
+${brain.marketContext}
+
+URBAN'S LIFETIME STATS: ${urbanBrain.totalUnderwritten || 0} deals underwritten | ${urbanBrain.hotDeals || 0} HOT | ${urbanBrain.passedDeals || 0} passed
 
 DEAL DATA FROM DEREK:
 Address: ${deal.address}, ${deal.city}, ${deal.state} ${deal.zip}
@@ -570,9 +590,64 @@ Respond with a comprehensive underwriting report as a JSON object with these EXA
     underwrite.comps = comps;
     underwrite.underwroteAt = new Date().toISOString();
     underwrite.chatHistory = [];
+    underwrite.model = model;
 
     underwrites[uid] = underwrite;
     saveJSON(UNDERWRITES_FILE, underwrites);
+
+    // ── AUTO-LEARN from this underwrite ─────────────────────────────────────
+    try {
+      // Update brain stats
+      urbanBrain.totalUnderwritten = (urbanBrain.totalUnderwritten || 0) + 1;
+      if (underwrite.verdict === 'HOT') urbanBrain.hotDeals = (urbanBrain.hotDeals || 0) + 1;
+      if (['PASS', 'HARD NO'].includes(underwrite.verdict)) urbanBrain.passedDeals = (urbanBrain.passedDeals || 0) + 1;
+
+      // Learn from wholesaler ARV accuracy
+      const wholesalerEmail = deal.contact1Email || deal.wholesalerEmail || 'unknown';
+      if (!urbanBrain.wholesalerStats[wholesalerEmail]) {
+        urbanBrain.wholesalerStats[wholesalerEmail] = {
+          name: deal.contact1Name || deal.wholesalerCompany || 'Unknown',
+          company: deal.wholesalerCompany || '',
+          deals: 0, avgARVInflation: 0, arvSamples: [], verdicts: {}
+        };
+      }
+      const ws = urbanBrain.wholesalerStats[wholesalerEmail];
+      ws.deals++;
+      ws.verdicts[underwrite.verdict] = (ws.verdicts[underwrite.verdict] || 0) + 1;
+      if (underwrite.arv?.wholesalerARV && underwrite.arv?.urbanARV && underwrite.arv.wholesalerARV > 0) {
+        const inflation = ((underwrite.arv.wholesalerARV - underwrite.arv.urbanARV) / underwrite.arv.urbanARV * 100).toFixed(1);
+        ws.arvSamples.push(parseFloat(inflation));
+        if (ws.arvSamples.length > 20) ws.arvSamples.shift(); // keep last 20
+        ws.avgARVInflation = (ws.arvSamples.reduce((a,b)=>a+b,0) / ws.arvSamples.length).toFixed(1);
+      }
+      // Update wholesalerNotes with stats summary
+      urbanBrain.wholesalerNotes[wholesalerEmail] =
+        `${ws.name} (${ws.company}) | ${ws.deals} deals | avg ARV inflation: ${ws.avgARVInflation}% | verdicts: ${JSON.stringify(ws.verdicts)}`;
+
+      // Auto-generate a lesson from this deal
+      const lesson = `${underwrite.verdict} | ${deal.address}, ${deal.city} | Ask $${deal.askingPrice?.toLocaleString()} | Urban ARV $${underwrite.arv?.urbanARV?.toLocaleString()} | Net profit $${underwrite.financials?.netProfitAtAsking?.toLocaleString()} | ${underwrite.verdictReason}`;
+      urbanBrain.lessons.push(`[${new Date().toLocaleDateString()}] ${lesson}`);
+      if (urbanBrain.lessons.length > 100) urbanBrain.lessons.shift(); // keep last 100
+
+      // Market notes
+      const countyKey = deal.county || deal.city;
+      if (!urbanBrain.marketNotes[countyKey]) urbanBrain.marketNotes[countyKey] = { deals: 0, avgARV: 0, arvSamples: [] };
+      const mn = urbanBrain.marketNotes[countyKey];
+      mn.deals++;
+      if (underwrite.arv?.urbanARV) {
+        mn.arvSamples.push(underwrite.arv.urbanARV);
+        if (mn.arvSamples.length > 50) mn.arvSamples.shift();
+        mn.avgARV = Math.round(mn.arvSamples.reduce((a,b)=>a+b,0) / mn.arvSamples.length);
+      }
+
+      urbanBrain.lastUpdated = new Date().toISOString();
+      saveJSON(BRAIN_FILE, urbanBrain);
+      console.log(`🧠 Urban learned: ${underwrite.verdict} | ${ws.deals} deals from this wholesaler | avg ARV inflation ${ws.avgARVInflation}%`);
+    } catch(e) {
+      console.log('Brain update failed:', e.message);
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     return underwrite;
   } catch (e) {
     console.error('Underwrite parse error:', e.message);
@@ -791,6 +866,22 @@ app.get('/api/test', async (req, res) => {
   } catch(e) {
     res.status(500).json({ error: e.message, stack: e.stack?.substring(0, 500) });
   }
+});
+
+// Brain — memory overview
+app.get('/api/brain', auth, (req, res) => {
+  const summary = {
+    totalUnderwritten: urbanBrain.totalUnderwritten || 0,
+    hotDeals: urbanBrain.hotDeals || 0,
+    passedDeals: urbanBrain.passedDeals || 0,
+    lastUpdated: urbanBrain.lastUpdated,
+    wholesalers: Object.keys(urbanBrain.wholesalerStats).length,
+    markets: Object.keys(urbanBrain.marketNotes),
+    recentLessons: urbanBrain.lessons.slice(-5),
+    wholesalerStats: urbanBrain.wholesalerStats,
+    marketNotes: urbanBrain.marketNotes
+  };
+  res.json(summary);
 });
 
 // Stats
