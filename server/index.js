@@ -37,6 +37,9 @@ function saveJSON(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
+// Ensure /tmp/urban exists
+try { require('fs').mkdirSync(DATA_DIR, { recursive: true }); } catch {}
+
 let urbanBrain = loadJSON(BRAIN_FILE, {
   lessons: [],
   wholesalerNotes: {},
@@ -677,6 +680,8 @@ IMPORTANT: Keep ALL text values under 200 characters. Valid JSON only. No markdo
 
   underwrites[uid] = underwrite;
   saveJSON(UNDERWRITES_FILE, underwrites);
+  // Async persist verdict index to sheet — non-blocking
+  persistVerdictIndexToSheet().catch(() => {});
 
   // Learn from this underwrite
   try {
@@ -1119,14 +1124,54 @@ YOUR ROLE:
     uw.chatHistory = chatHistory;
 
     // Save corrections to brain
-    const correctionWords = ['actually','wrong','arv is','arv should','repairs are','repairs should','sold for','comp at','i got a comp','correction','update','change'];
-    if (correctionWords.some(w => message.toLowerCase().includes(w))) {
-      urbanBrain.lessons.push(`[${new Date().toLocaleDateString()} CORRECTION on ${uw.deal.address}] ${message.slice(0,250)}`);
-      if (urbanBrain.lessons.length > 100) urbanBrain.lessons.shift();
-      urbanBrain.correctionHistory.push({ date: new Date().toISOString(), deal: uw.deal.address, correction: message, author: author||'unknown' });
+    // ── CORRECTION DETECTION + IMMEDIATE CROSS-DEAL LEARNING ─────────────────
+    // Detect if this message is a correction or new data point
+    const msgLower = message.toLowerCase();
+    const isCorrection = [
+      'actually','wrong','not right','arv is','arv should','arv around','arv closer',
+      'repairs are','repairs should','repairs closer','sold for','comp at','comp was',
+      'i got a comp','correction','update','change','fix','incorrect','off on',
+      'too high','too low','overestimated','underestimated','real number','real arv',
+      'just sold','recently sold','it sold','closed at','under contract at'
+    ].some(w => msgLower.includes(w));
+
+    if (isCorrection) {
+      // 1. Add to this deal's correction history
+      const lesson = '[' + new Date().toLocaleDateString() + ' ' + (author||'team').toUpperCase() +
+        ' on ' + uw.deal.address + '] ' + message.slice(0, 300);
+      urbanBrain.lessons = urbanBrain.lessons || [];
+      urbanBrain.lessons.push(lesson);
+      if (urbanBrain.lessons.length > 150) urbanBrain.lessons.shift();
+
+      // 2. Record in correction history
+      urbanBrain.correctionHistory = urbanBrain.correctionHistory || [];
+      urbanBrain.correctionHistory.push({
+        date: new Date().toISOString(),
+        deal: uw.deal.address,
+        city: uw.deal.city,
+        zip: uw.deal.zip,
+        wholesaler: uw.deal.contact1Email || uw.deal.wholesalerCompany,
+        correction: message,
+        author: author || 'unknown',
+        prevVerdict: uw.verdict,
+        prevScore: uw.score
+      });
+      if (urbanBrain.correctionHistory.length > 200) urbanBrain.correctionHistory.shift();
+
+      // 3. Update wholesaler stats if this correction implies ARV inflation
+      const wsEmail = uw.deal.contact1Email;
+      if (wsEmail && urbanBrain.wholesalerStats[wsEmail]) {
+        urbanBrain.wholesalerStats[wsEmail].corrections =
+          (urbanBrain.wholesalerStats[wsEmail].corrections || 0) + 1;
+        urbanBrain.wholesalerNotes[wsEmail] = (urbanBrain.wholesalerNotes[wsEmail] || '') +
+          ' | Correction ' + new Date().toLocaleDateString() + ': ' + message.slice(0,100);
+      }
+
       urbanBrain.lastUpdated = new Date().toISOString();
-      saveJSON(BRAIN_FILE, urbanBrain);
-      saveBrainToSheet().catch(()=>{});
+
+      // 4. IMMEDIATELY save to sheet so it survives the next redeploy
+      await saveBrain();
+      console.log('📝 Correction saved to brain + sheet: ' + message.slice(0,80));
     }
 
     underwrites[uid] = uw;
@@ -1178,8 +1223,92 @@ app.get('/api/brain', auth, (req, res) => res.json(urbanBrain));
 const PORT = process.env.PORT || 3001;
 // Load brain from sheet on boot
 loadBrainFromSheet().catch(e => console.log('Brain boot load:', e.message));
-app.listen(PORT, () => {
+// ── RESTORE BRAIN + VERDICT INDEX FROM SHEET ON STARTUP ──────────────────────
+// This is how corrections, lessons, and past verdicts survive redeployments.
+async function restoreBrainFromSheet() {
+  try {
+    // 1. Restore brain (lessons, corrections, wholesaler stats)
+    const s = getSheets();
+    const r = await s.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID, range: `${BRAIN_TAB}!A1:B2`
+    });
+    const rows = r.data.values || [];
+    if (rows.length >= 2 && rows[1]?.[1]) {
+      const saved = JSON.parse(rows[1][1]);
+      const fileUpdated  = urbanBrain.lastUpdated ? new Date(urbanBrain.lastUpdated) : new Date(0);
+      const sheetUpdated = saved.lastUpdated      ? new Date(saved.lastUpdated)      : new Date(0);
+      if (sheetUpdated > fileUpdated) {
+        // Sheet is newer — restore from it
+        Object.assign(urbanBrain, {
+          lessons:           saved.lessons           || urbanBrain.lessons || [],
+          correctionHistory: saved.correctionHistory || urbanBrain.correctionHistory || [],
+          wholesalerStats:   saved.wholesalerStats   || urbanBrain.wholesalerStats || {},
+          wholesalerNotes:   saved.wholesalerNotes   || urbanBrain.wholesalerNotes || {},
+          marketNotes:       saved.marketNotes       || urbanBrain.marketNotes || {},
+          totalUnderwritten: saved.totalUnderwritten || urbanBrain.totalUnderwritten || 0,
+          hotDeals:          saved.hotDeals          || urbanBrain.hotDeals || 0,
+          passedDeals:       saved.passedDeals       || urbanBrain.passedDeals || 0,
+          lastReviewAt:      saved.lastReviewAt      || urbanBrain.lastReviewAt || null,
+          lastUpdated:       saved.lastUpdated
+        });
+        saveJSON(BRAIN_FILE, urbanBrain);
+        console.log('✅ Brain restored: ' + (urbanBrain.lessons.length) + ' lessons, ' + (urbanBrain.correctionHistory.length) + ' corrections');
+      } else {
+        console.log('Local brain is current (' + (urbanBrain.lessons?.length || 0) + ' lessons)');
+      }
+    }
+
+    // 2. Restore verdict index — prevent re-underwriting deals already done
+    // Check the 'Urban Verdicts' columns in the brain tab (cols D+)
+    try {
+      const vi = await s.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID, range: `${BRAIN_TAB}!D1:G2000`
+      });
+      const viRows = (vi.data.values || []).slice(1); // skip header
+      let restored = 0;
+      for (const row of viRows) {
+        const [uid, verdict, score, address] = row;
+        if (uid && verdict && !underwrites[uid]) {
+          underwrites[uid] = { uid, verdict, score: parseInt(score)||0, deal: { address }, restoredFromSheet: true };
+          restored++;
+        }
+      }
+      if (restored > 0) {
+        saveJSON(UNDERWRITES_FILE, underwrites);
+        console.log('✅ Verdict index restored: ' + restored + ' deals (will not re-underwrite)');
+      }
+    } catch(e) {
+      // Verdict index columns may not exist yet — that's fine
+      console.log('Verdict index not found (first run after fix)');
+    }
+  } catch(e) {
+    console.log('Brain restore err:', e.message);
+  }
+}
+
+// Persist verdict index to sheet (cols D+ in Brain tab) after each underwrite
+async function persistVerdictIndexToSheet() {
+  try {
+    const s = getSheets();
+    const idx = Object.entries(underwrites)
+      .filter(([, uw]) => uw.verdict && uw.verdict !== 'PENDING')
+      .map(([uid, uw]) => [uid, uw.verdict, String(uw.score || ''), uw.deal?.address || uid]);
+    if (!idx.length) return;
+    await s.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID, range: `${BRAIN_TAB}!D1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [['UID', 'Verdict', 'Score', 'Address'], ...idx] }
+    });
+  } catch(e) { /* non-critical */ }
+}
+
+app.listen(PORT, async () => {
   console.log(`🏙️ Urban on port ${PORT}`);
+
+  // RESTORE BRAIN + VERDICT INDEX FROM SHEET ON EVERY STARTUP
+  // This is what keeps Grant's corrections and past underwrites alive across redeploys
+  console.log('🔄 Restoring brain and verdict index from Google Sheet...');
+  await restoreBrainFromSheet().catch(e => console.log('Restore err:', e.message));
 
   // Auto-run chat review on startup (if more than 12h since last review) — cheap Haiku
   const lastReview = urbanBrain.lastReviewAt ? new Date(urbanBrain.lastReviewAt) : null;
