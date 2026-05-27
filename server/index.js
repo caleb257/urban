@@ -247,7 +247,8 @@ async function fetchComps(address, city, state, zip) {
   const comps = [];
   comps._meta = { arvEstimate: null };
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    // Two searches: (1) recently sold comps, (2) Zestimate for subject
+    const searchRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -257,29 +258,97 @@ async function fetchComps(address, city, state, zip) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1200,
+        max_tokens: 2000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search Zillow and Redfin for recently SOLD homes near: ${address}, ${city}, ${state} ${zip}. Find 3-5 sold comps from last 6 months within 1 mile. Also find the Zestimate for this exact address. Return ONLY a JSON array, no markdown backticks:\n[{"address":"123 Oak","sqft":1400,"beds":3,"baths":2,"salePrice":248000,"saleDate":"2025-03","distanceMiles":0.3,"source":"zillow"}]`
+          content: `You are a real estate comp researcher. Do TWO web searches:
+
+1. Search Zillow for recently sold homes near "${address}, ${city}, ${state} ${zip}" — find 3-5 homes sold in the last 6 months within 1 mile that are similar (same beds/baths/sqft range). Look for actual SOLD prices not list prices.
+
+2. Search for the Zestimate or current estimated value of "${address}, ${city}, ${state} ${zip}" on Zillow or Redfin.
+
+After searching, return ONLY a valid JSON array (no markdown, no backticks, no explanation) with all comps you found:
+[
+  {"address":"123 Oak Ave","city":"${city}","sqft":1350,"beds":3,"baths":2,"salePrice":248000,"saleDate":"2025-03","distanceMiles":0.4,"source":"zillow_sold"},
+  {"address":"${address}","city":"${city}","sqft":null,"beds":null,"baths":null,"salePrice":265000,"saleDate":"2025-05","distanceMiles":0,"source":"zestimate"}
+]
+
+Include ONLY entries where you found real data. If you found no comps, return an empty array: []`
         }]
       })
     });
-    const data = await res.json();
-    if (data.error) { console.log('Comp API error:', data.error.message); return comps; }
-    const tb = data.content?.find(c => c.type === 'text');
-    if (!tb) return comps;
-    const raw = tb.text.trim();
-    const f = raw.indexOf('['), l = raw.lastIndexOf(']');
-    if (f === -1 || l === -1) return comps;
-    const parsed = JSON.parse(raw.slice(f, l + 1));
-    parsed.forEach(c => comps.push(c));
-    const prices = parsed.map(c => c.salePrice).filter(Boolean);
-    if (prices.length) {
-      comps._meta.arvEstimate = Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
-      console.log(`Comps: ${parsed.length} found → avg $${comps._meta.arvEstimate?.toLocaleString()}`);
+
+    const data = await searchRes.json();
+    if (data.error) {
+      console.log('Comp API error:', data.error.message);
+      return comps;
     }
-  } catch(e) { console.log('Comp error:', e.message); }
+
+    // Find the text response block
+    const textBlock = data.content?.find(c => c.type === 'text');
+    if (!textBlock?.text) {
+      console.log('No text block in comp response');
+      return comps;
+    }
+
+    const raw = textBlock.text.trim();
+    console.log(`Comp raw response (first 300): ${raw.slice(0, 300)}`);
+
+    // Safely extract JSON array
+    const arrStart = raw.indexOf('[');
+    const arrEnd = raw.lastIndexOf(']');
+    if (arrStart === -1 || arrEnd === -1 || arrEnd <= arrStart) {
+      console.log('No JSON array found in comp response');
+      return comps;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw.slice(arrStart, arrEnd + 1));
+    } catch(parseErr) {
+      console.log('Comp JSON parse error:', parseErr.message);
+      // Try to salvage partial results by finding individual objects
+      return comps;
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      console.log('Empty or invalid comp array');
+      return comps;
+    }
+
+    parsed.forEach(c => {
+      if (c && typeof c === 'object' && c.salePrice) comps.push(c);
+    });
+
+    // Separate sold comps from estimates
+    const soldComps = comps.filter(c => c.source && c.source.includes('sold') && c.salePrice);
+    const estimates = comps.filter(c => c.source && (c.source.includes('zestimate') || c.source.includes('estimate')) && c.salePrice);
+
+    console.log(`Comps: ${soldComps.length} sold, ${estimates.length} estimates`);
+
+    // Compute ARV: weight sold comps 70%, estimates 30%
+    if (soldComps.length > 0 || estimates.length > 0) {
+      const soldPrices = soldComps.map(c => c.salePrice);
+      const estPrices = estimates.map(c => c.salePrice);
+      let arvEstimate;
+      if (soldPrices.length > 0 && estPrices.length > 0) {
+        const soldAvg = soldPrices.reduce((a,b)=>a+b,0)/soldPrices.length;
+        const estAvg = estPrices.reduce((a,b)=>a+b,0)/estPrices.length;
+        arvEstimate = Math.round(soldAvg * 0.7 + estAvg * 0.3);
+      } else if (soldPrices.length > 0) {
+        arvEstimate = Math.round(soldPrices.reduce((a,b)=>a+b,0)/soldPrices.length);
+      } else {
+        arvEstimate = Math.round(estPrices.reduce((a,b)=>a+b,0)/estPrices.length);
+      }
+      comps._meta.arvEstimate = arvEstimate;
+      console.log(`ARV estimate: $${arvEstimate.toLocaleString()} (from ${soldComps.length} sold + ${estimates.length} estimates)`);
+    }
+
+  } catch(e) {
+    console.log('Comp engine error:', e.message);
+  }
+
   return comps;
 }
 
@@ -438,10 +507,22 @@ Respond ONLY with a JSON object (no markdown, no backticks, just raw JSON):
     messages: [{ role: 'user', content: prompt }]
   });
 
-  const raw = res.content[0].text.trim();
-  const f = raw.indexOf('{'), l = raw.lastIndexOf('}');
-  if (f === -1 || l === -1) throw new Error('No JSON in response');
-  const underwrite = JSON.parse(raw.slice(f, l + 1));
+  const rawText = res.content[0].text.trim();
+  console.log(`Raw underwrite response length: ${rawText.length}, preview: ${rawText.slice(0,100)}`);
+  const f = rawText.indexOf('{'), l = rawText.lastIndexOf('}');
+  if (f === -1 || l === -1) throw new Error(`No JSON object in response. Raw: ${rawText.slice(0,200)}`);
+  let underwrite;
+  try {
+    underwrite = JSON.parse(rawText.slice(f, l + 1));
+  } catch(jsonErr) {
+    console.error('JSON parse error. Attempting cleanup...');
+    // Try removing control characters and reparsing
+    const cleaned = rawText.slice(f, l + 1)
+      .replace(/[ -]/g, ' ')
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']');
+    underwrite = JSON.parse(cleaned);
+  }
 
   underwrite.uid = uid;
   underwrite.deal = deal;
