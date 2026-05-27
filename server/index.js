@@ -10,7 +10,16 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Lazy init — reads env var at request time, not at boot
+let _anthropic = null;
+function getAnthropic() {
+  if (!_anthropic) {
+    const key = process.env.ANTHROPIC_API_KEY;
+    if (!key) throw new Error('ANTHROPIC_API_KEY not set');
+    _anthropic = new Anthropic({ apiKey: key });
+  }
+  return _anthropic;
+}
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const PASSWORD = process.env.URBAN_PASSWORD || 'coralstone2025';
 const BRAIN_FILE = path.join(__dirname, '../data/brain.json');
@@ -362,7 +371,7 @@ Respond with a comprehensive underwriting report as a JSON object with these EXA
   "urbanNotes": "<anything else Urban wants Caleb and Grant to know>"
 }`;
 
-  const res = await anthropic.messages.create({
+  const res = await getAnthropic().messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 4000,
     messages: [{ role: 'user', content: prompt }]
@@ -495,7 +504,7 @@ When they correct a number:
 
 Be direct. Be specific. Be the best underwriter they've ever worked with.`;
 
-    const res2 = await anthropic.messages.create({
+    const res2 = await getAnthropic().messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
       system: systemPrompt,
