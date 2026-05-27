@@ -6,9 +6,10 @@
 <title>Urban — Coralstone Capital Underwriter</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0a0a0f;--bg2:#111118;--bg3:#18181f;--border:#22222e;--border2:#2e2e3e;--text:#e8e8f0;--muted:#666680;--accent:#c8a96e;--accent2:#e8c98e;--hot:#ff4444;--buy:#44cc88;--review:#f0a030;--pass:#6688aa;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Bebas Neue',sans-serif}
+:root{--bg:#0a0a0f;--bg2:#111118;--bg3:#18181f;--border:#22222e;--border2:#2e2e3e;--text:#e8e8f0;--muted:#666680;--accent:#c8a96e;--accent2:#e8c98e;--hot:#ff4444;--buy:#44cc88;--review:#f0a030;--pass:#6688aa;--go:#44cc88;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Bebas Neue',sans-serif}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+/* LOGIN */
 #login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:20px}
 #login-screen h1{font-family:var(--display);font-size:80px;color:var(--accent);letter-spacing:6px}
 #login-screen .sub{color:var(--muted);font-size:11px;letter-spacing:3px;text-transform:uppercase}
@@ -17,9 +18,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 #login-form input:focus{border-color:var(--accent)}
 #login-btn{background:var(--accent);color:#000;border:none;padding:12px 28px;border-radius:4px;font-family:var(--sans);font-weight:700;cursor:pointer;font-size:14px;letter-spacing:1px}
 #login-err{color:var(--hot);font-size:12px;display:none}
+/* LAYOUT */
 #app{display:none;height:100vh;overflow:hidden}
 #sidebar{position:fixed;left:0;top:0;bottom:0;width:310px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100}
 #main{margin-left:310px;height:100vh;overflow-y:auto;position:relative}
+/* SIDEBAR */
 #sidebar-header{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
 #sidebar-header h1{font-family:var(--display);font-size:38px;color:var(--accent);letter-spacing:4px}
 #sidebar-header p{color:var(--muted);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
@@ -52,6 +55,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .di-score{font-family:var(--mono);font-size:11px;color:var(--muted)}
 #ref-btn{margin:10px 18px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:8px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-family:var(--sans);width:calc(100% - 36px);transition:all .15s}
 #ref-btn:hover{border-color:var(--accent);color:var(--accent)}
+/* MAIN */
 #main-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:14px}
 #main-empty h2{font-family:var(--display);font-size:52px;color:var(--border2);letter-spacing:5px}
 #main-empty p{font-size:13px}
@@ -71,8 +75,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .act-row{display:flex;gap:8px;margin:20px 0;flex-wrap:wrap}
 .btn{padding:9px 18px;border-radius:4px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500;transition:all .15s;display:flex;align-items:center;gap:5px}
 .btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.primary{background:var(--accent);color:#000;border-color:var(--accent)}.btn-deep{background:#1a1a2e;border-color:#6c63ff;color:#6c63ff}
+.btn.primary{background:var(--accent);color:#000;border-color:var(--accent)}
 .btn.primary:hover{background:var(--accent2)}
+.btn-deep{background:#1a1a2e;border-color:#6c63ff;color:#6c63ff}
+/* PENDING / LOADING */
 #pending-card{background:var(--bg2);border:1px dashed var(--border2);border-radius:6px;padding:40px;text-align:center;margin-bottom:20px;display:none}
 #pending-card h3{font-family:var(--display);font-size:28px;color:var(--muted);letter-spacing:2px;margin-bottom:10px}
 #pending-card p{color:var(--muted);font-size:13px;margin-bottom:18px}
@@ -80,11 +86,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .load-txt{font-size:13px;color:var(--muted);font-family:var(--mono)}
+/* UW CONTENT & TABS */
 #uw-content{display:none}
 .stabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;gap:0;overflow-x:auto}
-.stab{padding:9px 16px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap;letter-spacing:.5px}
+.stab{padding:9px 16px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap;letter-spacing:.5px;user-select:none}
 .stab:hover{color:var(--text)}
 .stab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tc{display:none}
+.tc.active{display:block}
+/* CARDS / GRID */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:20px}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:18px}
 .ct{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;font-weight:600}
@@ -94,6 +104,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .mv.big{font-family:var(--display);font-size:26px;color:var(--accent)}
 .mv.g{color:var(--buy)}.mv.r{color:var(--hot)}.mv.y{color:var(--review)}.mv.mu{color:var(--muted)}
 hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
+/* ARV */
 .arv-cmp{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-radius:6px;overflow:hidden;margin-bottom:14px}
 .arv-s{background:var(--bg2);padding:18px;text-align:center}
 .arv-l{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
@@ -104,6 +115,7 @@ hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
 .conf-HIGH{background:rgba(68,204,136,.2);color:var(--buy)}
 .conf-MEDIUM{background:rgba(240,160,48,.2);color:var(--review)}
 .conf-LOW{background:rgba(255,68,68,.2);color:var(--hot)}
+/* REHAB */
 .ri{display:flex;flex-direction:column;gap:5px}
 .rr{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
 .rr:last-child{border-bottom:none}
@@ -117,6 +129,7 @@ hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
 .sc-FULL{background:rgba(255,68,68,.15);color:var(--hot);border:1px solid rgba(255,68,68,.3)}
 .sc-MEDIUM{background:rgba(240,160,48,.15);color:var(--review);border:1px solid rgba(240,160,48,.3)}
 .sc-LIGHT{background:rgba(68,204,136,.15);color:var(--buy);border:1px solid rgba(68,204,136,.3)}
+/* FINANCIALS */
 .fr{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
 .fr:last-child{border-bottom:none}
 .fl{font-size:13px;color:var(--muted)}
@@ -124,27 +137,32 @@ hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
 .fr.tot .fl{color:var(--text);font-weight:600}
 .fr.tot .fv{color:var(--accent);font-size:14px}
 .fr.g .fv{color:var(--buy)}.fr.r .fv{color:var(--hot)}
-.flags{display:flex;flex-direction:column;gap:8px}
-.flag{padding:12px 14px;border-radius:4px;border-left:3px solid;background:var(--bg3)}
-.flag-HIGH{border-color:var(--hot)}.flag-MEDIUM{border-color:var(--review)}.flag-LOW{border-color:var(--pass)}
-.fn{font-size:12px;font-weight:600;margin-bottom:4px}
-.flag-HIGH .fn{color:var(--hot)}.flag-MEDIUM .fn{color:var(--review)}.flag-LOW .fn{color:var(--pass)}
-.fd{font-size:12px;color:var(--muted);line-height:1.5}
-.rec-box{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:22px;margin-bottom:20px}
-.rec-txt{font-size:14px;line-height:1.8;color:var(--text);margin-bottom:14px}
-.off-strat{font-size:13px;line-height:1.7;color:var(--accent);font-style:italic}
+/* OVERRIDES */
 .ov-input{background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:13px;width:140px;outline:none}
 .ov-input:focus{border-color:var(--accent)}
 .ov-row{display:flex;gap:8px;margin-top:10px;align-items:center}
 .ov-lbl{font-size:12px;color:var(--muted)}
 .ov-btn{padding:6px 12px;border-radius:4px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;font-size:12px;transition:all .15s}
 .ov-btn:hover{border-color:var(--accent);color:var(--accent)}
+/* COMPS TABLE */
 .comps-t{width:100%;border-collapse:collapse;font-size:12px}
 .comps-t th{padding:7px 10px;text-align:left;color:var(--muted);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--border)}
 .comps-t td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text)}
 .comps-t tr:last-child td{border-bottom:none}
 .comps-t td.p{font-family:var(--mono);color:var(--accent)}
-#chat-panel{position:fixed;right:0;top:0;bottom:0;width:370px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s ease;z-index:200}
+/* FLAGS */
+.flags{display:flex;flex-direction:column;gap:8px}
+.flag{padding:12px 14px;border-radius:4px;border-left:3px solid;background:var(--bg3)}
+.flag-HIGH{border-color:var(--hot)}.flag-MEDIUM{border-color:var(--review)}.flag-LOW{border-color:var(--pass)}
+.fn{font-size:12px;font-weight:600;margin-bottom:4px}
+.flag-HIGH .fn{color:var(--hot)}.flag-MEDIUM .fn{color:var(--review)}.flag-LOW .fn{color:var(--pass)}
+.fd{font-size:12px;color:var(--muted);line-height:1.5}
+/* OVERVIEW */
+.rec-box{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:22px;margin-bottom:20px}
+.rec-txt{font-size:14px;line-height:1.8;color:var(--text);margin-bottom:14px}
+.off-strat{font-size:13px;line-height:1.7;color:var(--accent);font-style:italic}
+/* CHAT */
+#chat-panel{position:fixed;right:0;top:0;bottom:0;width:380px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s ease;z-index:200}
 #chat-panel.open{transform:translateX(0)}
 #chat-hdr{padding:18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 #chat-hdr h3{font-family:var(--display);font-size:24px;color:var(--accent);letter-spacing:2px}
@@ -155,8 +173,7 @@ hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
 .cm.u .bbl{background:var(--accent);color:#000;padding:9px 13px;border-radius:12px 12px 2px 12px;font-size:13px;line-height:1.5}
 .cm.a .bbl{background:var(--bg3);color:var(--text);padding:9px 13px;border-radius:12px 12px 12px 2px;font-size:13px;line-height:1.6;border:1px solid var(--border2)}
 .cts{font-size:10px;color:var(--muted);margin-top:3px}
-.cm.a .cts{text-align:left}
-.cm.u .cts{text-align:right}
+.cm.a .cts{text-align:left}.cm.u .cts{text-align:right}
 #chat-in-wrap{padding:14px;border-top:1px solid var(--border)}
 .auth-sel{display:flex;gap:7px;margin-bottom:8px}
 .auth-btn{flex:1;padding:6px;border-radius:4px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
@@ -165,31 +182,38 @@ hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
 #chat-in:focus{border-color:var(--accent)}
 #chat-send{width:100%;margin-top:7px;background:var(--bg3);border:1px solid var(--border2);color:var(--accent);padding:9px;border-radius:4px;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:600;transition:all .15s}
 #chat-send:hover{background:var(--accent);color:#000;border-color:var(--accent)}
-#deal-full-info{padding:16px 0}
-.di-section{margin-bottom:18px}
-.di-sec-title{font-size:10px;letter-spacing:2px;color:var(--muted);font-weight:700;text-transform:uppercase;padding:0 0 8px;border-bottom:1px solid var(--border);margin-bottom:8px}
-.di-row{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03);gap:12px}
-.di-lbl{font-size:11px;color:var(--muted);flex:0 0 120px;padding-top:1px}
-.di-val{font-size:13px;color:var(--text);text-align:right;flex:1;line-height:1.4}
-.di-row.big .di-val{font-size:16px;color:var(--accent);font-weight:700}
-.di-row.warn .di-val{color:var(--hot)}
-.di-row.warn .di-lbl{color:var(--hot)}
-.di-row.pos .di-val{color:var(--go)}
+/* PROPERTY TAB */
+.fsec{background:var(--bg2);border:1px solid var(--border);border-radius:6px;margin-bottom:12px;overflow:hidden}
+.fst{font-size:10px;letter-spacing:2px;font-weight:700;color:var(--muted);background:var(--bg3);padding:10px 16px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.prow{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.04);gap:16px}
+.prow:last-child{border-bottom:none}
+.plbl{font-size:11px;color:var(--muted);flex:0 0 140px;padding-top:2px}
+.pval{font-size:13px;color:var(--text);text-align:right;flex:1;line-height:1.5;word-break:break-word}
+.prow.big .pval{font-size:20px;font-weight:700;color:var(--accent);font-family:var(--display)}
+.prow.warn .pval,.prow.warn .plbl{color:var(--hot)}
+.prow.pos .pval,.prow.pos .plbl{color:var(--go)}
+.pnote{font-size:12px;color:var(--text);line-height:1.6;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.pnote:last-child{border-bottom:none}
+.pnote-lbl{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+/* MISC */
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 a{color:var(--accent)}
 </style>
 </head>
 <body>
-<div id="login-screen">
-    <h1>URBAN</h1>
-    <p class="sub">Coralstone Capital Group · Underwriter</p>
-    <div id="login-form">
-      <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
-      <button id="login-btn">ENTER</button>
-    </div>
-    <p id="login-err">Wrong password</p>
-  </div>
 
+<!-- LOGIN -->
+<div id="login-screen">
+  <h1>URBAN</h1>
+  <p class="sub">Coralstone Capital Group · Underwriter</p>
+  <div id="login-form">
+    <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
+    <button id="login-btn">ENTER</button>
+  </div>
+  <p id="login-err">Wrong password</p>
+</div>
+
+<!-- APP -->
 <div id="app">
   <div id="sidebar">
     <div id="sidebar-header">
@@ -220,28 +244,29 @@ a{color:var(--accent)}
   <div id="main">
     <div id="main-empty">
       <h2>SELECT A DEAL</h2>
-      <p>Pull deals from Derek's sheet, then click one to underwrite</p>
+      <p>Deals auto-underwrite when they arrive. Click one to review.</p>
     </div>
+
     <div id="dv">
       <div class="dv-addr" id="dv-addr"></div>
       <div class="dv-city" id="dv-city"></div>
       <div class="dv-hm">
-        <div class="verdict-big" id="dv-v"></div>
+        <div class="verdict-big vPENDING" id="dv-v">PENDING</div>
         <div class="sc" id="dv-sc">?</div>
         <div class="vr" id="dv-vr"></div>
       </div>
       <div class="act-row">
         <button class="btn primary" id="btn-uw">⚡ Underwrite</button>
-        <button class="btn btn-deep" id="btn-deep" title="Uses Sonnet 4 — deeper analysis, ~$0.05">🔬 Deep</button>
-        <button class="btn" id="btn-reuw">↻ Re-underwrite</button>
-        <button class="btn" id="btn-chat">💬 Chat with Urban</button>
-        <button class="btn" id="btn-sheet">📊 Open Sheet</button>
+        <button class="btn btn-deep" id="btn-deep" title="Sonnet 4 — deeper, ~$0.05">🔬 Deep</button>
+        <button class="btn" id="btn-reuw">↻ Re-run</button>
+        <button class="btn" id="btn-chat">💬 Chat</button>
+        <button class="btn" id="btn-sheet">📊 Sheet</button>
       </div>
 
       <div id="pending-card">
         <h3>NOT YET UNDERWRITTEN</h3>
-        <p>Urban hasn't analyzed this deal yet. Click below to start.</p>
-        <button class="btn primary" onclick="doUnderwrite(false)">⚡ Underwrite Now</button>
+        <p>Urban hasn't analyzed this deal yet.</p>
+        <button class="btn primary" id="btn-uw-now">⚡ Underwrite Now</button>
       </div>
 
       <div id="loading-state">
@@ -250,7 +275,7 @@ a{color:var(--accent)}
       </div>
 
       <div id="uw-content">
-        <div class="stabs">
+        <div class="stabs" id="stabs-row">
           <div class="stab on" data-t="overview">Overview</div>
           <div class="stab" data-t="arv">ARV Analysis</div>
           <div class="stab" data-t="rehab">Rehab</div>
@@ -262,7 +287,7 @@ a{color:var(--accent)}
         </div>
 
         <!-- OVERVIEW -->
-        <div class="tc" id="t-overview">
+        <div class="tc active" id="t-overview">
           <div class="rec-box">
             <div class="ct">Urban's Recommendation</div>
             <div class="rec-txt" id="ov-rec"></div>
@@ -298,7 +323,7 @@ a{color:var(--accent)}
         </div>
 
         <!-- ARV -->
-        <div class="tc" id="t-arv" style="display:none">
+        <div class="tc" id="t-arv">
           <div class="arv-cmp">
             <div class="arv-s"><div class="arv-l">Wholesaler's ARV</div><div class="arv-v ws" id="arv-ws"></div></div>
             <div class="arv-s"><div class="arv-l">Urban's TRUE ARV</div><div class="arv-v ur" id="arv-ur"></div></div>
@@ -310,17 +335,17 @@ a{color:var(--accent)}
           </div>
           <div class="card" style="margin-bottom:14px">
             <div class="ct">Comparable Sales</div>
-            <table class="comps-t"><thead><tr><th>Address</th><th>Beds/Bath</th><th>Sqft</th><th>Sale Price</th><th>Date</th><th>Distance</th></tr></thead>
+            <table class="comps-t"><thead><tr><th>Address</th><th>Bd/Ba</th><th>Sqft</th><th>Sale Price</th><th>Date</th><th>Dist</th></tr></thead>
             <tbody id="comps-body"></tbody></table>
           </div>
           <div class="card">
             <div class="ct">Override ARV</div>
-            <div class="ov-row"><span class="ov-lbl">New ARV: $</span><input type="number" class="ov-input" id="ov-arv-in" placeholder="285000"><button class="ov-btn" onclick="applyOv('urbanARV',document.getElementById('ov-arv-in').value)">Apply & Recalc</button></div>
+            <div class="ov-row"><span class="ov-lbl">New ARV: $</span><input type="number" class="ov-input" id="ov-arv-in" placeholder="285000"><button class="ov-btn" id="btn-ov-arv">Apply & Recalc</button></div>
           </div>
         </div>
 
         <!-- REHAB -->
-        <div class="tc" id="t-rehab" style="display:none">
+        <div class="tc" id="t-rehab">
           <div class="card" style="margin-bottom:14px">
             <div class="ct">Scope & Line Items</div>
             <div id="rehab-scope"></div>
@@ -337,12 +362,12 @@ a{color:var(--accent)}
           </div>
           <div class="card">
             <div class="ct">Override Rehab</div>
-            <div class="ov-row"><span class="ov-lbl">New Rehab: $</span><input type="number" class="ov-input" id="ov-rehab-in" placeholder="45000"><button class="ov-btn" onclick="applyOv('rehab',document.getElementById('ov-rehab-in').value)">Apply & Recalc</button></div>
+            <div class="ov-row"><span class="ov-lbl">New Rehab: $</span><input type="number" class="ov-input" id="ov-rehab-in" placeholder="45000"><button class="ov-btn" id="btn-ov-rehab">Apply & Recalc</button></div>
           </div>
         </div>
 
         <!-- FINANCIALS -->
-        <div class="tc" id="t-financials" style="display:none">
+        <div class="tc" id="t-financials">
           <div class="grid">
             <div class="card">
               <div class="ct">Deal Economics</div>
@@ -366,7 +391,7 @@ a{color:var(--accent)}
               <div class="fr"><span class="fl">Rehab</span><span class="fv" id="fi-rh2"></span></div>
               <div class="fr"><span class="fl">Financing (interest + pts)</span><span class="fv" id="fi-fin"></span></div>
               <div class="fr"><span class="fl">Holding Costs</span><span class="fv" id="fi-hc"></span></div>
-              <div class="fr"><span class="fl">Selling (6% agent + 2% close)</span><span class="fv" id="fi-sc"></span></div>
+              <div class="fr"><span class="fl">Selling (6% + 2%)</span><span class="fv" id="fi-sc"></span></div>
               <div class="fr tot"><span class="fl">Total All-In</span><span class="fv" id="fi-tot"></span></div>
             </div>
             <div class="card">
@@ -380,7 +405,7 @@ a{color:var(--accent)}
         </div>
 
         <!-- RENTAL -->
-        <div class="tc" id="t-rental" style="display:none">
+        <div class="tc" id="t-rental">
           <div class="grid">
             <div class="card">
               <div class="ct">Rental Metrics</div>
@@ -399,7 +424,7 @@ a{color:var(--accent)}
         </div>
 
         <!-- NEW CONSTRUCTION -->
-        <div class="tc" id="t-newconstruction" style="display:none">
+        <div class="tc" id="t-newconstruction">
           <div class="card">
             <div class="ct">New Construction Potential</div>
             <div class="grid" style="margin-bottom:14px">
@@ -408,25 +433,24 @@ a{color:var(--accent)}
               <div class="m"><div class="ml">Est. New ARV</div><div class="mv" id="nc-arv"></div></div>
             </div>
             <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:14px" id="nc-notes"></p>
-            <div style="font-size:12px;color:var(--muted);padding:10px;background:var(--bg3);border-radius:4px">⚠️ New construction data is for reference only. Urban does not underwrite new builds — Caleb and Grant evaluate separately.</div>
           </div>
         </div>
 
         <!-- FLAGS -->
-        <div class="tc" id="t-flags" style="display:none">
+        <div class="tc" id="t-flags">
           <div class="flags" id="flags-list"></div>
-          <div style="margin-top:14px;font-size:12px;color:var(--muted);padding:10px;background:var(--bg3);border-radius:4px">🚩 All risk flags are informational. High-severity flags do not automatically disqualify a deal — exceptional deals still get pursued.</div>
         </div>
 
-        <!-- PROPERTY -->
-        <div class="tc" id="t-property" style="display:none">
+        <!-- PROPERTY — ALL DATA FROM SHEET -->
+        <div class="tc" id="t-property">
           <div id="deal-full-info"></div>
         </div>
+
       </div><!-- /uw-content -->
     </div><!-- /dv -->
   </div><!-- /main -->
 
-  <!-- CHAT -->
+  <!-- CHAT PANEL -->
   <div id="chat-panel">
     <div id="chat-hdr">
       <h3>URBAN AI</h3>
@@ -438,7 +462,7 @@ a{color:var(--accent)}
         <button class="auth-btn on" data-a="caleb" onclick="setAuth('caleb')">Caleb</button>
         <button class="auth-btn" data-a="grant" onclick="setAuth('grant')">Grant</button>
       </div>
-      <textarea id="chat-in" placeholder="Correct a number, give Urban new info, ask anything...&#10;Urban remembers corrections and applies them to future deals."></textarea>
+      <textarea id="chat-in" placeholder="Ask Urban anything about this deal. Correct numbers, give better comps, ask what-ifs. Urban remembers your corrections."></textarea>
       <button id="chat-send">Send ↵</button>
     </div>
   </div>
@@ -446,61 +470,68 @@ a{color:var(--accent)}
 
 <script>
 const $ = id => document.getElementById(id);
-let TOKEN = '', deals = [], curDeal = null, curUW = null, curFilter = 'ALL', curTab = 'overview', author = 'caleb';
-const fmt = n => n != null && n !== '' ? '$' + parseInt(n).toLocaleString() : '—';
+const fmt = n => (n != null && n !== '') ? '$' + parseInt(n).toLocaleString() : '—';
 const pct = n => n != null ? parseFloat(n).toFixed(1) + '%' : '—';
-const val = v => v || '—';
 
-// AUTH
+let TOKEN = '', deals = [], curDeal = null, curUW = null, curFilter = 'ALL', author = 'caleb';
+let autoUnderwriteRunning = false;
+
+// ── LOGIN ──────────────────────────────────────────────────────────────────────
 $('pw').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
 $('login-btn').addEventListener('click', doLogin);
-
-// Login
+// URL token support
 (function() {
-  const params = new URLSearchParams(window.location.search);
-  const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
-  const urlToken = params.get('token') || hashParams.get('token');
-  if (urlToken) {
-    $('pw').value = urlToken;
-    doLogin();
-  }
+  const p = new URLSearchParams(window.location.search);
+  const h = new URLSearchParams(window.location.hash.replace('#',''));
+  const t = p.get('token') || h.get('token');
+  if (t) { $('pw').value = t; doLogin(); }
 })();
+
 async function doLogin() {
   TOKEN = $('pw').value.trim();
   const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
   if (r.ok) {
     $('login-screen').style.display = 'none';
     $('app').style.display = 'flex';
-    doLoadDeals();
     doLoadStats();
-  } else { $('login-err').style.display = 'block'; TOKEN = ''; }
+    doLoadDeals();
+  } else {
+    $('login-err').style.display = 'block';
+    TOKEN = '';
+  }
 }
 
-// STATS
+// ── STATS ──────────────────────────────────────────────────────────────────────
 async function doLoadStats() {
-  const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
-  const s = await r.json();
-  $('st-total').textContent = s.totalUnderwritten || 0;
-  $('st-avg').textContent = s.avgScore || '—';
-  $('st-hot').textContent = (s.verdicts?.HOT) || 0;
-  $('st-lessons').textContent = s.lessonsLearned || 0;
+  try {
+    const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
+    const s = await r.json();
+    $('st-total').textContent = s.totalUnderwritten || 0;
+    $('st-avg').textContent = s.avgScore || '—';
+    $('st-hot').textContent = s.verdicts?.HOT || 0;
+    $('st-lessons').textContent = s.lessonsLearned || 0;
+  } catch {}
 }
 
-// DEALS
+// ── DEALS ──────────────────────────────────────────────────────────────────────
 async function doLoadDeals() {
   $('ref-btn').textContent = '↻ Loading...';
-  const r = await fetch('/api/deals', { headers: { 'x-urban-token': TOKEN } });
-  deals = await r.json();
+  try {
+    const r = await fetch('/api/deals', { headers: { 'x-urban-token': TOKEN } });
+    deals = await r.json();
+    renderList();
+    // Auto-underwrite pending deals ONCE on load, not on every refresh
+    if (!autoUnderwriteRunning) autoUnderwritePending();
+  } catch(e) { console.log('Load deals error:', e.message); }
   $('ref-btn').textContent = '↻ Pull from Derek\'s Sheet';
-  renderList();
-  // Auto-underwrite any deals that are still PENDING
-  autoUnderwritePending();
 }
 
 async function autoUnderwritePending() {
+  if (autoUnderwriteRunning) return;
   const pending = deals.filter(d => !d.underwriteStatus || d.underwriteStatus === 'PENDING');
   if (!pending.length) return;
-  console.log(`Auto-underwriting ${pending.length} pending deal(s)...`);
+  autoUnderwriteRunning = true;
+  console.log(`Auto-underwriting ${pending.length} pending deals...`);
   for (const d of pending) {
     try {
       const addr = encodeURIComponent(d.address);
@@ -509,7 +540,9 @@ async function autoUnderwritePending() {
         headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
         body: JSON.stringify({ deep: false })
       });
-      const reader = res.body.getReader(), dec = new TextDecoder();
+      // Read SSE stream
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
       let buf = '';
       while (true) {
         const { done, value } = await reader.read();
@@ -521,20 +554,30 @@ async function autoUnderwritePending() {
           try {
             const data = JSON.parse(line.slice(6));
             if (data.done) {
-              console.log(`✅ Auto-underwrote: ${d.address} → ${data.underwrite.verdict}`);
-              // Update deal in list
+              const uw = data.underwrite;
+              console.log(`✅ ${d.address} → ${uw.verdict}`);
+              // Update in local list
               const idx = deals.findIndex(x => x.address === d.address);
-              if (idx >= 0) { deals[idx].underwriteStatus = data.underwrite.verdict; deals[idx].underwriteScore = data.underwrite.score; }
+              if (idx >= 0) { deals[idx].underwriteStatus = uw.verdict; deals[idx].underwriteScore = uw.score; }
               renderList();
+              doLoadStats();
+              // If this deal is currently selected, show the result
+              if (curDeal && curDeal.address === d.address) renderUW(uw);
             }
+            if (data.skipped) console.log(`⏩ ${d.address} already underwritten`);
           } catch {}
         }
       }
     } catch(e) { console.log(`Auto-underwrite failed for ${d.address}:`, e.message); }
-    await new Promise(r => setTimeout(r, 2000)); // 2s between deals
+    await new Promise(r => setTimeout(r, 3000)); // 3s between deals
   }
+  autoUnderwriteRunning = false;
 }
-$('ref-btn').addEventListener('click', doLoadDeals);
+
+$('ref-btn').addEventListener('click', () => {
+  autoUnderwriteRunning = false; // allow re-run on manual refresh
+  doLoadDeals();
+});
 $('search-input').addEventListener('input', renderList);
 document.querySelectorAll('.ftab').forEach(t => t.addEventListener('click', () => {
   document.querySelectorAll('.ftab').forEach(x => x.classList.remove('on'));
@@ -545,30 +588,39 @@ function renderList() {
   const q = $('search-input').value.toLowerCase();
   const list = $('deal-list');
   const filtered = deals.filter(d => {
-    const v = d.underwriteStatus || 'PENDING';
-    const mf = curFilter === 'ALL' || v === curFilter || (curFilter === 'PENDING' && v === 'PENDING');
-    const ms = !q || `${d.address} ${d.city} ${d.wholesalerCompany} ${d.contact1Company}`.toLowerCase().includes(q);
-    return mf && ms;
+    const status = d.underwriteStatus || 'PENDING';
+    const matchFilter = curFilter === 'ALL' || status === curFilter;
+    const matchSearch = !q || `${d.address} ${d.city} ${d.wholesalerCompany} ${d.contact1Name}`.toLowerCase().includes(q);
+    return matchFilter && matchSearch;
   });
   list.innerHTML = '';
-  if (!filtered.length) { list.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:13px;text-align:center">No deals found</div>'; return; }
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:13px;text-align:center">No deals found</div>';
+    return;
+  }
   filtered.forEach(d => {
     const uid = d.uid || `${d.address}-${d.dateReceived}`;
-    const v = d.underwriteStatus || 'PENDING';
-    const bc = v === 'HARD NO' ? 'b-HARDNO' : `b-${v}`;
+    const status = d.underwriteStatus || 'PENDING';
+    const badgeCls = status === 'HARD NO' ? 'b-HARDNO' : `b-${status}`;
     const price = d.askingPrice ? fmt(d.askingPrice) : 'No price';
+    const isActive = curDeal && (curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`) === uid;
     const el = document.createElement('div');
-    el.className = 'di' + (curDeal && (curDeal.uid||`${curDeal.address}-${curDeal.dateReceived}`) === uid ? ' active' : '');
+    el.className = 'di' + (isActive ? ' active' : '');
     el.dataset.uid = uid;
-    el.innerHTML = `<div class="di-addr">${d.address || 'No address'}</div>
+    el.innerHTML = `
+      <div class="di-addr">${d.address || 'No address'}</div>
       <div class="di-city">${d.city}, ${d.state} · ${d.beds||'?'}bd/${d.baths||'?'}ba · ${d.sqft ? parseInt(d.sqft).toLocaleString() : '?'} sqft</div>
-      <div class="di-meta"><span class="di-price">${price}</span><span class="badge ${bc}">${v}</span>${d.underwriteScore ? `<span class="di-score">${d.underwriteScore}/10</span>` : ''}</div>`;
+      <div class="di-meta">
+        <span class="di-price">${price}</span>
+        <span class="badge ${badgeCls}">${status}</span>
+        ${d.underwriteScore ? `<span class="di-score">${d.underwriteScore}/10</span>` : ''}
+      </div>`;
     el.addEventListener('click', () => selectDeal(d));
     list.appendChild(el);
   });
 }
 
-// SELECT DEAL
+// ── SELECT DEAL ────────────────────────────────────────────────────────────────
 async function selectDeal(d) {
   curDeal = d;
   const uid = d.uid || `${d.address}-${d.dateReceived}`;
@@ -577,76 +629,112 @@ async function selectDeal(d) {
   $('dv').style.display = 'block';
   $('dv-addr').textContent = d.address || 'Unknown';
   $('dv-city').textContent = `${d.city}, ${d.state} ${d.zip} · ${d.county} County · ${d.propertyType}`;
+
+  // Always fill property tab with sheet data
   fillPropTab(d);
-  const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, { headers: { 'x-urban-token': TOKEN } });
-  if (r.ok) { curUW = await r.json(); renderUW(curUW); }
-  else showPending();
+
+  // Try to load existing underwrite
+  try {
+    const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, { headers: { 'x-urban-token': TOKEN } });
+    if (r.ok) {
+      curUW = await r.json();
+      renderUW(curUW);
+    } else {
+      showPending();
+    }
+  } catch {
+    showPending();
+  }
 }
 
 function showPending() {
-  const v = curDeal?.underwriteStatus || 'PENDING';
-  $('dv-v').textContent = v; $('dv-v').className = `verdict-big vPENDING`;
-  $('dv-sc').textContent = '?'; $('dv-vr').textContent = 'Not yet underwritten';
+  $('dv-v').textContent = 'PENDING';
+  $('dv-v').className = 'verdict-big vPENDING';
+  $('dv-sc').textContent = '?';
+  $('dv-vr').textContent = 'Not yet underwritten';
   $('pending-card').style.display = 'block';
   $('loading-state').style.display = 'none';
   $('uw-content').style.display = 'none';
 }
 
-// TAB SWITCHING
+// ── TABS ───────────────────────────────────────────────────────────────────────
 function switchTab(name) {
-  curTab = name;
   document.querySelectorAll('.stab').forEach(t => t.classList.toggle('on', t.dataset.t === name));
-  document.querySelectorAll('.tc').forEach(t => t.style.display = 'none');
+  document.querySelectorAll('.tc').forEach(t => t.classList.remove('active'));
   const el = $('t-' + name);
-  if (el) el.style.display = 'block';
-  // Fill property tab data when switching to it
+  if (el) el.classList.add('active');
   if (name === 'property' && curDeal) fillPropTab(curDeal);
 }
 document.querySelectorAll('.stab').forEach(t => {
   t.addEventListener('click', () => switchTab(t.dataset.t));
 });
 
-// UNDERWRITE
+// ── UNDERWRITE ─────────────────────────────────────────────────────────────────
 $('btn-uw').addEventListener('click', () => doUnderwrite(false, false));
+$('btn-uw-now').addEventListener('click', () => doUnderwrite(false, false));
 $('btn-deep').addEventListener('click', () => doUnderwrite(true, true));
 $('btn-reuw').addEventListener('click', () => doUnderwrite(true, false));
-async function doUnderwrite(force, deep = false) {
+
+async function doUnderwrite(force, deep) {
   if (!curDeal) return;
   const uid = curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
   $('pending-card').style.display = 'none';
   $('uw-content').style.display = 'none';
   $('loading-state').style.display = 'block';
-  $('load-msg').textContent = deep ? '🔬 Deep underwrite with Sonnet 4...' : '⚡ Fast underwriting with Haiku...';
-  const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, {
-    method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ forceRefresh: force, deep })
-  });
-  const reader = r.body.getReader(), dec = new TextDecoder();
-  let buf = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    const lines = buf.split('\n'); buf = lines.pop();
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const data = JSON.parse(line.slice(6));
-      if (data.status) $('load-msg').textContent = data.status;
-      if (data.done) { curUW = data.underwrite; $('loading-state').style.display = 'none'; renderUW(data.underwrite); doLoadStats(); doLoadDeals(); }
-      if (data.error) { $('loading-state').style.display = 'none'; alert('Error: ' + data.error); }
+  $('load-msg').textContent = deep ? '🔬 Deep underwriting with Sonnet 4...' : '⚡ Fetching comps and underwriting...';
+
+  try {
+    const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, {
+      method: 'POST',
+      headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ forceRefresh: force, deep })
+    });
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.status) $('load-msg').textContent = data.status;
+          if (data.done) {
+            curUW = data.underwrite;
+            $('loading-state').style.display = 'none';
+            renderUW(curUW);
+            doLoadStats();
+            // Update deal status in list without re-triggering auto-underwrite
+            const idx = deals.findIndex(x => x.address === curDeal.address);
+            if (idx >= 0) { deals[idx].underwriteStatus = curUW.verdict; deals[idx].underwriteScore = curUW.score; }
+            renderList();
+          }
+          if (data.error) {
+            $('loading-state').style.display = 'none';
+            alert('Error: ' + data.error);
+          }
+        } catch {}
+      }
     }
+  } catch(e) {
+    $('loading-state').style.display = 'none';
+    alert('Error: ' + e.message);
   }
 }
 
-// RENDER UW
+// ── RENDER UNDERWRITE ──────────────────────────────────────────────────────────
 function renderUW(uw) {
   $('pending-card').style.display = 'none';
   $('loading-state').style.display = 'none';
   $('uw-content').style.display = 'block';
-  switchTab('overview'); // always reset to overview on new underwrite
+  switchTab('overview');
+
   const v = uw.verdict || 'REVIEW';
   const vc = v.replace(/\s/g,'').toUpperCase();
-  $('dv-v').textContent = v; $('dv-v').className = `verdict-big v${vc}`;
+  $('dv-v').textContent = v;
+  $('dv-v').className = `verdict-big v${vc}`;
   $('dv-sc').textContent = uw.score || '?';
   $('dv-vr').textContent = uw.verdictReason || '';
 
@@ -664,7 +752,7 @@ function renderUW(uw) {
   $('ov-arvdiff').className = `mv ${diff > 10000 ? 'r' : diff < -10000 ? 'g' : ''}`;
   const cred = uw.wholesalerCredibility?.assessment || 'UNKNOWN';
   $('ov-cred').textContent = cred;
-  $('ov-cred').className = `mv ${cred === 'TRUSTED' ? 'g' : cred === 'QUESTIONABLE' ? 'y' : 'mu'}`;
+  $('ov-cred').className = `mv ${cred==='TRUSTED'?'g':cred==='QUESTIONABLE'?'y':'mu'}`;
   $('ov-trend').textContent = uw.marketAnalysis?.trend || '—';
   $('ov-hold').textContent = uw.financials?.holdMonths ? `${uw.financials.holdMonths} months` : '—';
   $('cc-profit').textContent = uw.financials?.meetsMinimumProfit ? '✅ Yes' : '❌ No';
@@ -672,11 +760,11 @@ function renderUW(uw) {
   const inMkt = ['pasco','hillsborough','polk','pinellas','hernando'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
   $('cc-mkt').textContent = inMkt ? '✅ In Market' : '⚠️ Extended';
   $('cc-mkt').className = `mv ${inMkt ? 'g' : 'y'}`;
-  const floodRaw = curDeal?.floodZone;
-  const hasFlood = floodRaw && !['no','n/a','','none','x'].includes(floodRaw.toLowerCase());
-  $('cc-flood').textContent = hasFlood ? `⚠️ ${floodRaw}` : '✅ None';
+  const flood = curDeal?.floodZone;
+  const hasFlood = flood && !['no','n/a','','none','x'].includes((flood||'').toLowerCase());
+  $('cc-flood').textContent = hasFlood ? `⚠️ ${flood}` : '✅ None';
   $('cc-flood').className = `mv ${hasFlood ? 'r' : 'g'}`;
-  const highFlags = (uw.riskFlags||[]).filter(f => f.severity === 'HIGH').length;
+  const highFlags = (uw.riskFlags||[]).filter(f => f.severity==='HIGH').length;
   $('cc-risk').textContent = highFlags > 0 ? `⚠️ ${highFlags} High` : '✅ Low';
   $('cc-risk').className = `mv ${highFlags > 0 ? 'r' : 'g'}`;
   $('cc-scope').textContent = uw.rehab?.scopeLevel || '—';
@@ -686,43 +774,44 @@ function renderUW(uw) {
   // ARV TAB
   $('arv-ws').textContent = fmt(uw.arv?.wholesalerARV);
   $('arv-ur').textContent = fmt(uw.arv?.urbanARV);
-  $('arv-dn').textContent = diff > 1000 ? `Wholesaler is ${fmt(diff)} (${((diff/(uw.arv?.urbanARV||1))*100).toFixed(1)}%) ABOVE Urban's TRUE ARV`
+  $('arv-dn').textContent = diff > 1000
+    ? `Wholesaler is ${fmt(diff)} (${((diff/(uw.arv?.urbanARV||1))*100).toFixed(1)}%) ABOVE Urban's TRUE ARV`
     : diff < -1000 ? `Wholesaler is ${fmt(Math.abs(diff))} BELOW Urban's ARV — possible upside`
-    : `Urban agrees with wholesaler ARV`;
-  const arvConfEl = $('arv-conf');
+    : 'Urban agrees with wholesaler ARV';
   const ac = uw.arv?.arvConfidence || 'MEDIUM';
-  arvConfEl.textContent = ac; arvConfEl.className = `conf conf-${ac}`;
+  $('arv-conf').textContent = ac;
+  $('arv-conf').className = `conf conf-${ac}`;
   $('arv-notes').textContent = uw.arv?.arvNotes || '';
   const compsTb = $('comps-body');
   compsTb.innerHTML = '';
   (uw.comps||[]).forEach(c => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${c.address||'—'}</td><td>${c.beds||'?'}/${c.baths||'?'}</td><td>${c.sqft ? parseInt(c.sqft).toLocaleString() : '—'}</td><td class="p">${fmt(c.salePrice)}</td><td>${c.saleDate||'—'}</td><td>${c.distanceMiles||'?'}mi</td>`;
+    tr.innerHTML = `<td>${c.address||'—'}</td><td>${c.beds||'?'}/${c.baths||'?'}</td><td>${c.sqft?parseInt(c.sqft).toLocaleString():'—'}</td><td class="p">${fmt(c.salePrice)}</td><td>${c.saleDate||'—'}</td><td>${c.distanceMiles||'?'}mi</td>`;
     compsTb.appendChild(tr);
   });
-  if (!uw.comps?.length) compsTb.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No comps found — Urban estimated from market knowledge</td></tr>';
+  if (!uw.comps?.length) compsTb.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No comps — Urban estimated from market knowledge</td></tr>';
 
   // REHAB TAB
   const sl = (uw.rehab?.scopeLevel||'').toUpperCase();
-  const sc = sl.includes('FULL') ? 'FULL' : sl.includes('LIGHT') ? 'LIGHT' : 'MEDIUM';
+  const sc = sl.includes('FULL')?'FULL':sl.includes('LIGHT')?'LIGHT':'MEDIUM';
   $('rehab-scope').innerHTML = `<div class="scope-tag sc-${sc}">${uw.rehab?.scopeLevel||'MEDIUM'} · ${uw.financials?.holdMonths||5} Month Hold</div>`;
   const liEl = $('rehab-li');
   liEl.innerHTML = '';
   const items = uw.rehab?.lineItems || {};
   let tot = 0;
-  Object.entries(items).forEach(([k,v]) => {
-    if (!v) return; tot += v;
-    liEl.innerHTML += `<div class="rr"><span class="rn">${k.replace(/_/g,' ')}</span><span class="rv">${fmt(v)}</span></div>`;
+  Object.entries(items).forEach(([k, vv]) => {
+    if (!vv) return; tot += vv;
+    liEl.innerHTML += `<div class="rr"><span class="rn">${k.replace(/_/g,' ')}</span><span class="rv">${fmt(vv)}</span></div>`;
   });
   liEl.innerHTML += `<div class="rt"><span class="rn">TOTAL</span><span class="rv">${fmt(tot)}</span></div>`;
   const rng = uw.rehab?.urbanEstimateRange;
   $('rehab-rng').textContent = rng ? `Range: ${fmt(rng.low)} – ${fmt(rng.high)}` : '';
   $('rehab-notes').textContent = uw.rehab?.notes || '';
   $('rehab-miss').textContent = uw.rehab?.missingInfo ? `⚠️ Missing: ${uw.rehab.missingInfo}` : '';
-  $('rh-ws').textContent = uw.rehab?.wholesalerEstimate ? fmt(uw.rehab.wholesalerEstimate) : 'Not provided by wholesaler';
+  $('rh-ws').textContent = uw.rehab?.wholesalerEstimate ? fmt(uw.rehab.wholesalerEstimate) : 'Not provided';
   $('rh-ur').textContent = fmt(uw.rehab?.urbanEstimate);
-  const rc2 = uw.rehab?.confidence || 'MEDIUM';
-  $('rh-conf').innerHTML = `<span class="conf conf-${rc2}">${rc2}</span>`;
+  const rc = uw.rehab?.confidence || 'MEDIUM';
+  $('rh-conf').innerHTML = `<span class="conf conf-${rc}">${rc}</span>`;
 
   // FINANCIALS TAB
   const f = uw.financials || {};
@@ -731,8 +820,8 @@ function renderUW(uw) {
   $('fi-reh').textContent = fmt(uw.rehab?.urbanEstimate);
   $('fi-mao').textContent = fmt(f.mao);
   const oum = f.overUnderMAO;
-  $('fi-oum').textContent = oum != null ? `${oum > 0 ? '+' : ''}${fmt(oum)} ${oum > 0 ? 'over' : 'under'} MAO` : '—';
-  $('fi-oum').className = `fv ${oum > 0 ? 'r' : 'g'}`;
+  $('fi-oum').textContent = oum != null ? `${oum>0?'+':''}${fmt(oum)} ${oum>0?'over':'under'} MAO` : '—';
+  $('fi-oum').className = `fv ${oum>0?'r':'g'}`;
   $('fi-loan').textContent = fmt(f.hardMoney?.loanAmount);
   $('fi-mo').textContent = fmt(f.hardMoney?.monthlyPayment);
   $('fi-hold').textContent = f.holdMonths ? `${f.holdMonths} months` : '—';
@@ -746,208 +835,255 @@ function renderUW(uw) {
   $('fi-tot').textContent = fmt(f.totalCost);
   const pa = f.netProfitAtAsking;
   $('fi-pa').textContent = fmt(pa);
-  $('fi-pa').className = `fv ${pa >= 40000 ? 'g' : pa >= 0 ? '' : 'r'}`;
+  $('fi-pa').className = `fv ${pa>=40000?'g':pa>=0?'':'r'}`;
   $('fi-pm').textContent = fmt(f.netProfitAtMAO);
   $('fi-roi').textContent = f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—';
   $('fi-min').textContent = f.meetsMinimumProfit ? '✅ YES' : '❌ NO';
-  $('fi-min').className = `fv ${f.meetsMinimumProfit ? 'g' : 'r'}`;
+  $('fi-min').className = `fv ${f.meetsMinimumProfit?'g':'r'}`;
 
   // RENTAL TAB
   const rn = uw.rental || {};
-  $('rn-rent').textContent = rn.marketRent ? fmt(rn.marketRent) + '/mo' : '—';
+  $('rn-rent').textContent = rn.marketRent ? fmt(rn.marketRent)+'/mo' : '—';
   $('rn-gy').textContent = pct(rn.grossYield);
   $('rn-ny').textContent = pct(rn.netYield);
   const cf = rn.cashFlow;
-  $('rn-cf').textContent = cf != null ? fmt(cf) + '/mo' : '—';
-  $('rn-cf').className = `mv ${cf >= 0 ? 'g' : 'r'}`;
+  $('rn-cf').textContent = cf != null ? fmt(cf)+'/mo' : '—';
+  $('rn-cf').className = `mv ${cf>=0?'g':'r'}`;
   $('rn-cap').textContent = pct(rn.capRate);
   $('rn-notes').textContent = rn.notes || '';
   $('rn-worth').textContent = rn.worthConsidering ? '✅ Worth considering as rental' : '❌ Flip is stronger exit';
-  $('rn-worth').className = `mv ${rn.worthConsidering ? 'g' : 'mu'}`;
+  $('rn-worth').className = `mv ${rn.worthConsidering?'g':'mu'}`;
 
-  // NEW CONSTRUCTION
+  // NEW CONSTRUCTION TAB
   const nc = uw.newConstruction || {};
   $('nc-lot').textContent = fmt(nc.lotValue);
   $('nc-build').textContent = fmt(nc.estimatedBuildCost);
   $('nc-arv').textContent = fmt(nc.estimatedNewARV);
   $('nc-notes').textContent = nc.notes || '';
 
-  // FLAGS
+  // FLAGS TAB
   const flagEl = $('flags-list');
   flagEl.innerHTML = '';
-  (uw.riskFlags||[]).sort((a,b) => ['HIGH','MEDIUM','LOW'].indexOf(a.severity) - ['HIGH','MEDIUM','LOW'].indexOf(b.severity)).forEach(f => {
-    flagEl.innerHTML += `<div class="flag flag-${f.severity}"><div class="fn">⚑ ${f.flag} · ${f.severity}</div><div class="fd">${f.detail}</div></div>`;
-  });
-  if (!uw.riskFlags?.length) flagEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No flags identified</div>';
+  (uw.riskFlags||[])
+    .sort((a,b) => ['HIGH','MEDIUM','LOW'].indexOf(a.severity)-['HIGH','MEDIUM','LOW'].indexOf(b.severity))
+    .forEach(f => {
+      flagEl.innerHTML += `<div class="flag flag-${f.severity}"><div class="fn">⚑ ${f.flag} · ${f.severity}</div><div class="fd">${f.detail}</div></div>`;
+    });
+  if (!uw.riskFlags?.length) flagEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No risk flags identified</div>';
 
   // CHAT HISTORY
   renderChat(uw.chatHistory || []);
 }
 
-// PROPERTY TAB — shows ALL data from Derek's sheet
+// ── PROPERTY TAB — ALL SHEET DATA ─────────────────────────────────────────────
 function fillPropTab(d) {
   const el = $('deal-full-info');
   if (!el) return;
-  const v = x => (x && x !== '' && x !== '0') ? x : null;
+  const vv = x => (x && x !== '' && x !== '0') ? x : null;
   const money = x => x && parseFloat(x) ? '$' + parseFloat(x).toLocaleString() : null;
-  const link = (url, label) => url ? `<a href="${url}" target="_blank" style="color:var(--accent);text-decoration:none">${label} ↗</a>` : null;
+  const lnk = (url, label) => url ? `<a href="${url}" target="_blank">${label} ↗</a>` : null;
+  const hasFlag = x => x && !['no','n/a','none','x',''].includes((x||'').toLowerCase().trim());
 
-  const row = (label, val, opts={}) => {
-    if (!val && !opts.always) return '';
-    const cls = opts.warn ? 'warn' : opts.good ? 'good' : opts.big ? 'big' : '';
-    return `<div class="fr ${cls}"><div class="fl">${label}</div><div class="fv2">${val || '—'}</div></div>`;
+  const prow = (label, val, opts={}) => {
+    if (!val) return '';
+    const cls = opts.warn ? 'warn' : opts.big ? 'big' : opts.pos ? 'pos' : '';
+    return `<div class="prow ${cls}"><div class="plbl">${label}</div><div class="pval">${val}</div></div>`;
   };
-
   const sec = (icon, title, rows) => {
     const content = rows.filter(Boolean).join('');
     if (!content) return '';
     return `<div class="fsec"><div class="fst">${icon} ${title}</div>${content}</div>`;
   };
+  const note = (label, val, color) => val ? `<div class="pnote" ${color?`style="color:${color}"`:''}><div class="pnote-lbl" ${color?`style="color:${color}"`:''}>${label}</div>${val}</div>` : '';
 
-  const hasFlag = x => x && !['no','n/a','none','x',''].includes((x||'').toLowerCase().trim());
-
-  el.innerHTML = `
-  <style>
-    #deal-full-info { padding: 0; }
-    .fsec { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
-    .fst { font-size: 10px; letter-spacing: 2px; font-weight: 700; color: var(--muted); background: var(--bg3); padding: 10px 16px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
-    .fr { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); gap: 16px; }
-    .fr:last-child { border-bottom: none; }
-    .fl { font-size: 11px; color: var(--muted); flex: 0 0 140px; padding-top: 2px; }
-    .fv2 { font-size: 13px; color: var(--text); text-align: right; flex: 1; line-height: 1.5; word-break: break-word; }
-    .fr.big .fv2 { font-size: 20px; font-weight: 700; color: var(--accent); font-family: var(--display); letter-spacing: 1px; }
-    .fr.warn .fv2 { color: var(--hot); }
-    .fr.warn .fl { color: var(--hot); }
-    .fr.good .fv2 { color: var(--go); }
-    .fr.good .fl { color: var(--go); }
-    .fnote { font-size: 12px; color: var(--text); line-height: 1.6; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .fnote:last-child { border-bottom: none; }
-    .fnote-lbl { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
-  </style>
-
-  ${sec('📋', 'DEAL INFO', [
-    row('Date Received', v(d.dateReceived)),
-    row('Days Active', v(d.daysActive)),
-    row('Expires', v(d.expires), {warn: !!v(d.expires)}),
-    row('Email Subject', v(d.emailSubject)),
-    row('List / Source', v(d.listName)),
-    row('Photos', v(d.photosIncluded) ? `${v(d.photosIncluded)} · ${v(d.photoCount) || '?'} photos` : null),
-  ])}
-
-  ${sec('🏠', 'PROPERTY', [
-    row('Address', `${d.address}<br><span style="font-size:11px;color:var(--muted)">${d.city}, ${d.state} ${d.zip} — ${d.county} County</span>`),
-    row('Subdivision', v(d.subdivision)),
-    row('School District', v(d.schoolDistrict)),
-    row('Type', v(d.propertyType)),
-    row('Beds / Baths', `${v(d.beds) || '?'} bd · ${v(d.baths) || '?'} ba${v(d.halfBaths) ? ' · ' + d.halfBaths + ' half' : ''}`),
-    row('Sqft', v(d.sqft) ? parseInt(d.sqft).toLocaleString() + ' sqft' + (v(d.lotSqft) ? ` · Lot: ${parseInt(d.lotSqft).toLocaleString()} sqft` : '') + (v(d.lotAcres) ? ` (${d.lotAcres} ac)` : '') : null),
-    row('Year Built', v(d.yearBuilt)),
-    row('Stories', v(d.stories)),
-    row('Construction', v(d.construction)),
-    row('Foundation', v(d.foundation)),
-    row('Occupancy', v(d.occupancy)),
-    row('Pool', v(d.pool) ? (d.pool + (v(d.poolNotes) ? ' — ' + d.poolNotes : '')) : null),
-    row('Garage', v(d.garage) ? (d.garage + (v(d.garageSpaces) ? ' · ' + d.garageSpaces + ' spaces' : '')) + (v(d.carport) ? ' · Carport' : '') : null),
-    row('Basement / Attic', [v(d.basement) && 'Basement: '+d.basement, v(d.attic) && 'Attic: '+d.attic].filter(Boolean).join(' · ') || null),
-    row('Flood Zone', hasFlag(d.floodZone) ? d.floodZone : null, {warn: hasFlag(d.floodZone)}),
-    row('HOA', hasFlag(d.hoa) ? (d.hoa + (v(d.hoaFee) ? ' — $'+parseFloat(d.hoaFee).toLocaleString()+'/mo' : '')) : null, {warn: hasFlag(d.hoa)}),
-    d.googleMapsLink ? `<div class="fr"><div class="fl">Maps</div><div class="fv2">${link(d.googleMapsLink, 'Open in Maps')}</div></div>` : '',
-  ])}
-
-  ${sec('💰', 'WHOLESALER NUMBERS', [
-    row('Asking Price', money(d.askingPrice), {big: true}),
-    row('Wholesaler ARV', money(d.wholesalerARV), {big: true}),
-    row('Repairs Estimate', money(d.repairsEstimate) || 'Not provided', {warn: !v(d.repairsEstimate)}),
-    row('Assignment Fee', money(d.assignmentFee)),
-    row('Equity', money(d.equity)),
-    row('Annual Taxes', money(d.annualTaxes)),
-    row('Rent (Current)', money(d.rentCurrent)),
-    row('Rent (Market Est)', money(d.rentMarket)),
-    row('Close Date', v(d.closeDate)),
-    row('Inspection Period', v(d.inspectionPeriod)),
-    row('Earnest Money', money(d.earnestMoney)),
-    row('Financing Terms', v(d.financingTerms)),
-    row('Cash Only', v(d.cashOnly), {warn: (d.cashOnly||'').toLowerCase() === 'yes'}),
-  ])}
-
-  ${sec('🔧', 'SYSTEMS & CONDITION', [
-    row('Overall Condition', v(d.overall_condition), {warn: (d.overall_condition||'').toLowerCase().includes('poor') || (d.overall_condition||'').toLowerCase().includes('bad')}),
-    row('Roof', [v(d.roofType), v(d.roofAge)].filter(Boolean).join(' · ') || null),
-    row('HVAC / AC', v(d.acYear)),
-    row('Water Heater', v(d.waterHeater)),
-    row('Electrical', v(d.electrical)),
-    row('Plumbing', v(d.plumbing)),
-    row('Windows', v(d.windows)),
-    row('Flooring', v(d.flooring)),
-  ])}
-
-  ${[v(d.kitchenNotes), v(d.bathNotes), v(d.whatIsUpdated), v(d.whatNeedsWork), v(d.highlights), v(d.redFlags), v(d.additionalNotes)].some(Boolean) ? `
-  <div class="fsec">
-    <div class="fst">📝 CONDITION NOTES</div>
-    ${v(d.kitchenNotes) ? `<div class="fnote"><div class="fnote-lbl">Kitchen</div>${d.kitchenNotes}</div>` : ''}
-    ${v(d.bathNotes) ? `<div class="fnote"><div class="fnote-lbl">Bathrooms</div>${d.bathNotes}</div>` : ''}
-    ${v(d.whatIsUpdated) ? `<div class="fnote" style="color:var(--go)"><div class="fnote-lbl" style="color:var(--go)">✅ What's Updated</div>${d.whatIsUpdated}</div>` : ''}
-    ${v(d.whatNeedsWork) ? `<div class="fnote" style="color:var(--hot)"><div class="fnote-lbl" style="color:var(--hot)">🔨 What Needs Work</div>${d.whatNeedsWork}</div>` : ''}
-    ${v(d.highlights) ? `<div class="fnote" style="color:var(--go)"><div class="fnote-lbl" style="color:var(--go)">⭐ Highlights</div>${d.highlights}</div>` : ''}
-    ${v(d.redFlags) ? `<div class="fnote" style="color:var(--hot)"><div class="fnote-lbl" style="color:var(--hot)">🚩 Red Flags</div>${d.redFlags}</div>` : ''}
-    ${v(d.additionalNotes) ? `<div class="fnote"><div class="fnote-lbl">Additional Notes</div>${d.additionalNotes}</div>` : ''}
-  </div>` : ''}
-
-  ${[v(d.comp1), v(d.comp2), v(d.comp3)].some(Boolean) ? `
-  <div class="fsec">
-    <div class="fst">🏘️ WHOLESALER COMPS</div>
-    ${v(d.comp1) ? `<div class="fnote"><div class="fnote-lbl">Comp 1</div>${d.comp1}</div>` : ''}
-    ${v(d.comp2) ? `<div class="fnote"><div class="fnote-lbl">Comp 2</div>${d.comp2}</div>` : ''}
-    ${v(d.comp3) ? `<div class="fnote"><div class="fnote-lbl">Comp 3</div>${d.comp3}</div>` : ''}
-  </div>` : ''}
-
-  ${sec('👤', 'SELLER INFO', [
-    row('Seller Name', v(d.sellerName)),
-    row('Seller Phone', v(d.sellerPhone)),
-    row('Situation', v(d.sellerSituation)),
-    row('Motivation', v(d.sellerMotivation)),
-  ])}
-
-  ${sec('📞', 'WHOLESALER CONTACT', [
-    row('Company', v(d.wholesalerCompany || d.contact1Company)),
-    row('Contact 1', [v(d.contact1Name), v(d.contact1Title)].filter(Boolean).join(' · ')),
-    row('Phone', [v(d.contact1Phone), v(d.contact1Phone2)].filter(Boolean).join(' · ')),
-    row('Email', v(d.contact1Email)),
-    row('Website', v(d.contact1Website) ? link(d.contact1Website.startsWith('http') ? d.contact1Website : 'https://'+d.contact1Website, d.contact1Website) : null),
-    v(d.contact2Name) ? row('Contact 2', [v(d.contact2Name), v(d.contact2Title), v(d.contact2Company)].filter(Boolean).join(' · ')) : null,
-    v(d.contact2Phone) ? row('Phone 2', [v(d.contact2Phone), v(d.contact2Email)].filter(Boolean).join(' · ')) : null,
-    v(d.contact3Name) ? row('Contact 3', [v(d.contact3Name), v(d.contact3Phone), v(d.contact3Email)].filter(Boolean).join(' · ')) : null,
-    v(d.allPhones) ? row('All Phones', d.allPhones) : null,
-    v(d.allEmails) ? row('All Emails', d.allEmails) : null,
-    v(d.allNames) ? row('All Names', d.allNames) : null,
-  ])}
-
-  ${sec('🔗', 'LINKS', [
-    d.zillowLink ? `<div class="fr"><div class="fl">Zillow</div><div class="fv2">${link(d.zillowLink, 'View on Zillow')}</div></div>` : 
-      `<div class="fr"><div class="fl">Zillow</div><div class="fv2">${link('https://www.zillow.com/homes/'+encodeURIComponent(d.address+' '+d.city+' '+d.state)+'_rb/', 'Search Zillow')}</div></div>`,
-    d.driveLink ? `<div class="fr"><div class="fl">Google Drive</div><div class="fv2">${link(d.driveLink, 'Open Drive Folder')}</div></div>` : '',
-    d.googleMapsLink ? `<div class="fr"><div class="fl">Maps</div><div class="fv2">${link(d.googleMapsLink, 'Google Maps')}</div></div>` : '',
-    d.allOtherLinks ? `<div class="fr"><div class="fl">Other Links</div><div class="fv2" style="font-size:11px">${d.allOtherLinks}</div></div>` : '',
-    d.photoLinks ? `<div class="fr"><div class="fl">Photos</div><div class="fv2" style="font-size:11px">${d.photoLinks}</div></div>` : '',
-  ])}
-  `;
+  el.innerHTML = [
+    sec('📋', 'DEAL INFO', [
+      prow('Date Received', vv(d.dateReceived)),
+      prow('Days Active', vv(d.daysActive)),
+      prow('Expires', vv(d.expires), {warn: !!vv(d.expires)}),
+      prow('Email Subject', vv(d.emailSubject)),
+      prow('List / Source', vv(d.listName)),
+      prow('Photos', vv(d.photosIncluded) ? `${d.photosIncluded} · ${vv(d.photoCount)||'?'} photos` : null),
+    ]),
+    sec('🏠', 'PROPERTY', [
+      prow('Address', `${d.address}<br><small style="color:var(--muted)">${d.city}, ${d.state} ${d.zip} — ${d.county} County</small>`),
+      prow('Subdivision', vv(d.subdivision)),
+      prow('School District', vv(d.schoolDistrict)),
+      prow('Type', vv(d.propertyType)),
+      prow('Beds / Baths', `${vv(d.beds)||'?'} bd · ${vv(d.baths)||'?'} ba${vv(d.halfBaths)?' · '+d.halfBaths+' half':''}`),
+      prow('Sqft', vv(d.sqft) ? parseInt(d.sqft).toLocaleString()+' sqft'+(vv(d.lotSqft)?' · Lot: '+parseInt(d.lotSqft).toLocaleString()+' sqft':'')+(vv(d.lotAcres)?' ('+d.lotAcres+' ac)':'') : null),
+      prow('Year Built', vv(d.yearBuilt)),
+      prow('Stories', vv(d.stories)),
+      prow('Construction', vv(d.construction)),
+      prow('Foundation', vv(d.foundation)),
+      prow('Occupancy', vv(d.occupancy)),
+      prow('Pool', vv(d.pool) ? d.pool+(vv(d.poolNotes)?' — '+d.poolNotes:'') : null),
+      prow('Garage', vv(d.garage) ? d.garage+(vv(d.garageSpaces)?' · '+d.garageSpaces+' spaces':'')+(vv(d.carport)?' · Carport':'') : null),
+      prow('Basement / Attic', [vv(d.basement)&&'Basement: '+d.basement, vv(d.attic)&&'Attic: '+d.attic].filter(Boolean).join(' · ')||null),
+      prow('Flood Zone', hasFlag(d.floodZone) ? d.floodZone : null, {warn: hasFlag(d.floodZone)}),
+      prow('HOA', hasFlag(d.hoa) ? d.hoa+(vv(d.hoaFee)?' — $'+parseFloat(d.hoaFee).toLocaleString()+'/mo':'') : null, {warn: true}),
+      vv(d.googleMapsLink) ? `<div class="prow"><div class="plbl">Maps</div><div class="pval">${lnk(d.googleMapsLink,'Open in Maps')}</div></div>` : '',
+    ]),
+    sec('💰', 'WHOLESALER NUMBERS', [
+      prow('Asking Price', money(d.askingPrice), {big: true}),
+      prow('Wholesaler ARV', money(d.wholesalerARV), {big: true}),
+      prow('Repairs Estimate', money(d.repairsEstimate)||'Not provided'),
+      prow('Assignment Fee', money(d.assignmentFee)),
+      prow('Equity', money(d.equity)),
+      prow('Annual Taxes', money(d.annualTaxes)),
+      prow('Rent (Current)', money(d.rentCurrent)),
+      prow('Rent (Market Est)', money(d.rentMarket)),
+      prow('Close Date', vv(d.closeDate)),
+      prow('Inspection Period', vv(d.inspectionPeriod)),
+      prow('Earnest Money', money(d.earnestMoney)),
+      prow('Financing Terms', vv(d.financingTerms)),
+      prow('Cash Only', vv(d.cashOnly), {warn: (d.cashOnly||'').toLowerCase()==='yes'}),
+    ]),
+    sec('🔧', 'SYSTEMS & CONDITION', [
+      prow('Overall Condition', vv(d.overall_condition), {warn: (d.overall_condition||'').toLowerCase().includes('poor')||(d.overall_condition||'').toLowerCase().includes('bad')}),
+      prow('Roof', [vv(d.roofType),vv(d.roofAge)].filter(Boolean).join(' · ')||null),
+      prow('HVAC / AC', vv(d.acYear)),
+      prow('Water Heater', vv(d.waterHeater)),
+      prow('Electrical', vv(d.electrical)),
+      prow('Plumbing', vv(d.plumbing)),
+      prow('Windows', vv(d.windows)),
+      prow('Flooring', vv(d.flooring)),
+    ]),
+    [vv(d.kitchenNotes),vv(d.bathNotes),vv(d.whatIsUpdated),vv(d.whatNeedsWork),vv(d.highlights),vv(d.redFlags),vv(d.additionalNotes)].some(Boolean) ? `
+    <div class="fsec"><div class="fst">📝 CONDITION NOTES</div>
+      ${note('Kitchen', vv(d.kitchenNotes))}
+      ${note('Bathrooms', vv(d.bathNotes))}
+      ${note('✅ What\'s Updated', vv(d.whatIsUpdated), 'var(--go)')}
+      ${note('🔨 What Needs Work', vv(d.whatNeedsWork), 'var(--hot)')}
+      ${note('⭐ Highlights', vv(d.highlights), 'var(--go)')}
+      ${note('🚩 Red Flags', vv(d.redFlags), 'var(--hot)')}
+      ${note('Additional Notes', vv(d.additionalNotes))}
+    </div>` : '',
+    [vv(d.comp1),vv(d.comp2),vv(d.comp3)].some(Boolean) ? `
+    <div class="fsec"><div class="fst">🏘️ WHOLESALER COMPS</div>
+      ${note('Comp 1', vv(d.comp1))}
+      ${note('Comp 2', vv(d.comp2))}
+      ${note('Comp 3', vv(d.comp3))}
+    </div>` : '',
+    sec('👤', 'SELLER INFO', [
+      prow('Seller Name', vv(d.sellerName)),
+      prow('Seller Phone', vv(d.sellerPhone)),
+      prow('Situation', vv(d.sellerSituation)),
+      prow('Motivation', vv(d.sellerMotivation)),
+    ]),
+    sec('📞', 'WHOLESALER CONTACT', [
+      prow('Company', vv(d.wholesalerCompany||d.contact1Company)),
+      prow('Contact 1', [vv(d.contact1Name),vv(d.contact1Title)].filter(Boolean).join(' · ')),
+      prow('Phone', [vv(d.contact1Phone),vv(d.contact1Phone2)].filter(Boolean).join(' · ')),
+      prow('Email', vv(d.contact1Email)),
+      vv(d.contact1Website) ? `<div class="prow"><div class="plbl">Website</div><div class="pval">${lnk(d.contact1Website.startsWith('http')?d.contact1Website:'https://'+d.contact1Website, d.contact1Website)}</div></div>` : '',
+      vv(d.contact2Name) ? prow('Contact 2', [vv(d.contact2Name),vv(d.contact2Title),vv(d.contact2Company)].filter(Boolean).join(' · ')) : null,
+      vv(d.contact2Phone) ? prow('Phone 2', [vv(d.contact2Phone),vv(d.contact2Email)].filter(Boolean).join(' · ')) : null,
+      vv(d.contact3Name) ? prow('Contact 3', [vv(d.contact3Name),vv(d.contact3Phone),vv(d.contact3Email)].filter(Boolean).join(' · ')) : null,
+      vv(d.allPhones) ? prow('All Phones', d.allPhones) : null,
+      vv(d.allEmails) ? prow('All Emails', d.allEmails) : null,
+      vv(d.allNames) ? prow('All Names', d.allNames) : null,
+    ]),
+    sec('🔗', 'LINKS', [
+      `<div class="prow"><div class="plbl">Zillow</div><div class="pval">${d.zillowLink ? lnk(d.zillowLink,'View on Zillow') : lnk('https://www.zillow.com/homes/'+encodeURIComponent(d.address+' '+d.city+' '+d.state)+'_rb/','Search Zillow')}</div></div>`,
+      vv(d.driveLink) ? `<div class="prow"><div class="plbl">Google Drive</div><div class="pval">${lnk(d.driveLink,'Open Drive Folder')}</div></div>` : '',
+      vv(d.googleMapsLink) ? `<div class="prow"><div class="plbl">Maps</div><div class="pval">${lnk(d.googleMapsLink,'Google Maps')}</div></div>` : '',
+      vv(d.allOtherLinks) ? `<div class="prow"><div class="plbl">Other Links</div><div class="pval" style="font-size:11px">${d.allOtherLinks}</div></div>` : '',
+      vv(d.photoLinks) ? `<div class="prow"><div class="plbl">Photos</div><div class="pval" style="font-size:11px">${d.photoLinks}</div></div>` : '',
+    ]),
+  ].join('');
 }
 
-
-// postMessage bridge — lets parent iframe control app (for Claude's testing)
-window.addEventListener('message', (e) => {
-  if (e.data?.action === 'selectDeal' && e.data.index >= 0) {
-    const d = deals[e.data.index];
-    if (d) selectDeal(d);
-  }
-  if (e.data?.action === 'underwrite') doUnderwrite(true, false);
-  if (e.data?.action === 'deepUnderwrite') doUnderwrite(true, true);
-  if (e.data?.action === 'switchTab' && e.data.tab) switchTab(e.data.tab);
-  if (e.data?.action === 'getDeals') e.source.postMessage({ deals: deals.map(d => ({address:d.address, city:d.city, status:d.underwriteStatus})) }, '*');
+// ── OVERRIDES ─────────────────────────────────────────────────────────────────
+$('btn-ov-arv').addEventListener('click', async () => {
+  if (!curUW) return;
+  const val = $('ov-arv-in').value;
+  if (!val) return;
+  const uid = curUW.uid;
+  const r = await fetch(`/api/override/${encodeURIComponent(uid)}`, {
+    method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ field: 'urbanARV', value: val, author })
+  });
+  if (r.ok) { curUW = await r.json(); renderUW(curUW); }
+});
+$('btn-ov-rehab').addEventListener('click', async () => {
+  if (!curUW) return;
+  const val = $('ov-rehab-in').value;
+  if (!val) return;
+  const uid = curUW.uid;
+  const r = await fetch(`/api/override/${encodeURIComponent(uid)}`, {
+    method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ field: 'rehab', value: val, author })
+  });
+  if (r.ok) { curUW = await r.json(); renderUW(curUW); }
 });
 
-// SHEET LINK
-$('btn-sheet').addEventListener('click', () => window.open('https://docs.google.com/spreadsheets/d/' + encodeURIComponent('1las1OYRL2ZgIZjq5_K4bcMM9dAhGxgMOBghfyR29ynU'), '_blank'));
+// ── CHAT ──────────────────────────────────────────────────────────────────────
+$('btn-chat').addEventListener('click', () => $('chat-panel').classList.add('open'));
+$('chat-x').addEventListener('click', () => $('chat-panel').classList.remove('open'));
+function setAuth(a) {
+  author = a;
+  document.querySelectorAll('.auth-btn').forEach(b => b.classList.toggle('on', b.dataset.a === a));
+}
+$('chat-send').addEventListener('click', doChat);
+$('chat-in').addEventListener('keydown', e => { if (e.key==='Enter' && (e.metaKey||e.ctrlKey)) doChat(); });
+
+async function doChat() {
+  const msg = $('chat-in').value.trim();
+  if (!msg || !curDeal) return;
+  const uid = curUW?.uid || curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
+  $('chat-in').value = '';
+  addMsg('u', `${author.toUpperCase()}: ${msg}`);
+  addMsg('a', '...');
+  try {
+    const r = await fetch(`/api/chat/${encodeURIComponent(uid)}`, {
+      method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, author })
+    });
+    const data = await r.json();
+    const msgs = $('chat-msgs');
+    msgs.removeChild(msgs.lastChild); // remove "..."
+    if (data.reply) addMsg('a', data.reply);
+    else if (data.error) addMsg('a', '⚠️ Error: ' + data.error);
+  } catch(e) {
+    const msgs = $('chat-msgs');
+    if (msgs.lastChild) msgs.removeChild(msgs.lastChild);
+    addMsg('a', '⚠️ Error: ' + e.message);
+  }
+}
+
+function renderChat(history) {
+  const msgs = $('chat-msgs');
+  msgs.innerHTML = '';
+  if (!history?.length) {
+    msgs.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">No conversation yet.<br>Ask Urban anything about this deal.<br>Corrections are remembered permanently.</div>';
+    return;
+  }
+  history.forEach(h => addMsg(h.role==='user'?'u':'a', h.content, h.timestamp));
+}
+
+function addMsg(role, content, ts) {
+  const msgs = $('chat-msgs');
+  const d = document.createElement('div');
+  d.className = `cm ${role}`;
+  d.innerHTML = `<div class="bbl">${content.replace(/\n/g,'<br>')}</div>${ts?`<div class="cts">${new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>`:''}`;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ── SHEET LINK ─────────────────────────────────────────────────────────────────
+$('btn-sheet').addEventListener('click', () => {
+  window.open('https://docs.google.com/spreadsheets/d/1las1OYRL2ZgIZjq5_K4bcMM9dAhGxgMOBghfyR29ynU', '_blank');
+});
+
+// ── POSTMESSAGE BRIDGE (for testing) ─────────────────────────────────────────
+window.addEventListener('message', e => {
+  if (e.data?.action === 'selectDeal' && e.data.index >= 0 && deals[e.data.index]) selectDeal(deals[e.data.index]);
+  if (e.data?.action === 'underwrite') doUnderwrite(true, false);
+  if (e.data?.action === 'deepUnderwrite') doUnderwrite(true, true);
+  if (e.data?.action === 'switchTab') switchTab(e.data.tab);
+  if (e.data?.action === 'getDeals') e.source?.postMessage({ deals: deals.map(d=>({address:d.address,status:d.underwriteStatus})) }, '*');
+});
 </script>
 </body>
 </html>
