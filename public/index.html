@@ -420,57 +420,7 @@ a{color:var(--accent)}
 
         <!-- PROPERTY -->
         <div class="tc" id="t-property" style="display:none">
-          <div class="grid">
-            <div class="card">
-              <div class="ct">Property Details</div>
-              <div class="m"><div class="ml">Type</div><div class="mv" id="pp-type"></div></div>
-              <div class="m"><div class="ml">Beds / Baths</div><div class="mv" id="pp-beds"></div></div>
-              <div class="m"><div class="ml">Sqft</div><div class="mv" id="pp-sqft"></div></div>
-              <div class="m"><div class="ml">Year Built</div><div class="mv" id="pp-yr"></div></div>
-              <div class="m"><div class="ml">Lot</div><div class="mv" id="pp-lot"></div></div>
-              <div class="m"><div class="ml">Construction</div><div class="mv" id="pp-con"></div></div>
-              <div class="m"><div class="ml">Foundation</div><div class="mv" id="pp-fnd"></div></div>
-              <div class="m"><div class="ml">Pool</div><div class="mv" id="pp-pool"></div></div>
-              <div class="m"><div class="ml">HOA</div><div class="mv" id="pp-hoa"></div></div>
-              <div class="m"><div class="ml">Flood Zone</div><div class="mv" id="pp-fz"></div></div>
-              <div class="m"><div class="ml">Occupancy</div><div class="mv" id="pp-occ"></div></div>
-            </div>
-            <div class="card">
-              <div class="ct">Systems</div>
-              <div class="m"><div class="ml">Roof</div><div class="mv" id="sy-roof"></div></div>
-              <div class="m"><div class="ml">AC / HVAC</div><div class="mv" id="sy-ac"></div></div>
-              <div class="m"><div class="ml">Water Heater</div><div class="mv" id="sy-wh"></div></div>
-              <div class="m"><div class="ml">Electrical</div><div class="mv" id="sy-el"></div></div>
-              <div class="m"><div class="ml">Plumbing</div><div class="mv" id="sy-pl"></div></div>
-              <div class="m"><div class="ml">Windows</div><div class="mv" id="sy-win"></div></div>
-              <div class="m"><div class="ml">Flooring</div><div class="mv" id="sy-fl"></div></div>
-            </div>
-            <div class="card">
-              <div class="ct">Wholesaler Contact</div>
-              <div class="m"><div class="ml">Name</div><div class="mv" id="ws-name"></div></div>
-              <div class="m"><div class="ml">Company</div><div class="mv" id="ws-co"></div></div>
-              <div class="m"><div class="ml">Phone</div><div class="mv" id="ws-ph"></div></div>
-              <div class="m"><div class="ml">Email</div><div class="mv" id="ws-em"></div></div>
-              <div class="m"><div class="ml">Close Date</div><div class="mv" id="ws-cd"></div></div>
-              <div class="m"><div class="ml">Inspection Period</div><div class="mv" id="ws-ip"></div></div>
-              <div class="m"><div class="ml">Earnest Money</div><div class="mv" id="ws-ern"></div></div>
-              <div class="m"><div class="ml">Cash Only?</div><div class="mv" id="ws-cash"></div></div>
-            </div>
-          </div>
-          <div class="card" style="margin-top:14px">
-            <div class="ct">Notes & Links</div>
-            <div class="m"><div class="ml">Highlights</div><div class="mv" id="pp-hi"></div></div>
-            <div class="m"><div class="ml">Needs Work</div><div class="mv" id="pp-nw"></div></div>
-            <div class="m"><div class="ml">Wholesaler Red Flags</div><div class="mv r" id="pp-rf"></div></div>
-            <div class="m"><div class="ml">Google Drive</div><div class="mv" id="pp-gd"></div></div>
-            <div class="m"><div class="ml">Zillow</div><div class="mv" id="pp-zl"></div></div>
-            <div class="m"><div class="ml">Additional Notes</div><div class="mv" id="pp-addnotes"></div></div>
-            <div class="m"><div class="ml">Kitchen</div><div class="mv" id="pp-kitchen"></div></div>
-            <div class="m"><div class="ml">Bathrooms</div><div class="mv" id="pp-baths"></div></div>
-            <div class="m"><div class="ml">Updated</div><div class="mv" id="pp-updated"></div></div>
-          </div>
-          <!-- FULL RAW DEAL DATA -->
-          <div id="deal-full-info" style="margin-top:14px"></div>
+          <div id="deal-full-info"></div>
         </div>
       </div><!-- /uw-content -->
     </div><!-- /dv -->
@@ -820,190 +770,155 @@ function renderUW(uw) {
   renderChat(uw.chatHistory || []);
 }
 
-// PROPERTY TAB
+// PROPERTY TAB — shows ALL data from Derek's sheet
 function fillPropTab(d) {
-  const v = x => x || '—';
-  $('pp-type').textContent = v(d.propertyType);
-  $('pp-beds').textContent = `${v(d.beds)} bd / ${v(d.baths)} ba`;
-  $('pp-sqft').textContent = d.sqft ? parseInt(d.sqft).toLocaleString() + ' sqft' : '—';
-  $('pp-yr').textContent = v(d.yearBuilt);
-  $('pp-lot').textContent = d.lotAcres ? d.lotAcres + ' acres' : '—';
-  $('pp-con').textContent = v(d.construction);
-  $('pp-fnd').textContent = v(d.foundation);
-  $('pp-pool').textContent = v(d.pool);
-  $('pp-hoa').textContent = d.hoaFee ? fmt(d.hoaFee) + '/mo' : v(d.hoa);
-  $('pp-fz').textContent = v(d.floodZone);
-  $('pp-occ').textContent = v(d.occupancy);
-  $('sy-roof').textContent = [d.roofType, d.roofAge].filter(Boolean).join(' · ') || '—';
-  $('sy-ac').textContent = v(d.acYear);
-  $('sy-wh').textContent = v(d.waterHeater);
-  $('sy-el').textContent = v(d.electrical);
-  $('sy-pl').textContent = v(d.plumbing);
-  $('sy-win').textContent = v(d.windows);
-  $('sy-fl').textContent = v(d.flooring);
-  
-  // Fill existing fields
-  $('ws-name').textContent = [d.contact1Name, d.contact2Name].filter(Boolean).join(' / ') || '—';
-  $('ws-co').textContent = v(d.wholesalerCompany || d.contact1Company);
-  $('ws-ph').textContent = [d.contact1Phone, d.contact2Phone].filter(Boolean).join(' / ') || '—';
-  $('ws-em').textContent = [d.contact1Email, d.contact2Email].filter(Boolean).join(' / ') || '—';
-  $('ws-cd').textContent = v(d.closeDate);
-  $('ws-ip').textContent = v(d.inspectionPeriod);
-  $('ws-ern').textContent = d.earnestMoney ? fmt(d.earnestMoney) : '—';
-  $('ws-cash').textContent = v(d.cashOnly);
-  $('pp-hi').textContent = v(d.highlights);
-  $('pp-nw').textContent = v(d.whatNeedsWork);
-  $('pp-rf').textContent = v(d.redFlags);
-  $('pp-gd').textContent = v(d.googleDriveLink);
-  $('pp-zl').innerHTML = d.address ? `<a href="https://www.zillow.com/homes/${encodeURIComponent(d.address+' '+d.city+' '+d.state)}_rb/" target="_blank" style="color:var(--accent)">Open on Zillow ↗</a>` : '—';
-  $('pp-addnotes').textContent = v(d.additionalNotes);
-  $('pp-kitchen').textContent = v(d.kitchenNotes);
-  $('pp-baths').textContent = v(d.bathNotes);
-  $('pp-updated').textContent = v(d.whatIsUpdated);
+  const el = $('deal-full-info');
+  if (!el) return;
+  const v = x => (x && x !== '' && x !== '0') ? x : null;
+  const money = x => x && parseFloat(x) ? '$' + parseFloat(x).toLocaleString() : null;
+  const link = (url, label) => url ? `<a href="${url}" target="_blank" style="color:var(--accent);text-decoration:none">${label} ↗</a>` : null;
 
-  // Build full deal info card — all sheet data
-  const dealInfo = document.getElementById('deal-full-info');
-  if (!dealInfo) return;
+  const row = (label, val, opts={}) => {
+    if (!val && !opts.always) return '';
+    const cls = opts.warn ? 'warn' : opts.good ? 'good' : opts.big ? 'big' : '';
+    return `<div class="fr ${cls}"><div class="fl">${label}</div><div class="fv2">${val || '—'}</div></div>`;
+  };
 
-  const row = (label, val, cls='') => val && val !== '—'
-    ? `<div class="di-row ${cls}"><span class="di-lbl">${label}</span><span class="di-val">${val}</span></div>` : '';
-  const section = (title, rows) => `<div class="di-section"><div class="di-sec-title">${title}</div>${rows.filter(Boolean).join('')}</div>`;
-  const flag = (label, val) => val && !['no','n/a','none',''].includes((val||'').toLowerCase())
-    ? `<div class="di-row warn"><span class="di-lbl">⚠️ ${label}</span><span class="di-val">${val}</span></div>` : '';
+  const sec = (icon, title, rows) => {
+    const content = rows.filter(Boolean).join('');
+    if (!content) return '';
+    return `<div class="fsec"><div class="fst">${icon} ${title}</div>${content}</div>`;
+  };
 
-  dealInfo.innerHTML = [
-    section('📋 DEAL SUMMARY', [
-      row('Received', d.dateReceived),
-      row('Source Email', d.sourceEmail || d.contact1Email),
-      row('Subject', d.emailSubject),
-      row('Days on Market', d.daysOnMarket),
-    ]),
-    section('🏠 PROPERTY', [
-      row('Address', `${d.address}, ${d.city}, ${d.state} ${d.zip}`),
-      row('County', d.county),
-      row('Type', d.propertyType),
-      row('Beds / Baths', `${v(d.beds)} bd / ${v(d.baths)} ba`),
-      row('Sqft', d.sqft ? parseInt(d.sqft).toLocaleString() + ' sqft' : ''),
-      row('Year Built', d.yearBuilt),
-      row('Lot', d.lotAcres ? d.lotAcres + ' acres' : ''),
-      row('Construction', d.construction),
-      row('Foundation', d.foundation),
-      row('Occupancy', d.occupancy),
-      row('Pool', d.pool),
-      flag('HOA', d.hoaFee ? `$${parseFloat(d.hoaFee).toLocaleString()}/mo` : d.hoa),
-      flag('Flood Zone', d.floodZone),
-    ]),
-    section('💰 WHOLESALER NUMBERS', [
-      row('Asking Price', d.askingPrice ? '$' + parseFloat(d.askingPrice).toLocaleString() : '', 'big'),
-      row('Wholesaler ARV', d.wholesalerARV ? '$' + parseFloat(d.wholesalerARV).toLocaleString() : '', 'big'),
-      row('Repair Estimate', d.repairsEstimate ? '$' + parseFloat(d.repairsEstimate).toLocaleString() : 'Not provided'),
-      row('Annual Taxes', d.annualTaxes ? '$' + parseFloat(d.annualTaxes).toLocaleString() : ''),
-      row('Assignment Fee', d.assignmentFee ? '$' + parseFloat(d.assignmentFee).toLocaleString() : ''),
-    ]),
-    section('🔧 SYSTEMS', [
-      row('Roof', [d.roofType, d.roofAge].filter(Boolean).join(' · ')),
-      row('HVAC / AC', d.acYear),
-      row('Water Heater', d.waterHeater),
-      row('Electrical', d.electrical),
-      row('Plumbing', d.plumbing),
-      row('Windows', d.windows),
-      row('Flooring', d.flooring),
-    ]),
-    section('🏚️ CONDITION', [
-      row('Overall', d.overall_condition, d.overall_condition?.toLowerCase().includes('poor') ? 'warn' : ''),
-      row('Kitchen', d.kitchenNotes),
-      row('Bathrooms', d.bathNotes),
-      row("What's Updated", d.whatIsUpdated),
-      row("What Needs Work", d.whatNeedsWork, 'warn'),
-      flag('Red Flags', d.redFlags),
-      row('Highlights', d.highlights, 'pos'),
-      row('Additional Notes', d.additionalNotes),
-    ]),
-    section('📞 WHOLESALER', [
-      row('Company', d.wholesalerCompany || d.contact1Company),
-      row('Contact', d.contact1Name),
-      row('Phone', d.contact1Phone),
-      row('Email', d.contact1Email),
-      row('Website', d.contact1Website),
-      row('2nd Contact', d.contact2Name ? `${d.contact2Name} · ${d.contact2Phone || ''} · ${d.contact2Email || ''}` : ''),
-    ]),
-  ].join('');
-  $('ws-name').textContent = v(d.contact1Name);
-  $('ws-co').textContent = v(d.wholesalerCompany || d.contact1Company);
-  $('ws-ph').textContent = v(d.contact1Phone);
-  $('ws-em').textContent = v(d.contact1Email);
-  $('ws-cd').textContent = v(d.closeDate);
-  $('ws-ip').textContent = v(d.inspectionPeriod);
-  $('ws-ern').textContent = d.earnestMoney ? fmt(d.earnestMoney) : '—';
-  $('ws-cash').textContent = d.cashOnly ? '💰 Cash Only' : 'Financing Accepted';
-  $('pp-hi').textContent = v(d.highlights);
-  $('pp-nw').textContent = v(d.whatNeedsWork);
-  $('pp-rf').textContent = v(d.redFlags);
-  $('pp-gd').innerHTML = d.driveLink ? `<a href="${d.driveLink}" target="_blank">Open Drive →</a>` : '—';
-  $('pp-zl').innerHTML = d.zillowLink ? `<a href="${d.zillowLink}" target="_blank">Open Zillow →</a>` : '—';
+  const hasFlag = x => x && !['no','n/a','none','x',''].includes((x||'').toLowerCase().trim());
+
+  el.innerHTML = `
+  <style>
+    #deal-full-info { padding: 0; }
+    .fsec { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
+    .fst { font-size: 10px; letter-spacing: 2px; font-weight: 700; color: var(--muted); background: var(--bg3); padding: 10px 16px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    .fr { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); gap: 16px; }
+    .fr:last-child { border-bottom: none; }
+    .fl { font-size: 11px; color: var(--muted); flex: 0 0 140px; padding-top: 2px; }
+    .fv2 { font-size: 13px; color: var(--text); text-align: right; flex: 1; line-height: 1.5; word-break: break-word; }
+    .fr.big .fv2 { font-size: 20px; font-weight: 700; color: var(--accent); font-family: var(--display); letter-spacing: 1px; }
+    .fr.warn .fv2 { color: var(--hot); }
+    .fr.warn .fl { color: var(--hot); }
+    .fr.good .fv2 { color: var(--go); }
+    .fr.good .fl { color: var(--go); }
+    .fnote { font-size: 12px; color: var(--text); line-height: 1.6; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .fnote:last-child { border-bottom: none; }
+    .fnote-lbl { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  </style>
+
+  ${sec('📋', 'DEAL INFO', [
+    row('Date Received', v(d.dateReceived)),
+    row('Days Active', v(d.daysActive)),
+    row('Expires', v(d.expires), {warn: !!v(d.expires)}),
+    row('Email Subject', v(d.emailSubject)),
+    row('List / Source', v(d.listName)),
+    row('Photos', v(d.photosIncluded) ? `${v(d.photosIncluded)} · ${v(d.photoCount) || '?'} photos` : null),
+  ])}
+
+  ${sec('🏠', 'PROPERTY', [
+    row('Address', `${d.address}<br><span style="font-size:11px;color:var(--muted)">${d.city}, ${d.state} ${d.zip} — ${d.county} County</span>`),
+    row('Subdivision', v(d.subdivision)),
+    row('School District', v(d.schoolDistrict)),
+    row('Type', v(d.propertyType)),
+    row('Beds / Baths', `${v(d.beds) || '?'} bd · ${v(d.baths) || '?'} ba${v(d.halfBaths) ? ' · ' + d.halfBaths + ' half' : ''}`),
+    row('Sqft', v(d.sqft) ? parseInt(d.sqft).toLocaleString() + ' sqft' + (v(d.lotSqft) ? ` · Lot: ${parseInt(d.lotSqft).toLocaleString()} sqft` : '') + (v(d.lotAcres) ? ` (${d.lotAcres} ac)` : '') : null),
+    row('Year Built', v(d.yearBuilt)),
+    row('Stories', v(d.stories)),
+    row('Construction', v(d.construction)),
+    row('Foundation', v(d.foundation)),
+    row('Occupancy', v(d.occupancy)),
+    row('Pool', v(d.pool) ? (d.pool + (v(d.poolNotes) ? ' — ' + d.poolNotes : '')) : null),
+    row('Garage', v(d.garage) ? (d.garage + (v(d.garageSpaces) ? ' · ' + d.garageSpaces + ' spaces' : '')) + (v(d.carport) ? ' · Carport' : '') : null),
+    row('Basement / Attic', [v(d.basement) && 'Basement: '+d.basement, v(d.attic) && 'Attic: '+d.attic].filter(Boolean).join(' · ') || null),
+    row('Flood Zone', hasFlag(d.floodZone) ? d.floodZone : null, {warn: hasFlag(d.floodZone)}),
+    row('HOA', hasFlag(d.hoa) ? (d.hoa + (v(d.hoaFee) ? ' — $'+parseFloat(d.hoaFee).toLocaleString()+'/mo' : '')) : null, {warn: hasFlag(d.hoa)}),
+    d.googleMapsLink ? `<div class="fr"><div class="fl">Maps</div><div class="fv2">${link(d.googleMapsLink, 'Open in Maps')}</div></div>` : '',
+  ])}
+
+  ${sec('💰', 'WHOLESALER NUMBERS', [
+    row('Asking Price', money(d.askingPrice), {big: true}),
+    row('Wholesaler ARV', money(d.wholesalerARV), {big: true}),
+    row('Repairs Estimate', money(d.repairsEstimate) || 'Not provided', {warn: !v(d.repairsEstimate)}),
+    row('Assignment Fee', money(d.assignmentFee)),
+    row('Equity', money(d.equity)),
+    row('Annual Taxes', money(d.annualTaxes)),
+    row('Rent (Current)', money(d.rentCurrent)),
+    row('Rent (Market Est)', money(d.rentMarket)),
+    row('Close Date', v(d.closeDate)),
+    row('Inspection Period', v(d.inspectionPeriod)),
+    row('Earnest Money', money(d.earnestMoney)),
+    row('Financing Terms', v(d.financingTerms)),
+    row('Cash Only', v(d.cashOnly), {warn: (d.cashOnly||'').toLowerCase() === 'yes'}),
+  ])}
+
+  ${sec('🔧', 'SYSTEMS & CONDITION', [
+    row('Overall Condition', v(d.overall_condition), {warn: (d.overall_condition||'').toLowerCase().includes('poor') || (d.overall_condition||'').toLowerCase().includes('bad')}),
+    row('Roof', [v(d.roofType), v(d.roofAge)].filter(Boolean).join(' · ') || null),
+    row('HVAC / AC', v(d.acYear)),
+    row('Water Heater', v(d.waterHeater)),
+    row('Electrical', v(d.electrical)),
+    row('Plumbing', v(d.plumbing)),
+    row('Windows', v(d.windows)),
+    row('Flooring', v(d.flooring)),
+  ])}
+
+  ${[v(d.kitchenNotes), v(d.bathNotes), v(d.whatIsUpdated), v(d.whatNeedsWork), v(d.highlights), v(d.redFlags), v(d.additionalNotes)].some(Boolean) ? `
+  <div class="fsec">
+    <div class="fst">📝 CONDITION NOTES</div>
+    ${v(d.kitchenNotes) ? `<div class="fnote"><div class="fnote-lbl">Kitchen</div>${d.kitchenNotes}</div>` : ''}
+    ${v(d.bathNotes) ? `<div class="fnote"><div class="fnote-lbl">Bathrooms</div>${d.bathNotes}</div>` : ''}
+    ${v(d.whatIsUpdated) ? `<div class="fnote" style="color:var(--go)"><div class="fnote-lbl" style="color:var(--go)">✅ What's Updated</div>${d.whatIsUpdated}</div>` : ''}
+    ${v(d.whatNeedsWork) ? `<div class="fnote" style="color:var(--hot)"><div class="fnote-lbl" style="color:var(--hot)">🔨 What Needs Work</div>${d.whatNeedsWork}</div>` : ''}
+    ${v(d.highlights) ? `<div class="fnote" style="color:var(--go)"><div class="fnote-lbl" style="color:var(--go)">⭐ Highlights</div>${d.highlights}</div>` : ''}
+    ${v(d.redFlags) ? `<div class="fnote" style="color:var(--hot)"><div class="fnote-lbl" style="color:var(--hot)">🚩 Red Flags</div>${d.redFlags}</div>` : ''}
+    ${v(d.additionalNotes) ? `<div class="fnote"><div class="fnote-lbl">Additional Notes</div>${d.additionalNotes}</div>` : ''}
+  </div>` : ''}
+
+  ${[v(d.comp1), v(d.comp2), v(d.comp3)].some(Boolean) ? `
+  <div class="fsec">
+    <div class="fst">🏘️ WHOLESALER COMPS</div>
+    ${v(d.comp1) ? `<div class="fnote"><div class="fnote-lbl">Comp 1</div>${d.comp1}</div>` : ''}
+    ${v(d.comp2) ? `<div class="fnote"><div class="fnote-lbl">Comp 2</div>${d.comp2}</div>` : ''}
+    ${v(d.comp3) ? `<div class="fnote"><div class="fnote-lbl">Comp 3</div>${d.comp3}</div>` : ''}
+  </div>` : ''}
+
+  ${sec('👤', 'SELLER INFO', [
+    row('Seller Name', v(d.sellerName)),
+    row('Seller Phone', v(d.sellerPhone)),
+    row('Situation', v(d.sellerSituation)),
+    row('Motivation', v(d.sellerMotivation)),
+  ])}
+
+  ${sec('📞', 'WHOLESALER CONTACT', [
+    row('Company', v(d.wholesalerCompany || d.contact1Company)),
+    row('Contact 1', [v(d.contact1Name), v(d.contact1Title)].filter(Boolean).join(' · ')),
+    row('Phone', [v(d.contact1Phone), v(d.contact1Phone2)].filter(Boolean).join(' · ')),
+    row('Email', v(d.contact1Email)),
+    row('Website', v(d.contact1Website) ? link(d.contact1Website.startsWith('http') ? d.contact1Website : 'https://'+d.contact1Website, d.contact1Website) : null),
+    v(d.contact2Name) ? row('Contact 2', [v(d.contact2Name), v(d.contact2Title), v(d.contact2Company)].filter(Boolean).join(' · ')) : null,
+    v(d.contact2Phone) ? row('Phone 2', [v(d.contact2Phone), v(d.contact2Email)].filter(Boolean).join(' · ')) : null,
+    v(d.contact3Name) ? row('Contact 3', [v(d.contact3Name), v(d.contact3Phone), v(d.contact3Email)].filter(Boolean).join(' · ')) : null,
+    v(d.allPhones) ? row('All Phones', d.allPhones) : null,
+    v(d.allEmails) ? row('All Emails', d.allEmails) : null,
+    v(d.allNames) ? row('All Names', d.allNames) : null,
+  ])}
+
+  ${sec('🔗', 'LINKS', [
+    d.zillowLink ? `<div class="fr"><div class="fl">Zillow</div><div class="fv2">${link(d.zillowLink, 'View on Zillow')}</div></div>` : 
+      `<div class="fr"><div class="fl">Zillow</div><div class="fv2">${link('https://www.zillow.com/homes/'+encodeURIComponent(d.address+' '+d.city+' '+d.state)+'_rb/', 'Search Zillow')}</div></div>`,
+    d.driveLink ? `<div class="fr"><div class="fl">Google Drive</div><div class="fv2">${link(d.driveLink, 'Open Drive Folder')}</div></div>` : '',
+    d.googleMapsLink ? `<div class="fr"><div class="fl">Maps</div><div class="fv2">${link(d.googleMapsLink, 'Google Maps')}</div></div>` : '',
+    d.allOtherLinks ? `<div class="fr"><div class="fl">Other Links</div><div class="fv2" style="font-size:11px">${d.allOtherLinks}</div></div>` : '',
+    d.photoLinks ? `<div class="fr"><div class="fl">Photos</div><div class="fv2" style="font-size:11px">${d.photoLinks}</div></div>` : '',
+  ])}
+  `;
 }
 
-// SECTION TABS
-document.querySelectorAll('.stab').forEach(t => t.addEventListener('click', () => {
-  document.querySelectorAll('.stab').forEach(x => x.classList.remove('on'));
-  document.querySelectorAll('.tc').forEach(x => x.style.display = 'none');
-  t.classList.add('on'); curTab = t.dataset.t;
-  $(`t-${curTab}`).style.display = 'block';
-}));
-
-// OVERRIDE
-async function applyOv(field, value) {
-  if (!curDeal || !value) return;
-  const uid = curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
-  const r = await fetch(`/api/override/${encodeURIComponent(uid)}`, {
-    method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ field, value, author })
-  });
-  if (r.ok) { curUW = await r.json(); renderUW(curUW); doLoadDeals(); }
-}
-
-// CHAT
-$('btn-chat').addEventListener('click', () => $('chat-panel').classList.add('open'));
-$('chat-x').addEventListener('click', () => $('chat-panel').classList.remove('open'));
-function setAuth(a) {
-  author = a;
-  document.querySelectorAll('.auth-btn').forEach(b => b.classList.toggle('on', b.dataset.a === a));
-}
-$('chat-send').addEventListener('click', doChat);
-$('chat-in').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) doChat(); });
-
-async function doChat() {
-  const msg = $('chat-in').value.trim();
-  if (!msg || !curDeal) return;
-  const uid = curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
-  $('chat-in').value = '';
-  addMsg('u', author.toUpperCase() + ': ' + msg);
-  addMsg('a', '...');
-  const r = await fetch(`/api/chat/${encodeURIComponent(uid)}`, {
-    method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: msg, author })
-  });
-  const data = await r.json();
-  const msgs = $('chat-msgs');
-  msgs.removeChild(msgs.lastChild);
-  if (data.reply) addMsg('a', data.reply);
-}
-
-function renderChat(history) {
-  const msgs = $('chat-msgs');
-  msgs.innerHTML = '';
-  if (!history?.length) { msgs.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">No conversation yet.<br>Ask Urban anything about this deal.</div>'; return; }
-  history.forEach(h => addMsg(h.role === 'user' ? 'u' : 'a', h.content, h.timestamp));
-}
-
-function addMsg(role, content, ts) {
-  const msgs = $('chat-msgs');
-  const d = document.createElement('div');
-  d.className = `cm ${role}`;
-  d.innerHTML = `<div class="bbl">${content.replace(/\n/g,'<br>')}</div>${ts ? `<div class="cts">${new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>` : ''}`;
-  msgs.appendChild(d);
-  msgs.scrollTop = msgs.scrollHeight;
-}
 
 // SHEET LINK
 $('btn-sheet').addEventListener('click', () => window.open('https://docs.google.com/spreadsheets/d/' + encodeURIComponent('1las1OYRL2ZgIZjq5_K4bcMM9dAhGxgMOBghfyR29ynU'), '_blank'));
