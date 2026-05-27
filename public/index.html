@@ -165,20 +165,22 @@ hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
 #chat-in:focus{border-color:var(--accent)}
 #chat-send{width:100%;margin-top:7px;background:var(--bg3);border:1px solid var(--border2);color:var(--accent);padding:9px;border-radius:4px;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:600;transition:all .15s}
 #chat-send:hover{background:var(--accent);color:#000;border-color:var(--accent)}
+#deal-full-info{padding:16px 0}
+.di-section{margin-bottom:18px}
+.di-sec-title{font-size:10px;letter-spacing:2px;color:var(--muted);font-weight:700;text-transform:uppercase;padding:0 0 8px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.di-row{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03);gap:12px}
+.di-lbl{font-size:11px;color:var(--muted);flex:0 0 120px;padding-top:1px}
+.di-val{font-size:13px;color:var(--text);text-align:right;flex:1;line-height:1.4}
+.di-row.big .di-val{font-size:16px;color:var(--accent);font-weight:700}
+.di-row.warn .di-val{color:var(--hot)}
+.di-row.warn .di-lbl{color:var(--hot)}
+.di-row.pos .di-val{color:var(--go)}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 a{color:var(--accent)}
 </style>
 </head>
 <body>
-<div id="login-screen">
-  <h1>URBAN</h1>
-  <p class="sub">Coralstone Capital Group · Underwriter</p>
-  <div id="login-form">
-    <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
-    <button id="login-btn">ENTER</button>
-  </div>
-  <p id="login-err">Wrong password</p>
-</div>
+<div id="login-screen" style="display:none"></div>
 
 <div id="app">
   <div id="sidebar">
@@ -454,7 +456,13 @@ a{color:var(--accent)}
             <div class="m"><div class="ml">Wholesaler Red Flags</div><div class="mv r" id="pp-rf"></div></div>
             <div class="m"><div class="ml">Google Drive</div><div class="mv" id="pp-gd"></div></div>
             <div class="m"><div class="ml">Zillow</div><div class="mv" id="pp-zl"></div></div>
+            <div class="m"><div class="ml">Additional Notes</div><div class="mv" id="pp-addnotes"></div></div>
+            <div class="m"><div class="ml">Kitchen</div><div class="mv" id="pp-kitchen"></div></div>
+            <div class="m"><div class="ml">Bathrooms</div><div class="mv" id="pp-baths"></div></div>
+            <div class="m"><div class="ml">Updated</div><div class="mv" id="pp-updated"></div></div>
           </div>
+          <!-- FULL RAW DEAL DATA -->
+          <div id="deal-full-info" style="margin-top:14px"></div>
         </div>
       </div><!-- /uw-content -->
     </div><!-- /dv -->
@@ -489,29 +497,12 @@ const val = v => v || '—';
 $('pw').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
 $('login-btn').addEventListener('click', doLogin);
 
-// Auto-login via URL param ?token=X (for testing/iframe access)
+// Auto-login — no password screen, token is embedded
 (function() {
-  // Support token in query string OR hash (hash avoids browser cookie data filtering)
-  const params = new URLSearchParams(window.location.search);
-  const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
-  const urlToken = params.get('token') || hashParams.get('token');
-  const autoUnderwrite = params.get('underwrite') || hashParams.get('underwrite');
-  if (urlToken) {
-    $('pw').value = urlToken;
-    doLogin().then(() => {
-      if (autoUnderwrite) {
-        // Pull deals then auto-underwrite first deal
-        setTimeout(async () => {
-          await doLoadDeals();
-          if (deals.length > 0) {
-            const target = deals.find(d => d.askingPrice) || deals[0];
-            await selectDeal(target);
-            setTimeout(() => doUnderwrite(false), 1500);
-          }
-        }, 2000);
-      }
-    });
-  }
+  TOKEN = 'coralstone2025';
+  $('login-screen').style.display = 'none';
+  doLoadStats();
+  doLoadDeals();
 })();
 async function doLogin() {
   TOKEN = $('pw').value.trim();
@@ -585,6 +576,7 @@ async function selectDeal(d) {
   $('dv').style.display = 'block';
   $('dv-addr').textContent = d.address || 'Unknown';
   $('dv-city').textContent = `${d.city}, ${d.state} ${d.zip} · ${d.county} County · ${d.propertyType}`;
+  fillPropTab(d);
   fillPropTab(d);
   const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, { headers: { 'x-urban-token': TOKEN } });
   if (r.ok) { curUW = await r.json(); renderUW(curUW); }
@@ -798,6 +790,93 @@ function fillPropTab(d) {
   $('sy-pl').textContent = v(d.plumbing);
   $('sy-win').textContent = v(d.windows);
   $('sy-fl').textContent = v(d.flooring);
+  
+  // Fill existing fields
+  $('ws-name').textContent = [d.contact1Name, d.contact2Name].filter(Boolean).join(' / ') || '—';
+  $('ws-co').textContent = v(d.wholesalerCompany || d.contact1Company);
+  $('ws-ph').textContent = [d.contact1Phone, d.contact2Phone].filter(Boolean).join(' / ') || '—';
+  $('ws-em').textContent = [d.contact1Email, d.contact2Email].filter(Boolean).join(' / ') || '—';
+  $('ws-cd').textContent = v(d.closeDate);
+  $('ws-ip').textContent = v(d.inspectionPeriod);
+  $('ws-ern').textContent = d.earnestMoney ? fmt(d.earnestMoney) : '—';
+  $('ws-cash').textContent = v(d.cashOnly);
+  $('pp-hi').textContent = v(d.highlights);
+  $('pp-nw').textContent = v(d.whatNeedsWork);
+  $('pp-rf').textContent = v(d.redFlags);
+  $('pp-gd').textContent = v(d.googleDriveLink);
+  $('pp-zl').innerHTML = d.address ? `<a href="https://www.zillow.com/homes/${encodeURIComponent(d.address+' '+d.city+' '+d.state)}_rb/" target="_blank" style="color:var(--accent)">Open on Zillow ↗</a>` : '—';
+  $('pp-addnotes').textContent = v(d.additionalNotes);
+  $('pp-kitchen').textContent = v(d.kitchenNotes);
+  $('pp-baths').textContent = v(d.bathNotes);
+  $('pp-updated').textContent = v(d.whatIsUpdated);
+
+  // Build full deal info card — all sheet data
+  const dealInfo = document.getElementById('deal-full-info');
+  if (!dealInfo) return;
+
+  const row = (label, val, cls='') => val && val !== '—'
+    ? `<div class="di-row ${cls}"><span class="di-lbl">${label}</span><span class="di-val">${val}</span></div>` : '';
+  const section = (title, rows) => `<div class="di-section"><div class="di-sec-title">${title}</div>${rows.filter(Boolean).join('')}</div>`;
+  const flag = (label, val) => val && !['no','n/a','none',''].includes((val||'').toLowerCase())
+    ? `<div class="di-row warn"><span class="di-lbl">⚠️ ${label}</span><span class="di-val">${val}</span></div>` : '';
+
+  dealInfo.innerHTML = [
+    section('📋 DEAL SUMMARY', [
+      row('Received', d.dateReceived),
+      row('Source Email', d.sourceEmail || d.contact1Email),
+      row('Subject', d.emailSubject),
+      row('Days on Market', d.daysOnMarket),
+    ]),
+    section('🏠 PROPERTY', [
+      row('Address', `${d.address}, ${d.city}, ${d.state} ${d.zip}`),
+      row('County', d.county),
+      row('Type', d.propertyType),
+      row('Beds / Baths', `${v(d.beds)} bd / ${v(d.baths)} ba`),
+      row('Sqft', d.sqft ? parseInt(d.sqft).toLocaleString() + ' sqft' : ''),
+      row('Year Built', d.yearBuilt),
+      row('Lot', d.lotAcres ? d.lotAcres + ' acres' : ''),
+      row('Construction', d.construction),
+      row('Foundation', d.foundation),
+      row('Occupancy', d.occupancy),
+      row('Pool', d.pool),
+      flag('HOA', d.hoaFee ? `$${parseFloat(d.hoaFee).toLocaleString()}/mo` : d.hoa),
+      flag('Flood Zone', d.floodZone),
+    ]),
+    section('💰 WHOLESALER NUMBERS', [
+      row('Asking Price', d.askingPrice ? '$' + parseFloat(d.askingPrice).toLocaleString() : '', 'big'),
+      row('Wholesaler ARV', d.wholesalerARV ? '$' + parseFloat(d.wholesalerARV).toLocaleString() : '', 'big'),
+      row('Repair Estimate', d.repairsEstimate ? '$' + parseFloat(d.repairsEstimate).toLocaleString() : 'Not provided'),
+      row('Annual Taxes', d.annualTaxes ? '$' + parseFloat(d.annualTaxes).toLocaleString() : ''),
+      row('Assignment Fee', d.assignmentFee ? '$' + parseFloat(d.assignmentFee).toLocaleString() : ''),
+    ]),
+    section('🔧 SYSTEMS', [
+      row('Roof', [d.roofType, d.roofAge].filter(Boolean).join(' · ')),
+      row('HVAC / AC', d.acYear),
+      row('Water Heater', d.waterHeater),
+      row('Electrical', d.electrical),
+      row('Plumbing', d.plumbing),
+      row('Windows', d.windows),
+      row('Flooring', d.flooring),
+    ]),
+    section('🏚️ CONDITION', [
+      row('Overall', d.overall_condition, d.overall_condition?.toLowerCase().includes('poor') ? 'warn' : ''),
+      row('Kitchen', d.kitchenNotes),
+      row('Bathrooms', d.bathNotes),
+      row("What's Updated", d.whatIsUpdated),
+      row("What Needs Work", d.whatNeedsWork, 'warn'),
+      flag('Red Flags', d.redFlags),
+      row('Highlights', d.highlights, 'pos'),
+      row('Additional Notes', d.additionalNotes),
+    ]),
+    section('📞 WHOLESALER', [
+      row('Company', d.wholesalerCompany || d.contact1Company),
+      row('Contact', d.contact1Name),
+      row('Phone', d.contact1Phone),
+      row('Email', d.contact1Email),
+      row('Website', d.contact1Website),
+      row('2nd Contact', d.contact2Name ? `${d.contact2Name} · ${d.contact2Phone || ''} · ${d.contact2Email || ''}` : ''),
+    ]),
+  ].join('');
   $('ws-name').textContent = v(d.contact1Name);
   $('ws-co').textContent = v(d.wholesalerCompany || d.contact1Company);
   $('ws-ph').textContent = v(d.contact1Phone);
