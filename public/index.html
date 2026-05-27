@@ -515,14 +515,17 @@ async function doLoadStats() {
 }
 
 // ── DEALS ──────────────────────────────────────────────────────────────────────
-async function doLoadDeals() {
+async function doLoadDeals(skipAuto = false) {
   $('ref-btn').textContent = '↻ Loading...';
   try {
     const r = await fetch('/api/deals', { headers: { 'x-urban-token': TOKEN } });
     deals = await r.json();
     renderList();
-    // Auto-underwrite pending deals ONCE on load, not on every refresh
-    if (!autoUnderwriteRunning) autoUnderwritePending();
+    // Only auto-underwrite on first load of this session — not on every refresh
+    if (!skipAuto && !autoUnderwriteRunning && !sessionStorage.getItem('uw_done')) {
+      sessionStorage.setItem('uw_done', '1');
+      autoUnderwritePending();
+    }
   } catch(e) { console.log('Load deals error:', e.message); }
   $('ref-btn').textContent = '↻ Pull from Derek\'s Sheet';
 }
@@ -625,10 +628,37 @@ async function autoUnderwritePending() {
 }
 
 $('ref-btn').addEventListener('click', () => {
-  autoUnderwriteRunning = false; // allow re-run on manual refresh
-  doLoadDeals();
+  // Manual refresh: reload deals from sheet but DO NOT re-underwrite
+  // User must click "Run Batch Underwrite" to re-underwrite
+  doLoadDeals(true); // true = skip auto-underwrite
 });
 $('search-input').addEventListener('input', renderList);
+// ── REVIEW CHATS (Urban learns from all conversations) ────────────────────────
+async function doReviewChat() {
+  const btn = $('review-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Reviewing...';
+  try {
+    const r = await fetch('/api/review-chat', {
+      method: 'POST',
+      headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' }
+    });
+    const data = await r.json();
+    if (data.ok) {
+      const msg = data.lessonsAdded > 0
+        ? `✅ ${data.lessonsAdded} new lessons added to Urban's brain!`
+        : '✅ Review complete — no new lessons needed.';
+      alert(msg + (data.lessons?.length ? '\n\n' + data.lessons.join('\n') : ''));
+    } else {
+      alert('Error: ' + (data.error || 'unknown'));
+    }
+  } catch(e) {
+    alert('Review failed: ' + e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = '📚 Review Chats';
+}
+
 document.querySelectorAll('.ftab').forEach(t => t.addEventListener('click', () => {
   document.querySelectorAll('.ftab').forEach(x => x.classList.remove('on'));
   t.classList.add('on'); curFilter = t.dataset.f; renderList();

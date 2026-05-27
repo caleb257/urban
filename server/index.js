@@ -740,6 +740,98 @@ function auth(req, res, next) {
 }
 
 // ── ROUTES ────────────────────────────────────────────────────────────────────
+// ── REVIEW CHAT & LEARN ──────────────────────────────────────────────────────
+// Call this to have Urban re-read ALL conversation history and extract lessons.
+// Adam calls this after Caleb/Grant conversations. Caleb/Grant can call manually.
+// Uses Haiku (cheap) unless there are 20+ messages to digest (uses Sonnet once).
+app.post('/api/review-chat', auth, async (req, res) => {
+  try {
+    // Gather all chat history — from underwrite threads + any corrections
+    const allChats = [];
+    for (const [uid, uw] of Object.entries(underwrites)) {
+      if (uw.chatHistory && uw.chatHistory.length > 0) {
+        allChats.push({
+          address: uw.deal?.address || uid,
+          verdict: uw.verdict,
+          score: uw.score,
+          chat: uw.chatHistory.slice(-20) // last 20 messages per deal
+        });
+      }
+    }
+
+    const corrections = urbanBrain.correctionHistory || [];
+    const existingLessons = urbanBrain.lessons || [];
+
+    if (!allChats.length && !corrections.length) {
+      return res.json({ ok: true, message: 'No chat history to review yet.', lessonsAdded: 0 });
+    }
+
+    const chatSummary = allChats.slice(-30).map(c => {
+      const msgs = (c.chat||[]).map(m => (m.role||'') + ': ' + String(m.content||'').slice(0,100)).join(' | ');
+      return c.address + ' (' + c.verdict + ' ' + c.score + '/10): ' + msgs;
+    }).join('\n');
+
+    const correctionSummary = corrections.slice(-20).map(c =>
+      (c.date||'') + ' — ' + (c.field||'') + ' corrected to ' + c.value + ' on ' + c.address + ': "' + (c.message||'').slice(0,100) + '"'
+    ).join('\n');
+
+    const wholesalerCtx = Object.entries(urbanBrain.wholesalerStats || {}).slice(0,10)
+      .map(([email, ws]) => `${ws.name||email}: ${ws.deals} deals, avg ARV inflation ${ws.avgARVInflation}%`)
+      .join('\n');
+
+    const model = allChats.length > 15 ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5-20251001';
+
+    const r = await getAnthropic().messages.create({
+      model, max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: 'You are Urban, real estate underwriter for Coralstone Capital Group (Tampa Bay fix-and-flip).\n' +
+        'Review conversation and correction history and extract SPECIFIC lessons to improve future underwriting.\n\n' +
+        'CURRENT LESSONS (' + existingLessons.length + '):\n' +
+        existingLessons.slice(-10).join('\n') + '\n\n' +
+        'RECENT DEAL CONVERSATIONS:\n' + (chatSummary || 'none') + '\n\n' +
+        'CORRECTIONS BY CALEB/GRANT:\n' + (correctionSummary || 'none') + '\n\n' +
+        'WHOLESALER STATS:\n' + (wholesalerCtx || 'none') + '\n\n' +
+        'Extract 3-8 NEW specific lessons not already captured. Focus on:\n' +
+        '- Patterns in what Caleb/Grant accept vs reject\n' +
+        '- ARV inflation patterns by wholesaler\n' +
+        '- Market conditions for specific zip codes\n' +
+        '- Repair estimate accuracy\n' +
+        '- Deal types they most want\n\n' +
+        'Return ONLY a JSON array of lesson strings, no markdown:\n' +
+        '["lesson 1", "lesson 2", ...]'
+      }]
+    });
+
+    const raw = r.content[0].text.trim();
+    const s = raw.indexOf('['), e = raw.lastIndexOf(']');
+    let newLessons = [];
+    if (s !== -1 && e > s) {
+      try { newLessons = JSON.parse(raw.slice(s, e+1)); } catch {}
+    }
+
+    // Add new lessons, avoid duplicates
+    const existing = new Set(existingLessons.map(l => l.slice(0,50)));
+    const added = [];
+    for (const lesson of newLessons) {
+      if (!existing.has(lesson.slice(0,50))) {
+        const stamp = `[${new Date().toLocaleDateString()} AUTO-REVIEW] ${lesson}`;
+        urbanBrain.lessons.push(stamp);
+        added.push(stamp);
+      }
+    }
+    if (urbanBrain.lessons.length > 150) urbanBrain.lessons = urbanBrain.lessons.slice(-150);
+    urbanBrain.lastReviewAt = new Date().toISOString();
+    await saveBrain();
+
+    console.log(`📚 Chat review complete: ${added.length} new lessons added (${model})`);
+    res.json({ ok: true, lessonsAdded: added.length, lessons: added, model });
+  } catch(e) {
+    console.error('Review chat error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Agent feedback from Adam — Urban learns from outcomes
 app.post('/api/agent-feedback', async (req, res) => {
   const token = req.headers['x-urban-token'];
@@ -823,12 +915,15 @@ app.post('/api/auto-underwrite-batch', auth, async (req, res) => {
     const deals = await getDealsFromSheet();
     const pending = deals.filter(d => {
       if (!d.address || d.address === 'XXXX') return false;
-      // Check both possible uid formats to avoid false "already done" hits
+      // Check in-memory cache (fast)
       const uid1 = d.uid;
       const uid2 = `${d.address}-${d.dateReceived}`;
-      const alreadyDone = (uid1 && underwrites[uid1]?.verdict && underwrites[uid1].verdict !== 'PENDING')
-                       || (uid2 && underwrites[uid2]?.verdict && underwrites[uid2].verdict !== 'PENDING');
-      return !alreadyDone;
+      const inCache = (uid1 && underwrites[uid1]?.verdict && underwrites[uid1].verdict !== 'PENDING')
+                   || (uid2 && underwrites[uid2]?.verdict && underwrites[uid2].verdict !== 'PENDING');
+      if (inCache) return false;
+      // Also check sheet column — survives redeploys (rejects deals already marked)
+      const inSheet = d.underwriteStatus && !['PENDING',''].includes(d.underwriteStatus);
+      return !inSheet;
     });
 
     send({ total: pending.length, status: `Found ${pending.length} pending deals` });
@@ -936,12 +1031,17 @@ app.post('/api/underwrite-by-address/:address', auth, async (req, res) => {
       return res.status(404).json({ error: 'Deal not found' });
     }
 
-    // Skip only if truly underwritten with a real verdict (not a stale PENDING)
+    // Skip if underwritten — check in-memory cache first, then the sheet's verdict column
     const uid = deal.uid || `${deal.address}-${deal.dateReceived}`;
     const existing = underwrites[uid] || underwrites[deal.uid] || underwrites[`${deal.address}-${deal.dateReceived}`];
     if (existing?.verdict && existing.verdict !== 'PENDING' && !deep) {
-      console.log(`Already underwritten: ${deal.address} → ${existing.verdict}`);
+      console.log(`Already underwritten (cache): ${deal.address} → ${existing.verdict}`);
       return res.json({ skipped: true, verdict: existing.verdict });
+    }
+    // Also check the sheet's underwrite status column (survives redeployments)
+    if (!deep && (deal.underwriteStatus && !['PENDING',''].includes(deal.underwriteStatus))) {
+      console.log(`Already underwritten (sheet): ${deal.address} → ${deal.underwriteStatus}`);
+      return res.json({ skipped: true, verdict: deal.underwriteStatus });
     }
 
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
@@ -1078,4 +1178,59 @@ app.get('/api/brain', auth, (req, res) => res.json(urbanBrain));
 const PORT = process.env.PORT || 3001;
 // Load brain from sheet on boot
 loadBrainFromSheet().catch(e => console.log('Brain boot load:', e.message));
-app.listen(PORT, () => console.log(`🏙️ Urban on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🏙️ Urban on port ${PORT}`);
+
+  // Auto-run chat review on startup (if more than 12h since last review) — cheap Haiku
+  const lastReview = urbanBrain.lastReviewAt ? new Date(urbanBrain.lastReviewAt) : null;
+  const hoursSince = lastReview ? (Date.now() - lastReview) / 3600000 : 999;
+  if (hoursSince > 12) {
+    console.log('📚 Scheduling auto chat review...');
+    setTimeout(async () => {
+      try {
+        // Internal review — same logic as /api/review-chat but called locally
+        const allChats = Object.values(underwrites)
+          .filter(uw => uw.chatHistory?.length > 0)
+          .slice(-20);
+        if (allChats.length > 0) {
+          const r = await getAnthropic().messages.create({
+            model: 'claude-haiku-4-5-20251001', max_tokens: 600,
+            messages: [{
+              role: 'user',
+              content: 'You are Urban, real estate underwriter for Coralstone Capital Group. Review these recent underwrite conversations and extract 2-4 SPECIFIC new lessons for improving future analysis. Return only a JSON array of lesson strings.\n\nChat summary:\n' +
+                allChats.map(uw => (uw.deal?.address||'?') + ' ' + (uw.verdict||'') + ': ' + (uw.chatHistory||[]).slice(-3).map(m => (m.role||'')+': '+(String(m.content||'').slice(0,80))).join(' | ')).join('\n')
+            }]
+          });
+          const raw = r.content[0].text;
+          const s = raw.indexOf('['), e = raw.lastIndexOf(']');
+          if (s !== -1 && e > s) {
+            const lessons = JSON.parse(raw.slice(s, e+1));
+            const existing = new Set((urbanBrain.lessons||[]).map(l => l.slice(0,50)));
+            let added = 0;
+            for (const l of lessons) {
+              if (!existing.has(l.slice(0,50))) {
+                urbanBrain.lessons = urbanBrain.lessons || [];
+                urbanBrain.lessons.push('[AUTO-REVIEW] ' + l);
+                added++;
+              }
+            }
+            urbanBrain.lastReviewAt = new Date().toISOString();
+            if (urbanBrain.lessons.length > 150) urbanBrain.lessons = urbanBrain.lessons.slice(-150);
+            await saveBrain();
+            if (added > 0) console.log('📚 Auto-review: ' + added + ' new lessons added');
+          }
+        }
+      } catch(e) { console.log('Auto-review err:', e.message); }
+    }, 30000); // 30s after startup
+  }
+
+  // Schedule review every 24h
+  setInterval(async () => {
+    try {
+      // Trigger via internal fetch (reuses the route logic cleanly)
+      await fetch('http://localhost:' + PORT + '/api/review-chat', {
+        method: 'POST', headers: { 'x-urban-token': PASSWORD }
+      });
+    } catch(e) { console.log('Scheduled review err:', e.message); }
+  }, 24 * 60 * 60 * 1000);
+});
