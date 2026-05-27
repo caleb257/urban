@@ -920,6 +920,17 @@ function fillPropTab(d) {
 }
 
 
+// postMessage bridge — lets parent iframe control app (for Claude's testing)
+window.addEventListener('message', (e) => {
+  if (e.data?.action === 'selectDeal' && e.data.index >= 0) {
+    const d = deals[e.data.index];
+    if (d) selectDeal(d);
+  }
+  if (e.data?.action === 'underwrite') doUnderwrite(true, false);
+  if (e.data?.action === 'deepUnderwrite') doUnderwrite(true, true);
+  if (e.data?.action === 'getDeals') e.source.postMessage({ deals: deals.map(d => ({address:d.address, city:d.city, status:d.underwriteStatus})) }, '*');
+});
+
 // SHEET LINK
 $('btn-sheet').addEventListener('click', () => window.open('https://docs.google.com/spreadsheets/d/' + encodeURIComponent('1las1OYRL2ZgIZjq5_K4bcMM9dAhGxgMOBghfyR29ynU'), '_blank'));
 </script>
