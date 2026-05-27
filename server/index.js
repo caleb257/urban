@@ -58,8 +58,133 @@ function getSheets() {
   try { creds = JSON.parse(rawCreds); }
   catch(e) { throw new Error('GOOGLE_CREDENTIALS_JSON is not valid JSON: ' + e.message); }
   const auth = new google.auth.JWT(creds.client_email, null, creds.private_key,
-    ['https://www.googleapis.com/auth/spreadsheets.readonly']);
+    ['https://www.googleapis.com/auth/spreadsheets']);
   return google.sheets({ version: 'v4', auth });
+}
+
+// ── SHEET-BACKED BRAIN PERSISTENCE ──────────────────────────────────────────
+// Uses "Urban Brain" tab in Derek's sheet as permanent memory
+// Schema: row 1 = headers, row 2 = single JSON blob of brain state
+// Also: "Urban Underwrites" tab stores every underwrite summary
+
+const BRAIN_TAB = "Urban Brain";
+const UW_LOG_TAB = "Urban Underwrites";
+
+async function loadBrainFromSheet() {
+  try {
+    const s = getSheets();
+    const res = await s.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `${BRAIN_TAB}!B2`
+    });
+    const val = res.data.values?.[0]?.[0];
+    if (val) {
+      const loaded = JSON.parse(val);
+      // Merge with defaults so new fields don't break old brains
+      urbanBrain = { ...urbanBrain, ...loaded };
+      console.log(`🧠 Brain loaded from sheet: ${urbanBrain.totalUnderwritten || 0} deals in memory`);
+    } else {
+      console.log('🧠 No brain data in sheet yet — starting fresh');
+    }
+  } catch(e) {
+    if (e.message?.includes('Unable to parse range')) {
+      await initBrainTab();
+    } else {
+      console.log('Brain load failed:', e.message);
+    }
+  }
+}
+
+async function saveBrainToSheet() {
+  try {
+    const s = getSheets();
+    await s.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `${BRAIN_TAB}!A1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [
+        ['last_updated', 'brain_json'],
+        [new Date().toISOString(), JSON.stringify(urbanBrain)]
+      ]}
+    });
+  } catch(e) {
+    if (e.message?.includes('Unable to parse range')) {
+      await initBrainTab();
+      await saveBrainToSheet();
+    } else {
+      console.log('Brain save failed:', e.message);
+    }
+  }
+}
+
+async function initBrainTab() {
+  try {
+    const s = getSheets();
+    await s.spreadsheets.batchUpdate({
+      spreadsheetId: SHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: BRAIN_TAB } } }] }
+    });
+    console.log(`✅ Created ${BRAIN_TAB} tab`);
+  } catch(e) {
+    if (!e.message?.includes('already exists')) console.log('initBrainTab:', e.message);
+  }
+}
+
+async function logUnderwriteToSheet(uw) {
+  try {
+    const s = getSheets();
+    const row = [
+      uw.underwroteAt,
+      uw.deal?.address,
+      uw.deal?.city,
+      uw.deal?.state,
+      uw.deal?.askingPrice,
+      uw.arv?.urbanARV,
+      uw.arv?.wholesalerARV,
+      uw.financials?.netProfitAtAsking,
+      uw.financials?.mao,
+      uw.rehab?.urbanEstimate,
+      uw.verdict,
+      uw.score,
+      uw.verdictReason,
+      uw.model || 'haiku',
+      uw.deal?.contact1Email || uw.deal?.wholesalerEmail || '',
+      uw.deal?.wholesalerCompany || ''
+    ];
+    await s.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: `${UW_LOG_TAB}!A:A`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [row] }
+    });
+  } catch(e) {
+    if (e.message?.includes('Unable to parse range')) {
+      await initUWLogTab();
+      await logUnderwriteToSheet(uw);
+    }
+  }
+}
+
+async function initUWLogTab() {
+  try {
+    const s = getSheets();
+    await s.spreadsheets.batchUpdate({
+      spreadsheetId: SHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: UW_LOG_TAB } } }] }
+    });
+    await s.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `${UW_LOG_TAB}!A1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[
+        'Date','Address','City','State','Asking','Urban ARV','Wholesaler ARV',
+        'Net Profit','MAO','Rehab Est','Verdict','Score','Reason','Model','Wholesaler Email','Company'
+      ]]}
+    });
+    console.log(`✅ Created ${UW_LOG_TAB} tab`);
+  } catch(e) {
+    if (!e.message?.includes('already exists')) console.log('initUWLogTab:', e.message);
+  }
 }
 
 // ── PULL DEALS FROM DEREK'S SHEET ────────────────────────────────────────────
@@ -642,6 +767,9 @@ Respond with a comprehensive underwriting report as a JSON object with these EXA
 
       urbanBrain.lastUpdated = new Date().toISOString();
       saveJSON(BRAIN_FILE, urbanBrain);
+      saveBrainToSheet().catch(e => console.log('Sheet brain save:', e.message)); // local cache
+      saveBrainToSheet().catch(e => console.log('Sheet brain save:', e.message)); // persistent
+      logUnderwriteToSheet(underwrite).catch(e => console.log('UW log:', e.message)); // log row
       console.log(`🧠 Urban learned: ${underwrite.verdict} | ${ws.deals} deals from this wholesaler | avg ARV inflation ${ws.avgARVInflation}%`);
     } catch(e) {
       console.log('Brain update failed:', e.message);
