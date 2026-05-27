@@ -740,8 +740,12 @@ Respond with a comprehensive underwriting report as a JSON object with these EXA
   });
 
   try {
-    const text = res.content[0].text.trim()
-      .replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
+    let raw = res.content[0].text.trim();
+    // Extract JSON object — find first { and last }
+    const first = raw.indexOf('{');
+    const last = raw.lastIndexOf('}');
+    if (first === -1 || last === -1) throw new Error('No JSON object found in response');
+    const text = raw.slice(first, last + 1);
     const underwrite = JSON.parse(text);
     underwrite.uid = uid;
     underwrite.deal = deal;
