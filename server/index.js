@@ -299,9 +299,56 @@ async function fetchComps(address, city, state, zip) {
     salePrice: county.lastSalePrice, saleDate: 'prior', distanceMiles: 0, source: 'county_appraiser'
   });
 
+  // Layer 4: Web search for actual comparable sales (real sold data)
+  let webComps = [];
+  try {
+    const searchRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 800,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{
+          role: 'user',
+          content: `Find 3-5 recently SOLD homes comparable to ${address}, ${city}, ${state} ${zip}. Search Zillow and Redfin for sold comps within 1 mile from the last 6 months. Return ONLY a JSON array, no explanation:
+[{"address":"123 Main St","sqft":1400,"beds":3,"baths":2,"salePrice":245000,"saleDate":"2025-03","distanceMiles":0.4,"source":"zillow"}]`
+        }]
+      })
+    });
+    const data = await searchRes.json();
+    const text = data.content?.find(c => c.type === 'text')?.text || '[]';
+    const clean = text.replace(/```json/g, '').replace(/```/g, '').replace(/\n/g, ' ').trim();
+    webComps = JSON.parse(clean);
+    console.log(`Web search comps: ${webComps.length} found`);
+  } catch(e) {
+    console.log('Web comp search failed:', e.message);
+  }
+
+  // Merge: AVM estimates first, then real sold comps
+  const allComps = [...comps, ...webComps];
+
+  // Refine ARV estimate using web comps if available
+  let finalARV = arvEstimate;
+  if (webComps.length > 0) {
+    const webPrices = webComps.map(c => c.salePrice).filter(Boolean);
+    if (webPrices.length > 0) {
+      const webAvg = Math.round(webPrices.reduce((a, b) => a + b, 0) / webPrices.length);
+      // Blend: 40% AVM, 60% actual sales if we have both
+      finalARV = arvEstimate
+        ? Math.round(arvEstimate * 0.4 + webAvg * 0.6)
+        : webAvg;
+      console.log(`Blended ARV: AVM=$${arvEstimate} webAvg=$${webAvg} → final=$${finalARV}`);
+    }
+  }
+
   // Attach metadata for underwrite prompt
-  comps._meta = { zillow, redfin, county, arvEstimate };
-  return comps;
+  allComps._meta = { zillow, redfin, county, arvEstimate: finalARV, webComps };
+  return allComps;
 }
 
 // ── URBAN'S BRAIN CONTEXT ─────────────────────────────────────────────────────
