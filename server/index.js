@@ -875,25 +875,34 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
 
     const historyText = chatHistory.slice(-10).map(h => `${h.role === 'user' ? h.content : 'URBAN: ' + h.content}`).join('\n');
 
-    const systemPrompt = `You are Urban, Coralstone Capital Group's underwriter. You already underwrote this deal:
+    const recentLessons = urbanBrain.lessons.slice(-10).map(l => `• ${l}`).join('\n');
+    const ws = urbanBrain.wholesalerStats[uw.deal.contact1Email || uw.deal.wholesalerEmail || ''];
+    const wHistory = ws ? `${ws.deals} prior deals, avg ARV inflation ${ws.avgARVInflation}%` : 'first deal from this wholesaler';
+    const systemPrompt = `You are Urban, Coralstone Capital Group's real estate underwriter for Tampa Bay fix-and-flip deals. You report to Caleb and Grant.
 
-DEAL: ${uw.deal.address}, ${uw.deal.city} | Asking: $${parseInt(uw.deal.askingPrice).toLocaleString()} | Your ARV: $${uw.arv?.urbanARV?.toLocaleString()} | Verdict: ${uw.verdict} (${uw.score}/10)
+THIS DEAL YOU ALREADY UNDERWROTE:
+Address: ${uw.deal.address}, ${uw.deal.city}, ${uw.deal.state} ${uw.deal.zip}
+Beds/Baths/Sqft: ${uw.deal.beds}/${uw.deal.baths}/${uw.deal.sqft}
+Asking: $${parseInt(uw.deal.askingPrice || 0).toLocaleString()} | Your ARV: $${uw.arv?.urbanARV?.toLocaleString()} | Wholesaler ARV: $${uw.arv?.wholesalerARV?.toLocaleString()}
+Your Rehab Estimate: $${uw.rehab?.urbanEstimate?.toLocaleString()} (${uw.rehab?.scopeLevel})
+MAO: $${uw.financials?.mao?.toLocaleString()} | Net Profit at Asking: $${uw.financials?.netProfitAtAsking?.toLocaleString()}
+Verdict: ${uw.verdict} (${uw.score}/10) — ${uw.verdictReason}
+Wholesaler: ${uw.deal.wholesalerCompany || 'Unknown'} | ${wHistory}
 
-Your analysis: Net profit at asking = $${uw.financials?.netProfitAtAsking?.toLocaleString()} | MAO = $${uw.financials?.mao?.toLocaleString()}
+WHAT YOU KNOW FROM PAST DEALS:
+${recentLessons || 'No prior lessons yet'}
 
-Caleb and Grant can correct your numbers and you should re-calculate immediately. If they give you new information (better comps, actual repair costs, corrected ARV), update your analysis and explain what changed and why.
-
-When they correct a number:
-1. Acknowledge the correction
-2. Re-calculate all affected figures
-3. State the new verdict if it changed
-4. Extract a lesson for your brain
-
-Be direct. Be specific. Be the best underwriter they've ever worked with.`;
+YOUR JOB IN THIS CHAT:
+- Answer questions about this deal directly and specifically
+- If Caleb or Grant gives you corrected numbers (better comps, actual repair costs, real ARV), immediately re-calculate MAO, net profit, and verdict — show the math
+- If they tell you they're making an offer, making an offer at X, or passing — acknowledge and update your recommendation
+- Be concise. No fluff. They're busy.
+- Always end corrections with: "Updated verdict: [VERDICT] ([score]/10)"
+- Sign corrections with what you learned: "🧠 Noted for future deals: [lesson]"`;
 
     const res2 = await getAnthropic().messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1200,
       system: systemPrompt,
       messages: [{ role: 'user', content: `${historyText}\n\n${author?.toUpperCase() || 'USER'}: ${message}` }]
     });
@@ -902,23 +911,31 @@ Be direct. Be specific. Be the best underwriter they've ever worked with.`;
     chatHistory.push({ role: 'assistant', content: reply, timestamp: new Date().toISOString() });
     uw.chatHistory = chatHistory;
 
-    // Extract and save lessons
-    if (message.toLowerCase().includes('actually') || message.toLowerCase().includes('correction') || message.toLowerCase().includes('wrong') || message.toLowerCase().includes('update')) {
-      urbanBrain.lessons.push(`[${new Date().toLocaleDateString()} - ${uw.deal.city}] ${message.slice(0, 200)}`);
+    // Every chat message is a potential learning moment — save all corrections
+    const correctionWords = ['actually', 'correction', 'wrong', 'update', 'arv is', 'arv should', 'repairs are', 'repairs should', 'the price', 'i got a comp', 'comp at', 'sold for', 'change', 'adjust', 'no the'];
+    const isCorrection = correctionWords.some(w => message.toLowerCase().includes(w));
+    if (isCorrection) {
+      const lesson = `[CORRECTION by ${author || 'user'} on ${uw.deal.address}, ${uw.deal.city}] ${message.slice(0, 300)} → Urban replied: ${reply.slice(0, 200)}`;
+      urbanBrain.lessons.push(`[${new Date().toLocaleDateString()}] ${lesson}`);
+      if (urbanBrain.lessons.length > 100) urbanBrain.lessons.shift();
       urbanBrain.correctionHistory.push({
         date: new Date().toISOString(),
         deal: uw.deal.address,
+        city: uw.deal.city,
         correction: message,
+        urbanReply: reply.slice(0, 300),
         author: author || 'unknown'
       });
       urbanBrain.lastUpdated = new Date().toISOString();
       saveJSON(BRAIN_FILE, urbanBrain);
+      saveBrainToSheet().catch(e => console.log('Sheet brain save after correction:', e.message));
+      console.log(`🧠 Correction learned: ${message.slice(0, 80)}`);
     }
 
     underwrites[uid] = uw;
     saveJSON(UNDERWRITES_FILE, underwrites);
 
-    res.json({ reply, chatHistory });
+    res.json({ reply, chatHistory, isCorrection });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });
