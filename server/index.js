@@ -738,6 +738,50 @@ function auth(req, res, next) {
 }
 
 // ── ROUTES ────────────────────────────────────────────────────────────────────
+// Agent feedback from Adam — Urban learns from outcomes
+app.post('/api/agent-feedback', async (req, res) => {
+  const token = req.headers['x-urban-token'];
+  if (token !== PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+  const { from, type, message, dealAddress } = req.body;
+  console.log(`💬 [${from}→urban] ${message}`);
+  // Log to Urban's brain as a lesson
+  urbanBrain.lessons = urbanBrain.lessons || [];
+  urbanBrain.lessons.push(`[Adam feedback] ${message}`);
+  if (urbanBrain.lessons.length > 50) urbanBrain.lessons = urbanBrain.lessons.slice(-50);
+  await saveBrain().catch(() => {});
+  res.json({ ok: true });
+});
+
+// Adam queries Urban directly
+app.post('/api/agent-query', async (req, res) => {
+  const token = req.headers['x-urban-token'];
+  if (token !== PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+  const { question, deal, dealAddress } = req.body;
+  console.log(`🤝 Agent query from Adam: ${question}`);
+  try {
+    // Answer using Haiku — cheap, fast
+    const r = await getAnthropic().messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: `You are Urban, real estate underwriter for Coralstone Capital Group.
+Answer this question from Adam (acquisitions agent) about a deal.
+
+Deal context: ${JSON.stringify(deal || {}, null, 2).slice(0, 500)}
+Brain context: ${urbanBrain.lessons?.slice(-5).join('; ') || 'none'}
+
+Question: ${question}
+
+Answer in 1-3 sentences. Be direct and specific.`
+      }]
+    });
+    res.json({ answer: r.content[0].text });
+  } catch(e) {
+    res.json({ answer: `Urban error: ${e.message}` });
+  }
+});
+
 app.get('/health', (req, res) => res.json({ status: 'online', ts: new Date().toISOString() }));
 
 app.get('/', (req, res, next) => {
