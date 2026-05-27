@@ -305,215 +305,67 @@ async function getDealsFromSheet() {
   });
 }
 
-// ── FREE COMP ENGINE ─────────────────────────────────────────────────────────
-// Pulls from 3 free sources: Zillow, Redfin, County Appraiser
-// Returns { comps, zestimate, countyData, arvEstimate }
-
-async function scrapeZillow(address, city, state, zip) {
-  try {
-    const encoded = encodeURIComponent(`${address} ${city} ${state} ${zip}`);
-    const url = `https://www.zillow.com/homes/${encoded}_rb/`;
-    const r = await fetch(url, { headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml',
-      'Accept-Language': 'en-US,en;q=0.9'
-    }, redirect: 'follow' });
-    const html = await r.text();
-    // Extract Zestimate from page data
-    const zestMatch = html.match(/"zestimate":(\d+)/);
-    const priceMatch = html.match(/"price":(\d+)/);
-    const sqftMatch = html.match(/"livingArea":(\d+)/);
-    const zestimate = zestMatch ? parseInt(zestMatch[1]) : null;
-    const listPrice = priceMatch ? parseInt(priceMatch[1]) : null;
-    const sqft = sqftMatch ? parseInt(sqftMatch[1]) : null;
-    console.log(`Zillow: zestimate=$${zestimate} listPrice=$${listPrice} sqft=${sqft}`);
-    return { zestimate, listPrice, sqft, source: 'zillow' };
-  } catch(e) {
-    console.log('Zillow scrape failed:', e.message);
-    return { zestimate: null, source: 'zillow' };
-  }
-}
-
-async function scrapeRedfin(address, city, state, zip) {
-  try {
-    const encoded = encodeURIComponent(`${address}, ${city}, ${state} ${zip}`);
-    const url = `https://www.redfin.com/stingray/do/location-autocomplete?location=${encoded}&count=1&v=2`;
-    const r = await fetch(url, { headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-      'Accept': 'application/json'
-    }});
-    const text = await r.text();
-    const json = JSON.parse(text.replace("{}&&", ""));
-    const item = json?.payload?.exactMatch || json?.payload?.sections?.[0]?.rows?.[0];
-    if (!item?.url) return { estimate: null, source: 'redfin' };
-    const propR = await fetch(`https://www.redfin.com${item.url}`, { headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-    }});
-    const html = await propR.text();
-    const estimateMatch = html.match(/"estimatedValue":(\d+)/);
-    const estimate = estimateMatch ? parseInt(estimateMatch[1]) : null;
-    console.log(`Redfin: estimate=$${estimate}`);
-    return { estimate, source: 'redfin' };
-  } catch(e) {
-    console.log('Redfin scrape failed:', e.message);
-    return { estimate: null, source: 'redfin' };
-  }
-}
-
-async function scrapeCountyAppraiser(address, city, state, zip) {
-  try {
-    // Florida county appraiser HTTPS APIs — free public data
-    const county = detectCounty(city, zip);
-    let result = { lastSalePrice: null, assessedValue: null, yearBuilt: null, sqft: null, county, source: 'county' };
-
-    if (county === 'Hillsborough') {
-      // Hillsborough PA has a free search API
-      const encoded = encodeURIComponent(address.toUpperCase());
-      const r = await fetch(`https://gis.hcpafl.org/arcgis/rest/services/HCPA_Services/Parcel/MapServer/0/query?where=SITEADDRESS+LIKE+%27${encoded}%25%27&outFields=*&f=json`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
-      const data = await r.json();
-      const feat = data?.features?.[0]?.attributes;
-      if (feat) {
-        result.lastSalePrice = feat.SALEAMT || null;
-        result.assessedValue = feat.JUSTVALUE || null;
-        result.yearBuilt = feat.YEARBUILT || null;
-        result.sqft = feat.TOTLVGAREA || null;
-        console.log(`Hillsborough PA: lastSale=$${result.lastSalePrice} assessed=$${result.assessedValue}`);
-      }
-    } else if (county === 'Pinellas') {
-      const encoded = encodeURIComponent(address.split(' ').slice(0,3).join(' ').toUpperCase());
-      const r = await fetch(`https://www.pcpao.gov/search/real-property?address=${encoded}&city=&zip=${zip}&action=Search`, {
-        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
-      });
-      // Pinellas returns HTML — just log it hit
-      console.log(`Pinellas PA: queried`);
-    } else if (county === 'Pasco') {
-      const encoded = encodeURIComponent(address.toUpperCase());
-      const r = await fetch(`https://pascopa.com/index.aspx?search=${encoded}`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
-      console.log(`Pasco PA: queried`);
-    }
-    return result;
-  } catch(e) {
-    console.log('County appraiser scrape failed:', e.message);
-    return { lastSalePrice: null, assessedValue: null, county: null, source: 'county' };
-  }
-}
-
-function detectCounty(city, zip) {
-  const z = parseInt(zip);
-  // Hillsborough: 33601-33699, 33701-33714 (overlap), 33547, 33549, 33556, 33558, 33559, 33563, 33565, 33566, 33567, 33569, 33570, 33572, 33573, 33578, 33579, 33584, 33586, 33587, 33592, 33594, 33596, 33598
-  if ((z >= 33601 && z <= 33699) || [33547,33549,33556,33558,33559,33563,33565,33566,33567,33569,33570,33572,33573,33578,33579,33584,33586,33587,33592,33594,33596,33598].includes(z)) return 'Hillsborough';
-  // Pinellas: 33701-33785
-  if (z >= 33701 && z <= 33785) return 'Pinellas';
-  // Pasco: 33523-33545, 34638, 34639, 34652, 34653, 34654, 34655, 34667, 34668, 34669, 34690, 34691
-  if ((z >= 33523 && z <= 33545) || [34638,34639,34652,34653,34654,34655,34667,34668,34669,34690,34691].includes(z)) return 'Pasco';
-  // Polk: 33801-33898
-  if (z >= 33801 && z <= 33898) return 'Polk';
-  // Hernando: 34601-34614
-  if (z >= 34601 && z <= 34614) return 'Hernando';
-  const c = city.toLowerCase();
-  if (c.includes('tampa') || c.includes('brandon') || c.includes('riverview') || c.includes('ruskin') || c.includes('plant city') || c.includes('lutz') || c.includes('valrico')) return 'Hillsborough';
-  if (c.includes('st pete') || c.includes('clearwater') || c.includes('largo') || c.includes('pinellas')) return 'Pinellas';
-  if (c.includes('new port') || c.includes('land o') || c.includes('zephyrhills') || c.includes('dade city') || c.includes('hudson') || c.includes('holiday') || c.includes('pasco')) return 'Pasco';
-  if (c.includes('lakeland') || c.includes('winter haven') || c.includes('auburndale') || c.includes('polk')) return 'Polk';
-  if (c.includes('brooksville') || c.includes('spring hill') || c.includes('hernando')) return 'Hernando';
-  return 'Unknown';
-}
-
+// ── COMP ENGINE ──────────────────────────────────────────────────────────────
 async function fetchComps(address, city, state, zip) {
-  // Run all three sources in parallel
-  const [zillowData, redfinData, countyData] = await Promise.allSettled([
-    scrapeZillow(address, city, state, zip),
-    scrapeRedfin(address, city, state, zip),
-    scrapeCountyAppraiser(address, city, state, zip)
-  ]);
-
-  const zillow = zillowData.status === 'fulfilled' ? zillowData.value : {};
-  const redfin = redfinData.status === 'fulfilled' ? redfinData.value : {};
-  const county = countyData.status === 'fulfilled' ? countyData.value : {};
-
-  // Build ARV estimate from available data points
-  const estimates = [];
-  if (zillow.zestimate) estimates.push(zillow.zestimate);
-  if (redfin.estimate) estimates.push(redfin.estimate);
-  // County assessed value in FL is typically 80-90% of market — adjust up
-  if (county.assessedValue) estimates.push(Math.round(county.assessedValue * 1.15));
-
-  const arvEstimate = estimates.length > 0
-    ? Math.round(estimates.reduce((a, b) => a + b, 0) / estimates.length)
-    : null;
-
-  console.log(`ARV sources: zillow=$${zillow.zestimate} redfin=$${redfin.estimate} county_assessed=$${county.assessedValue} → avg=$${arvEstimate}`);
-
-  // Return in comp format + metadata
   const comps = [];
-  if (zillow.zestimate) comps.push({
-    address: `${address} (Zestimate)`, sqft: zillow.sqft, beds: null, baths: null,
-    salePrice: zillow.zestimate, saleDate: '2025', distanceMiles: 0, source: 'zillow_zestimate'
-  });
-  if (redfin.estimate) comps.push({
-    address: `${address} (Redfin Estimate)`, sqft: null, beds: null, baths: null,
-    salePrice: redfin.estimate, saleDate: '2025', distanceMiles: 0, source: 'redfin_estimate'
-  });
-  if (county.lastSalePrice) comps.push({
-    address: `${address} (Last Sale - ${county.county} PA)`, sqft: county.sqft, beds: null, baths: null,
-    salePrice: county.lastSalePrice, saleDate: 'prior', distanceMiles: 0, source: 'county_appraiser'
-  });
+  comps._meta = { arvEstimate: null };
 
-  // Layer 4: Web search for actual comparable sales (real sold data)
-  let webComps = [];
   try {
+    // Use Haiku + web_search to find real recently sold comps
     const searchRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05'
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 800,
+        max_tokens: 1200,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Find 3-5 recently SOLD homes comparable to ${address}, ${city}, ${state} ${zip}. Search Zillow and Redfin for sold comps within 1 mile from the last 6 months. Return ONLY a JSON array, no explanation:
-[{"address":"123 Main St","sqft":1400,"beds":3,"baths":2,"salePrice":245000,"saleDate":"2025-03","distanceMiles":0.4,"source":"zillow"}]`
+          content: `Search Zillow and Redfin for recently SOLD homes comparable to: ${address}, ${city}, ${state} ${zip}. Find 3-5 sold comps from last 6 months within 1 mile, similar beds/baths/sqft. Also find the current Zestimate or Redfin estimate for this exact address if available. Return ONLY valid JSON array, no markdown:
+[{"address":"123 Oak St","sqft":1400,"beds":3,"baths":2,"salePrice":248000,"saleDate":"2025-03","distanceMiles":0.3,"source":"zillow"},{"address":"${address}","sqft":null,"beds":null,"baths":null,"salePrice":265000,"saleDate":"2025-05","distanceMiles":0,"source":"zestimate"}]`
         }]
       })
     });
+
     const data = await searchRes.json();
-    const text = data.content?.find(c => c.type === 'text')?.text || '[]';
-    const clean = text.replace(/```json/g, '').replace(/```/g, '').replace(/\n/g, ' ').trim();
-    webComps = JSON.parse(clean);
-    console.log(`Web search comps: ${webComps.length} found`);
-  } catch(e) {
-    console.log('Web comp search failed:', e.message);
-  }
-
-  // Merge: AVM estimates first, then real sold comps
-  const allComps = [...comps, ...webComps];
-
-  // Refine ARV estimate using web comps if available
-  let finalARV = arvEstimate;
-  if (webComps.length > 0) {
-    const webPrices = webComps.map(c => c.salePrice).filter(Boolean);
-    if (webPrices.length > 0) {
-      const webAvg = Math.round(webPrices.reduce((a, b) => a + b, 0) / webPrices.length);
-      // Blend: 40% AVM, 60% actual sales if we have both
-      finalARV = arvEstimate
-        ? Math.round(arvEstimate * 0.4 + webAvg * 0.6)
-        : webAvg;
-      console.log(`Blended ARV: AVM=$${arvEstimate} webAvg=$${webAvg} → final=$${finalARV}`);
+    if (data.error) {
+      console.log('Comp search API error:', data.error.message);
+      return comps;
     }
+
+    const textBlock = data.content?.find(c => c.type === 'text');
+    if (!textBlock) return comps;
+
+    const raw = textBlock.text.trim();
+    const first = raw.indexOf('[');
+    const last = raw.lastIndexOf(']');
+    if (first === -1 || last === -1) return comps;
+
+    const parsed = JSON.parse(raw.slice(first, last + 1));
+    parsed.forEach(c => comps.push(c));
+
+    // Compute ARV estimate from comps (excluding the subject property estimate)
+    const soldComps = parsed.filter(c => c.source !== 'zestimate' && c.source !== 'redfin_estimate' && c.salePrice);
+    const estimates = parsed.filter(c => (c.source === 'zestimate' || c.source === 'redfin_estimate') && c.salePrice);
+    
+    const allPrices = [...soldComps.map(c => c.salePrice), ...estimates.map(c => c.salePrice)].filter(Boolean);
+    if (allPrices.length > 0) {
+      comps._meta.arvEstimate = Math.round(allPrices.reduce((a,b) => a+b, 0) / allPrices.length);
+      console.log(`Comps found: ${soldComps.length} sold, ${estimates.length} estimates → ARV avg $${comps._meta.arvEstimate?.toLocaleString()}`);
+    }
+
+  } catch(e) {
+    console.log('Comp search error:', e.message);
   }
 
-  // Attach metadata for underwrite prompt
-  allComps._meta = { zillow, redfin, county, arvEstimate: finalARV, webComps };
-  return allComps;
+  return comps;
 }
+
 
 // ── URBAN'S BRAIN CONTEXT ─────────────────────────────────────────────────────
 function getBrainContext(wholesalerEmail, county) {
