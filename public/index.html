@@ -180,7 +180,15 @@ a{color:var(--accent)}
 </style>
 </head>
 <body>
-<div id="login-screen" style="display:none"></div>
+<div id="login-screen">
+    <h1>URBAN</h1>
+    <p class="sub">Coralstone Capital Group · Underwriter</p>
+    <div id="login-form">
+      <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
+      <button id="login-btn">ENTER</button>
+    </div>
+    <p id="login-err">Wrong password</p>
+  </div>
 
 <div id="app">
   <div id="sidebar">
@@ -497,12 +505,15 @@ const val = v => v || '—';
 $('pw').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
 $('login-btn').addEventListener('click', doLogin);
 
-// Auto-login — no password screen, token is embedded
+// Login
 (function() {
-  TOKEN = 'coralstone2025';
-  $('login-screen').style.display = 'none';
-  doLoadStats();
-  doLoadDeals();
+  const params = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+  const urlToken = params.get('token') || hashParams.get('token');
+  if (urlToken) {
+    $('pw').value = urlToken;
+    doLogin();
+  }
 })();
 async function doLogin() {
   TOKEN = $('pw').value.trim();
