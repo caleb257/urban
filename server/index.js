@@ -22,7 +22,9 @@ function getAnthropic() {
 }
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
-const PASSWORD = process.env.URBAN_PASSWORD || 'coralstone2025';
+const PASSWORD  = process.env.URBAN_PASSWORD || 'coralstone2025';
+const ADAM_URL  = process.env.ADAM_URL || '';
+const ADAM_TOKEN = process.env.ADAM_TOKEN || 'coralstone2025';
 const BRAIN_FILE = path.join(__dirname, '../data/brain.json');
 const UNDERWRITES_FILE = path.join(__dirname, '../data/underwrites.json');
 
