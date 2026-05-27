@@ -490,9 +490,11 @@ $('login-btn').addEventListener('click', doLogin);
 
 // Auto-login via URL param ?token=X (for testing/iframe access)
 (function() {
+  // Support token in query string OR hash (hash avoids browser cookie data filtering)
   const params = new URLSearchParams(window.location.search);
-  const urlToken = params.get('token');
-  const autoUnderwrite = params.get('underwrite');
+  const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+  const urlToken = params.get('token') || hashParams.get('token');
+  const autoUnderwrite = params.get('underwrite') || hashParams.get('underwrite');
   if (urlToken) {
     $('pw').value = urlToken;
     doLogin().then(() => {
