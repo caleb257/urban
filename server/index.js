@@ -823,13 +823,53 @@ app.get('/api/deals', auth, async (req, res) => {
 });
 
 // Underwrite a specific deal
+// Underwrite by address — used by Derek for auto-underwrite on new deals
+app.post('/api/underwrite-by-address/:address', auth, async (req, res) => {
+  try {
+    const address = decodeURIComponent(req.params.address).toLowerCase().trim();
+    const { deep } = req.body;
+    const deals = await getDealsFromSheet();
+    const deal = deals.find(d => (d.address || '').toLowerCase().trim() === address ||
+                                  (d.address || '').toLowerCase().includes(address.split(' ')[0]));
+    if (!deal) {
+      console.log(`Auto-underwrite: no deal found for address "${address}"`);
+      return res.status(404).json({ error: 'Deal not found by address' });
+    }
+    const uid = deal.uid || `${deal.address}-${deal.dateReceived}`;
+    console.log(`🏙️ Auto-underwriting: ${deal.address} (uid: ${uid})`);
+
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
+    const sendStatus = (msg) => res.write(`data: ${JSON.stringify({ status: msg })}\n\n`);
+
+    sendStatus(`Pulling comps for ${deal.address}...`);
+    const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+    sendStatus(`Got ${comps.length} data points — underwriting...`);
+
+    const underwrite = await underwriteDeal(deal, comps, false, deep || false);
+    res.write(`data: ${JSON.stringify({ done: true, underwrite })}\n\n`);
+    res.end();
+  } catch(e) {
+    console.error('Auto-underwrite error:', e.message);
+    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+    res.end();
+  }
+});
+
 app.post('/api/underwrite/:uid', auth, async (req, res) => {
   try {
     const { uid } = req.params;
     const { forceRefresh, deep } = req.body;
     const deals = await getDealsFromSheet();
-    const deal = deals.find(d => (d.uid || `${d.address}-${d.dateReceived}`) === uid);
-    if (!deal) return res.status(404).json({ error: 'Deal not found' });
+    // Match by uid, or by address fragment (for Derek's auto-trigger)
+    const deal = deals.find(d => {
+      const duid = d.uid || `${d.address}-${d.dateReceived}`;
+      return duid === uid || d.uid === uid || 
+             (uid.length > 8 && (d.address || '').toLowerCase().includes(uid.toLowerCase().split('-')[0]));
+    });
+    if (!deal) {
+      console.log(`Deal not found for uid: ${uid} — available: ${deals.slice(0,3).map(d=>d.uid||d.address).join(', ')}`);
+      return res.status(404).json({ error: 'Deal not found' });
+    }
 
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -867,8 +907,15 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
   try {
     const { uid } = req.params;
     const { message, author } = req.body; // author: 'caleb' or 'grant'
-    const uw = underwrites[uid];
-    if (!uw) return res.status(404).json({ error: 'Not underwritten yet' });
+    let uw = underwrites[uid];
+    if (!uw) {
+      // Auto-underwrite on demand when chat is opened before underwrite ran
+      const deals = await getDealsFromSheet();
+      const deal = deals.find(d => (d.uid || `${d.address}-${d.dateReceived}`) === uid);
+      if (!deal) return res.status(404).json({ error: 'Deal not found in sheet' });
+      const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+      uw = await underwriteDeal(deal, comps, false, false);
+    }
 
     const chatHistory = uw.chatHistory || [];
     chatHistory.push({ role: 'user', content: `${author?.toUpperCase() || 'USER'}: ${message}`, timestamp: new Date().toISOString() });

@@ -543,6 +543,46 @@ async function doLoadDeals() {
   deals = await r.json();
   $('ref-btn').textContent = '↻ Pull from Derek\'s Sheet';
   renderList();
+  // Auto-underwrite any deals that are still PENDING
+  autoUnderwritePending();
+}
+
+async function autoUnderwritePending() {
+  const pending = deals.filter(d => !d.underwriteStatus || d.underwriteStatus === 'PENDING');
+  if (!pending.length) return;
+  console.log(`Auto-underwriting ${pending.length} pending deal(s)...`);
+  for (const d of pending) {
+    try {
+      const addr = encodeURIComponent(d.address);
+      const res = await fetch(`/api/underwrite-by-address/${addr}`, {
+        method: 'POST',
+        headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deep: false })
+      });
+      const reader = res.body.getReader(), dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n'); buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.done) {
+              console.log(`✅ Auto-underwrote: ${d.address} → ${data.underwrite.verdict}`);
+              // Update deal in list
+              const idx = deals.findIndex(x => x.address === d.address);
+              if (idx >= 0) { deals[idx].underwriteStatus = data.underwrite.verdict; deals[idx].underwriteScore = data.underwrite.score; }
+              renderList();
+            }
+          } catch {}
+        }
+      }
+    } catch(e) { console.log(`Auto-underwrite failed for ${d.address}:`, e.message); }
+    await new Promise(r => setTimeout(r, 2000)); // 2s between deals
+  }
 }
 $('ref-btn').addEventListener('click', doLoadDeals);
 $('search-input').addEventListener('input', renderList);
