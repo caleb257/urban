@@ -942,6 +942,7 @@ window.addEventListener('message', (e) => {
   }
   if (e.data?.action === 'underwrite') doUnderwrite(true, false);
   if (e.data?.action === 'deepUnderwrite') doUnderwrite(true, true);
+  if (e.data?.action === 'switchTab' && e.data.tab) switchTab(e.data.tab);
   if (e.data?.action === 'getDeals') e.source.postMessage({ deals: deals.map(d => ({address:d.address, city:d.city, status:d.underwriteStatus})) }, '*');
 });
 
