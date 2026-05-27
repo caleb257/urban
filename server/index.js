@@ -576,6 +576,30 @@ app.post('/api/override/:uid', auth, async (req, res) => {
 // Urban's brain
 app.get('/api/brain', auth, (req, res) => res.json(urbanBrain));
 
+// Test endpoint — runs full pipeline without auth for debugging
+app.get('/api/test', async (req, res) => {
+  try {
+    const deals = await getDealsFromSheet();
+    if (!deals.length) return res.json({ error: 'No deals in sheet' });
+    const deal = deals[0];
+    const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+    const uw = await underwriteDeal(deal, comps, true);
+    res.json({ 
+      success: true, 
+      deal: deal.address,
+      verdict: uw.verdict,
+      score: uw.score,
+      urbanARV: uw.arv?.urbanARV,
+      wholesalerARV: uw.arv?.wholesalerARV,
+      netProfit: uw.financials?.netProfitAtAsking,
+      mao: uw.financials?.mao,
+      recommendation: uw.recommendation?.substring(0, 200)
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message, stack: e.stack?.substring(0, 500) });
+  }
+});
+
 // Stats
 app.get('/api/stats', auth, (req, res) => {
   const all = Object.values(underwrites);
