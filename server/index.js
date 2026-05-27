@@ -289,7 +289,7 @@ async function fetchComps(address, city, state, zip) {
         'anthropic-beta': 'web-search-2025-03-05'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',  // Sonnet for comp searches — better web search accuracy
+        model: 'claude-haiku-4-5-20251001', // Haiku for comps — fast and cheap
         max_tokens: 2000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
@@ -399,6 +399,156 @@ function getBrainContext(wholesalerEmail, county) {
   return { lessons, wholesalerNotes: wNotes, wholesalerStats: wStats, marketContext: marketCtx };
 }
 
+// ── DEEP COMP ENGINE (Sonnet — used only for deep underwrite) ────────────────
+async function fetchDeepComps(address, city, state, zip, beds, baths, sqft, propType) {
+  const comps = [];
+  comps._meta = { arvEstimate: null, dataQuality: 'DEEP' };
+
+  try {
+    // Run 3 targeted searches in parallel for maximum data
+    const searches = [
+      // Search 1: Recent sold comps on Zillow
+      fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-beta': 'web-search-2025-03-05'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [{ role: 'user', content:
+            `Search Zillow for recently SOLD homes near ${address}, ${city}, FL ${zip}. ` +
+            `I need ${beds}bd/${baths}ba homes sold in last 6 months within 1 mile, similar size (~${sqft||1200} sqft). ` +
+            `Return ONLY valid JSON array of comps found:
+` +
+            `[{"address":"123 Oak","sqft":1400,"beds":3,"baths":2,"salePrice":248000,"saleDate":"2025-03","distanceMiles":0.3,"source":"zillow_sold"}]
+` +
+            `Include only real data. Return [] if nothing found.`
+          }]
+        })
+      }),
+      // Search 2: Redfin comps + Zestimate
+      fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-beta': 'web-search-2025-03-05'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [{ role: 'user', content:
+            `Search Redfin for recently sold comparable homes near ${address}, ${city}, FL ${zip}. ` +
+            `Also find the Redfin estimate and Zillow Zestimate for ${address}, ${city} FL specifically. ` +
+            `Return ONLY valid JSON array:
+` +
+            `[{"address":"${address}","sqft":null,"beds":null,"baths":null,"salePrice":265000,"saleDate":"2025-05","distanceMiles":0,"source":"zestimate"}]
+` +
+            `Include the subject property estimate AND any sold comps. Return [] if nothing found.`
+          }]
+        })
+      }),
+      // Search 3: Permit history + tax record + neighborhood data
+      fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-beta': 'web-search-2025-03-05'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1500,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [{ role: 'user', content:
+            `Search for property details for ${address}, ${city}, FL ${zip}:
+` +
+            `1. Look up the property on the county property appraiser website (search "${city} FL property appraiser ${address}")
+` +
+            `2. Find the assessed value, last sale price, last sale date, and year built
+` +
+            `3. Search for any recent permit activity (search "${address} ${city} FL building permit")
+
+` +
+            `Return a JSON object (not array):
+` +
+            `{"assessedValue":null,"lastSalePrice":null,"lastSaleDate":null,"yearBuilt":null,"permits":[],"taxAssessedYear":null,"notes":"what you found"}`
+          }]
+        })
+      })
+    ];
+
+    console.log(`🔍 Deep comps: running 3 parallel Sonnet searches for ${address}...`);
+    const [r1, r2, r3] = await Promise.all(searches.map(p => p.then(r => r.json())));
+
+    // Parse comp results from search 1 and 2
+    for (const data of [r1, r2]) {
+      const textBlock = data.content?.find(c => c.type === 'text');
+      if (!textBlock?.text) continue;
+      const raw = textBlock.text.trim();
+      const arrStart = raw.indexOf('['), arrEnd = raw.lastIndexOf(']');
+      if (arrStart === -1 || arrEnd <= arrStart) continue;
+      try {
+        const parsed = JSON.parse(raw.slice(arrStart, arrEnd + 1));
+        if (Array.isArray(parsed)) parsed.forEach(c => { if (c?.salePrice) comps.push(c); });
+      } catch(e) { console.log('Deep comp parse error:', e.message); }
+    }
+
+    // Parse property data from search 3
+    const textBlock3 = r3.content?.find(c => c.type === 'text');
+    if (textBlock3?.text) {
+      const raw3 = textBlock3.text.trim();
+      const objStart = raw3.indexOf('{'), objEnd = raw3.lastIndexOf('}');
+      if (objStart !== -1 && objEnd > objStart) {
+        try {
+          const propData = JSON.parse(raw3.slice(objStart, objEnd + 1));
+          comps._meta.propertyData = propData;
+          console.log(`📋 Property data: assessed $${propData.assessedValue?.toLocaleString()}, last sold $${propData.lastSalePrice?.toLocaleString()} (${propData.lastSaleDate})`);
+          // Add assessed value as a comp signal
+          if (propData.assessedValue) {
+            comps.push({ address, sqft: null, beds: null, baths: null,
+              salePrice: propData.assessedValue, saleDate: String(propData.taxAssessedYear || ''),
+              distanceMiles: 0, source: 'tax_assessed' });
+          }
+        } catch(e) {}
+      }
+    }
+
+    // Compute blended ARV
+    const soldComps = comps.filter(c => c.source?.includes('sold') && c.salePrice);
+    const estimates = comps.filter(c => (c.source?.includes('zestimate') || c.source?.includes('estimate')) && c.salePrice);
+    const taxComp = comps.filter(c => c.source === 'tax_assessed' && c.salePrice);
+
+    console.log(`Deep comps: ${soldComps.length} sold, ${estimates.length} estimates, ${taxComp.length} tax`);
+
+    if (soldComps.length > 0 || estimates.length > 0) {
+      const soldAvg = soldComps.length ? soldComps.reduce((a,c) => a + c.salePrice, 0) / soldComps.length : 0;
+      const estAvg = estimates.length ? estimates.reduce((a,c) => a + c.salePrice, 0) / estimates.length : 0;
+      let arv;
+      if (soldAvg && estAvg) arv = Math.round(soldAvg * 0.7 + estAvg * 0.3);
+      else if (soldAvg) arv = Math.round(soldAvg);
+      else arv = Math.round(estAvg);
+      comps._meta.arvEstimate = arv;
+      comps._meta.soldCount = soldComps.length;
+      comps._meta.estimateCount = estimates.length;
+      console.log(`Deep ARV estimate: $${arv.toLocaleString()} (${soldComps.length} sold + ${estimates.length} estimates + ${taxComp.length} tax)`);
+    }
+
+  } catch(e) {
+    console.log('Deep comp engine error:', e.message);
+  }
+
+  return comps;
+}
+
 // ── UNDERWRITE ENGINE ─────────────────────────────────────────────────────────
 async function underwriteDeal(deal, comps, forceRefresh = false, deep = false) {
   const uid = deal.uid || `${deal.address}-${deal.dateReceived}`;
@@ -420,7 +570,7 @@ async function underwriteDeal(deal, comps, forceRefresh = false, deep = false) {
     ? arvLine + '\n' + comps.map(c => `- ${c.address}: $${c.salePrice?.toLocaleString()} sold ${c.saleDate} (${c.source})`).join('\n')
     : arvLine;
 
-  const prompt = `You are Urban, elite real estate underwriter for Coralstone Capital Group, Tampa Bay FL. 20+ years fix-and-flip experience in Pasco, Hillsborough, Polk, Pinellas, Hernando counties.
+  const prompt = `${deep ? 'DEEP ANALYSIS MODE — Sonnet is running. Be thorough. Show your full reasoning on ARV and rehab. Longer text fields allowed.\n\n' : ''}You are Urban, elite real estate underwriter for Coralstone Capital Group, Tampa Bay FL. 20+ years fix-and-flip experience in Pasco, Hillsborough, Polk, Pinellas, Hernando counties.
 
 CORALSTONE CRITERIA:
 - Hard money: 9.5% interest only, 90% LTV
@@ -536,9 +686,13 @@ IMPORTANT: Keep ALL text values under 200 characters. Valid JSON only. No markdo
   const model = deep ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5-20251001';
   console.log(`Underwriting ${deal.address} with ${model}`);
 
+  const system = deep
+    ? 'You are an elite real estate underwriter with access to full market data. Respond with ONLY valid JSON. Be thorough and precise — this is a deep analysis. Do not truncate any field.'
+    : 'You are a real estate underwriter. Always respond with ONLY valid JSON — no markdown, no backticks, no explanation before or after. Keep all text fields under 200 characters. Be concise.';
+
   const res = await getAnthropic().messages.create({
-    model, max_tokens: 4096,
-    system: 'You are a real estate underwriter. Always respond with ONLY valid JSON — no markdown, no backticks, no explanation before or after. Keep all text fields under 200 characters. Be concise.',
+    model, max_tokens: deep ? 8192 : 4096,
+    system,
     messages: [{ role: 'user', content: prompt }]
   });
 
@@ -749,9 +903,11 @@ app.post('/api/underwrite/:uid', auth, async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
     const send = msg => res.write(`data: ${JSON.stringify(msg)}\n\n`);
 
-    send({ status: 'Fetching comps...' });
-    const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip);
-    send({ status: `Got ${comps.length} comps — Urban is analyzing...` });
+    send({ status: deep ? '🔍 Deep analysis: running 3 parallel comp searches (Zillow + Redfin + county records)...' : 'Fetching comps...' });
+    const comps = deep
+      ? await fetchDeepComps(deal.address, deal.city, deal.state, deal.zip, deal.beds, deal.baths, deal.sqft, deal.propertyType)
+      : await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+    send({ status: `Got ${comps.length} comps — ${deep ? 'running Sonnet deep analysis' : 'Urban is analyzing'}...` });
 
     const uw = await underwriteDeal(deal, comps, forceRefresh || false, deep || false);
     send({ done: true, underwrite: uw });
@@ -786,9 +942,11 @@ app.post('/api/underwrite-by-address/:address', auth, async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
     const send = msg => res.write(`data: ${JSON.stringify(msg)}\n\n`);
 
-    send({ status: `Fetching comps for ${deal.address}...` });
-    const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip);
-    send({ status: `Got ${comps.length} comps — underwriting...` });
+    send({ status: deep ? '🔍 Deep analysis: running 3 parallel comp searches (Zillow + Redfin + county records)...' : `Fetching comps for ${deal.address}...` });
+    const comps = deep
+      ? await fetchDeepComps(deal.address, deal.city, deal.state, deal.zip, deal.beds, deal.baths, deal.sqft, deal.propertyType)
+      : await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+    send({ status: `Got ${comps.length} comps — ${deep ? 'running Sonnet deep analysis' : 'underwriting'}...` });
 
     const uw = await underwriteDeal(deal, comps, false, deep || false);
     send({ done: true, underwrite: uw });
