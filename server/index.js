@@ -46,7 +46,11 @@ let underwrites = loadJSON(UNDERWRITES_FILE, {});
 
 // ── SHEETS CLIENT ─────────────────────────────────────────────────────────────
 function getSheets() {
-  const creds = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+  const rawCreds = process.env.GOOGLE_CREDENTIALS_JSON;
+  if (!rawCreds) throw new Error('GOOGLE_CREDENTIALS_JSON env var is not set');
+  let creds;
+  try { creds = JSON.parse(rawCreds); }
+  catch(e) { throw new Error('GOOGLE_CREDENTIALS_JSON is not valid JSON: ' + e.message); }
   const auth = new google.auth.JWT(creds.client_email, null, creds.private_key,
     ['https://www.googleapis.com/auth/spreadsheets.readonly']);
   return google.sheets({ version: 'v4', auth });
