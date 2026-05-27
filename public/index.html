@@ -578,7 +578,6 @@ async function selectDeal(d) {
   $('dv-addr').textContent = d.address || 'Unknown';
   $('dv-city').textContent = `${d.city}, ${d.state} ${d.zip} · ${d.county} County · ${d.propertyType}`;
   fillPropTab(d);
-  fillPropTab(d);
   const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, { headers: { 'x-urban-token': TOKEN } });
   if (r.ok) { curUW = await r.json(); renderUW(curUW); }
   else showPending();
@@ -592,6 +591,20 @@ function showPending() {
   $('loading-state').style.display = 'none';
   $('uw-content').style.display = 'none';
 }
+
+// TAB SWITCHING
+function switchTab(name) {
+  curTab = name;
+  document.querySelectorAll('.stab').forEach(t => t.classList.toggle('on', t.dataset.t === name));
+  document.querySelectorAll('.tc').forEach(t => t.style.display = 'none');
+  const el = $('t-' + name);
+  if (el) el.style.display = 'block';
+  // Fill property tab data when switching to it
+  if (name === 'property' && curDeal) fillPropTab(curDeal);
+}
+document.querySelectorAll('.stab').forEach(t => {
+  t.addEventListener('click', () => switchTab(t.dataset.t));
+});
 
 // UNDERWRITE
 $('btn-uw').addEventListener('click', () => doUnderwrite(false, false));
@@ -630,6 +643,7 @@ function renderUW(uw) {
   $('pending-card').style.display = 'none';
   $('loading-state').style.display = 'none';
   $('uw-content').style.display = 'block';
+  switchTab('overview'); // always reset to overview on new underwrite
   const v = uw.verdict || 'REVIEW';
   const vc = v.replace(/\s/g,'').toUpperCase();
   $('dv-v').textContent = v; $('dv-v').className = `verdict-big v${vc}`;
