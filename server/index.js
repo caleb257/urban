@@ -289,7 +289,7 @@ async function fetchComps(address, city, state, zip) {
         'anthropic-beta': 'web-search-2025-03-05'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-20250514',  // Sonnet for comp searches — better web search accuracy
         max_tokens: 2000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
@@ -588,7 +588,16 @@ IMPORTANT: Keep ALL text values under 200 characters. Valid JSON only. No markdo
       if (ws.arvSamples.length > 20) ws.arvSamples.shift();
       ws.avgARVInflation = (ws.arvSamples.reduce((a,b)=>a+b,0)/ws.arvSamples.length).toFixed(1);
     }
-    urbanBrain.wholesalerNotes[email] = `${ws.name} (${ws.company}) | ${ws.deals} deals | avg ARV inflation: ${ws.avgARVInflation}% | verdicts: ${JSON.stringify(ws.verdicts)}`;
+    // ARV inflation flag — requires manual verification by Caleb/Grant
+    // Auto-flags when: 3+ deals AND avg inflation > 15%
+    // Once manually verified (ws.verifiedInflator = true), flag is permanent
+    if (!ws.verifiedInflator && ws.arvSamples.length >= 3 && parseFloat(ws.avgARVInflation) > 15) {
+      ws.inflationWarning = true;
+      console.log(`⚠️ ARV INFLATION WARNING: ${ws.name || email} avg ${ws.avgARVInflation}% over ${ws.arvSamples.length} deals — NEEDS MANUAL VERIFICATION`);
+    } else if (!ws.verifiedInflator && parseFloat(ws.avgARVInflation) <= 15) {
+      ws.inflationWarning = false; // auto-clear if improves
+    }
+    urbanBrain.wholesalerNotes[email] = `${ws.name} (${ws.company}) | ${ws.deals} deals | avg ARV inflation: ${ws.avgARVInflation}%${ws.verifiedInflator ? ' | ⚠️ VERIFIED INFLATOR' : ws.inflationWarning ? ' | ⚠️ INFLATION WARNING (unverified)' : ''} | verdicts: ${JSON.stringify(ws.verdicts)}`;
 
     const lesson = `${underwrite.verdict} | ${deal.address}, ${deal.city} | Ask $${deal.askingPrice?.toLocaleString()} | Urban ARV $${underwrite.arv?.urbanARV?.toLocaleString()} | Net profit $${underwrite.financials?.netProfitAtAsking?.toLocaleString()} | ${underwrite.verdictReason}`;
     urbanBrain.lessons.push(`[${new Date().toLocaleDateString()}] ${lesson}`);
@@ -630,6 +639,84 @@ app.get('/', (req, res, next) => {
 });
 
 // Get deals with underwrite status attached
+// ── WHOLESALER VERIFICATION (manual by Caleb/Grant) ──────────────────────────
+app.post('/api/verify-wholesaler', auth, async (req, res) => {
+  const { email, verified, notes } = req.body;
+  if (!email) return res.status(400).json({ error: 'email required' });
+  if (!urbanBrain.wholesalerStats[email]) {
+    return res.status(404).json({ error: 'Wholesaler not found in brain' });
+  }
+  const ws = urbanBrain.wholesalerStats[email];
+  ws.verifiedInflator = !!verified;
+  ws.inflationWarning = !!verified; // if verified, warning stays on permanently
+  if (notes) ws.verificationNotes = notes;
+  ws.verifiedBy = 'Caleb/Grant';
+  ws.verifiedAt = new Date().toISOString();
+  urbanBrain.wholesalerNotes[email] = `${ws.name} (${ws.company}) | ${ws.deals} deals | avg ARV inflation: ${ws.avgARVInflation}%${ws.verifiedInflator ? ' | ⚠️ VERIFIED INFLATOR' : ''} | verdicts: ${JSON.stringify(ws.verdicts)}`;
+  await saveBrain();
+  console.log(`✅ Wholesaler ${email} ${verified ? 'VERIFIED as inflator' : 'cleared'} by Caleb/Grant`);
+  res.json({ success: true, email, verifiedInflator: ws.verifiedInflator, notes: ws.verificationNotes });
+});
+
+// ── BATCH AUTO-UNDERWRITE (parallel, 3 concurrent) ───────────────────────────
+app.post('/api/auto-underwrite-batch', auth, async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+
+  try {
+    const deals = await getDealsFromSheet();
+    const pending = deals.filter(d => {
+      const uid = d.uid || `${d.address}-${d.dateReceived}`;
+      return !underwrites[uid] || d.underwriteStatus === 'PENDING';
+    });
+
+    send({ total: pending.length, status: `Found ${pending.length} pending deals` });
+    if (!pending.length) { res.end(); return; }
+
+    const CONCURRENCY = 3;
+    let idx = 0;
+    let completed = 0;
+    const results = [];
+
+    async function processNext() {
+      while (idx < pending.length) {
+        const deal = pending[idx++];
+        if (!deal.address || deal.address === 'XXXX') {
+          send({ skipped: true, address: deal.address || 'XXXX', reason: 'No address' });
+          completed++;
+          continue;
+        }
+        try {
+          send({ status: `Fetching comps for ${deal.address}...`, address: deal.address });
+          const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+          const uw = await underwriteDeal(deal, comps, false, false);
+          underwrites[uw.uid || deal.address] = uw;
+          saveJSON(UNDERWRITES_FILE, underwrites);
+          await logUnderwriteToSheet(uw);
+          await saveBrain();
+          results.push({ address: deal.address, verdict: uw.verdict, score: uw.score });
+          send({ done: true, address: deal.address, verdict: uw.verdict, score: uw.score });
+          completed++;
+          console.log(`⚡ Batch: ${deal.address} → ${uw.verdict} (${completed}/${pending.length})`);
+        } catch(e) {
+          send({ error: e.message, address: deal.address });
+          completed++;
+        }
+      }
+    }
+
+    // Run CONCURRENCY workers simultaneously
+    await Promise.all(Array.from({ length: CONCURRENCY }, processNext));
+    send({ finished: true, total: completed, results });
+  } catch(e) {
+    send({ error: e.message });
+  }
+  res.end();
+});
+
 app.get('/api/deals', auth, async (req, res) => {
   try {
     const deals = await getDealsFromSheet();
