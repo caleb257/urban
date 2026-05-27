@@ -494,16 +494,19 @@ Respond ONLY with a JSON object (no markdown, no backticks, just raw JSON):
   "riskFlags": [{"flag":"<name>","severity":"<HIGH|MEDIUM|LOW>","detail":"<explanation>"}],
   "marketAnalysis": {"neighborhood":"<assessment>","trend":"<IMPROVING|STABLE|DECLINING>","daysOnMarket":"<typical DOM>","notes":"<context>"},
   "wholesalerCredibility": {"assessment":"<TRUSTED|UNKNOWN|QUESTIONABLE>","arvAccuracy":"<TYPICALLY ACCURATE|INFLATED|UNKNOWN>","notes":"<read>"},
-  "recommendation": "<full direct recommendation — tell Caleb and Grant exactly what Urban thinks>",
-  "offerStrategy": "<if worth pursuing: exact offer price, terms, contingencies>",
-  "urbanNotes": "<anything else>"
-}`;
+  "recommendation": "<2-3 sentence max direct recommendation for Caleb and Grant>",
+  "offerStrategy": "<if worth pursuing: offer price and key terms in 1-2 sentences>",
+  "urbanNotes": "<1 sentence max>"
+}
+
+IMPORTANT: Keep ALL text values under 200 characters. Valid JSON only. No markdown.`;
 
   const model = deep ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5-20251001';
   console.log(`Underwriting ${deal.address} with ${model}`);
 
   const res = await getAnthropic().messages.create({
-    model, max_tokens: deep ? 4000 : 3000,
+    model, max_tokens: 4096,
+    system: 'You are a real estate underwriter. Always respond with ONLY valid JSON — no markdown, no backticks, no explanation before or after. Keep all text fields under 200 characters. Be concise.',
     messages: [{ role: 'user', content: prompt }]
   });
 
