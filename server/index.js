@@ -109,6 +109,38 @@ async function logUnderwriteToSheet(uw) {
       uw.financials?.netProfitAtAsking, uw.financials?.mao, uw.rehab?.urbanEstimate,
       uw.verdict, uw.score, uw.verdictReason, uw.model || 'haiku',
       uw.deal?.contact1Email || '', uw.deal?.wholesalerCompany || ''];
+
+    // Write verdict back to Active Deals: check Pass col (B) for PASS/HARD NO, 
+    // check Sold col (C) for HOT/BUY (indicates action), Review col (D) for REVIEW
+    if (uw.deal?.uid) {
+      try {
+        const adRes = await s.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID, range: 'Active Deals!A:CT'
+        });
+        const rows = adRes.data.values || [];
+        const uidCol = rows[0]?.indexOf('Email UID');
+        if (uidCol >= 0) {
+          const rowIdx = rows.findIndex((r, i) => i > 0 && String(r[uidCol]) === String(uw.deal.uid));
+          if (rowIdx > 0) {
+            const sheetRow = rowIdx + 1;
+            // Col B = Pass, Col C = Sold, Col D = Review (1-indexed: B=2, C=3, D=4)
+            let checkCol = null;
+            if (['PASS','HARD NO'].includes(uw.verdict)) checkCol = 'B'; // Pass checkbox
+            else if (uw.verdict === 'REVIEW') checkCol = 'D';            // Review checkbox
+            if (checkCol) {
+              await s.spreadsheets.values.update({
+                spreadsheetId: SHEET_ID,
+                range: `Active Deals!${checkCol}${sheetRow}`,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: [[true]] }
+              });
+              console.log(`✅ Marked ${checkCol} (${uw.verdict}) for row ${sheetRow}: ${uw.deal.address}`);
+            }
+          }
+        }
+      } catch(wbErr) { console.log('Write-back err:', wbErr.message); }
+    }
+
     await s.spreadsheets.values.append({ spreadsheetId: SHEET_ID,
       range: `${UW_LOG_TAB}!A:A`, valueInputOption: 'RAW',
       requestBody: { values: [row] } });

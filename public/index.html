@@ -235,6 +235,7 @@ a{color:var(--accent)}
       <div class="ftab" data-f="BUY">Buy</div>
       <div class="ftab" data-f="REVIEW">Review</div>
       <div class="ftab" data-f="PASS">Pass</div>
+      <div class="ftab" data-f="HARDNO">Hard No</div>
       <div class="ftab" data-f="PENDING">Pending</div>
     </div>
     <div id="deal-list"></div>
@@ -589,7 +590,10 @@ function renderList() {
   const list = $('deal-list');
   const filtered = deals.filter(d => {
     const status = d.underwriteStatus || 'PENDING';
-    const matchFilter = curFilter === 'ALL' || status === curFilter;
+    const normStatus = status === 'HARD NO' ? 'HARDNO' : status;
+    const matchFilter = curFilter === 'ALL' 
+      || normStatus === curFilter
+      || (curFilter === 'PASS' && (status === 'PASS' || status === 'HARD NO'));
     const matchSearch = !q || `${d.address} ${d.city} ${d.wholesalerCompany} ${d.contact1Name}`.toLowerCase().includes(q);
     return matchFilter && matchSearch;
   });
