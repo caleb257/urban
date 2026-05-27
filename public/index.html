@@ -487,6 +487,15 @@ const val = v => v || '—';
 // AUTH
 $('pw').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
 $('login-btn').addEventListener('click', doLogin);
+
+// Auto-login via URL param ?token=X (for testing/iframe access)
+(function() {
+  const urlToken = new URLSearchParams(window.location.search).get('token');
+  if (urlToken) {
+    $('pw').value = urlToken;
+    doLogin();
+  }
+})();
 async function doLogin() {
   TOKEN = $('pw').value.trim();
   const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
