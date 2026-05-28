@@ -304,11 +304,13 @@ async function fetchComps(address, city, state, zip) {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `You are a real estate comp researcher. Do TWO web searches:
+          content: `You are a real estate comp researcher for Tampa Bay FL fix-and-flip investors. Do TWO web searches:
 
-1. Search Zillow for recently sold homes near "${address}, ${city}, ${state} ${zip}" — find 3-5 homes sold in the last 6 months within 1 mile that are similar (same beds/baths/sqft range). Look for actual SOLD prices not list prices.
+1. Search Zillow for recently SOLD homes near "${address}, ${city}, ${state} ${zip}" — find 3-5 homes sold in the last 6 months within 1 mile. Target similar size: ${deal.beds||3}bd/${deal.baths||2}ba, ~${deal.sqft||1200}sqft. Look for SOLD prices only, not list prices.
 
-2. Search for the Zestimate or current estimated value of "${address}, ${city}, ${state} ${zip}" on Zillow or Redfin.
+2. Search for the Zestimate for "${address}, ${city}, ${state} ${zip}" on Zillow. Also check Redfin estimate if available.
+
+Tampa Bay price context: SFRs typically range $150K-$600K depending on area. Hillsborough avg ~$380K, Pasco avg ~$290K, Pinellas avg ~$420K.
 
 After searching, return ONLY a valid JSON array (no markdown, no backticks, no explanation) with all comps you found:
 [
@@ -396,16 +398,34 @@ Include ONLY entries where you found real data. If you found no comps, return an
 
 // ── BRAIN CONTEXT ─────────────────────────────────────────────────────────────
 function getBrainContext(wholesalerEmail, county) {
-  const lessons = urbanBrain.lessons.slice(-25).map(l => `- ${l}`).join('\n');
+  // Lessons: last 40, plus a summary of older ones so nothing is lost
+  const allLessons = urbanBrain.lessons || [];
+  const recentLessons = allLessons.slice(-40).map(l => `- ${l}`).join('\n');
+  const olderCount = Math.max(0, allLessons.length - 40);
+  const lessonSummary = olderCount > 0
+    ? `[+ ${olderCount} earlier lessons stored — key themes: corrections on ARV inflation, wholesaler patterns, market-specific rehab costs]\n`
+    : '';
+  const lessons = lessonSummary + (recentLessons || 'No lessons yet');
+
+  // Wholesaler intel — rich context
   const wNotes = urbanBrain.wholesalerNotes[wholesalerEmail] || 'First time seeing this wholesaler';
   const ws = urbanBrain.wholesalerStats[wholesalerEmail];
-  const wStats = ws
-    ? `${ws.deals} prior deals | avg ARV inflation: ${ws.avgARVInflation}% | past verdicts: ${JSON.stringify(ws.verdicts)}`
-    : 'No prior deals from this wholesaler';
+  let wStats = 'No prior deals from this wholesaler';
+  if (ws) {
+    const topVerdict = ws.verdicts && Object.entries(ws.verdicts).sort((a,b)=>b[1]-a[1])[0];
+    const inflationFlag = ws.verifiedInflator ? ' ⚠️ VERIFIED ARV INFLATOR' : ws.inflationWarning ? ' ⚠️ ARV inflation warning' : '';
+    wStats = `${ws.deals} prior deals${inflationFlag} | avg ARV inflation: ${ws.avgARVInflation}% | most common verdict: ${topVerdict ? topVerdict[0] : 'mixed'} | corrections: ${ws.corrections || 0}`;
+  }
+
+  // Market context — price/sqft + what works in this market
   const mn = urbanBrain.marketNotes[county];
-  const marketCtx = mn && mn.deals > 2
-    ? `${county}: ${mn.deals} deals | avg Urban ARV: $${mn.avgARV?.toLocaleString()}`
-    : `${county}: limited data`;
+  let marketCtx = `${county || 'unknown county'}: limited data`;
+  if (mn && mn.deals > 1) {
+    const ppsqft = mn.avgARV && mn.avgSqft ? Math.round(mn.avgARV / mn.avgSqft) : null;
+    const hotRate = mn.deals > 0 ? Math.round((mn.hotDeals || 0) / mn.deals * 100) : 0;
+    marketCtx = `${county}: ${mn.deals} deals analyzed | avg Urban ARV $${mn.avgARV?.toLocaleString()} | ${ppsqft ? `avg $/sqft $${ppsqft}` : ''} | ${hotRate}% score HOT/BUY`;
+  }
+
   return { lessons, wholesalerNotes: wNotes, wholesalerStats: wStats, marketContext: marketCtx };
 }
 
@@ -590,8 +610,10 @@ Respond ONLY with a JSON object (no markdown, no backticks, just raw JSON):
   "arv": {
     "wholesalerARV": <number>,
     "urbanARV": <number>,
+    "arvPerSqft": <urbanARV divided by sqft, or null if sqft unknown>,
+    "marketAvgPerSqft": <what $/sqft comps support, or null>,
     "arvConfidence": "<HIGH|MEDIUM|LOW>",
-    "arvNotes": "<specific reasoning>",
+    "arvNotes": "<specific reasoning — cite actual comp addresses and prices>",
     "compsUsed": ["<addresses>"]
   },
   "rehab": {
@@ -654,7 +676,7 @@ IMPORTANT: Keep ALL text values under 200 characters. Valid JSON only. No markdo
     : 'You are a real estate underwriter. Always respond with ONLY valid JSON — no markdown, no backticks, no explanation before or after. Keep all text fields under 200 characters. Be concise.';
 
   const res = await getAnthropic().messages.create({
-    model, max_tokens: deep ? 8192 : 4096,
+    model, max_tokens: deep ? 8192 : 5000,  // 5000 standard so rehab line items never truncate
     system,
     messages: [{ role: 'user', content: prompt }]
   });

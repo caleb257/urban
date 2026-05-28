@@ -701,10 +701,12 @@ function renderList() {
       ? Math.floor((Date.now() - new Date(d.dateReceived)) / 86400000)
       : null;
     const ageLabel = ageDays === null ? '' : ageDays === 0 ? '🟢 Today' : ageDays === 1 ? '🟡 1d' : ageDays <= 3 ? `🟡 ${ageDays}d` : ageDays <= 7 ? `🟠 ${ageDays}d` : `🔴 ${ageDays}d`;
+    const sqftLabel = d.sqft ? `${parseInt(d.sqft).toLocaleString()} sf` : '';
+    const ppsqft = (d.underwriteScore && d.arv?.arvPerSqft) ? ` · $${Math.round(d.arv.arvPerSqft)}/sf` : '';
 
     el.innerHTML = `
       <div class="di-addr">${d.address || 'No address'}</div>
-      <div class="di-city">${d.city}, ${d.state} · ${d.beds||'?'}bd/${d.baths||'?'}ba · ${d.sqft ? parseInt(d.sqft).toLocaleString() : '?'} sqft</div>
+      <div class="di-city">${d.city}, ${d.state} · ${d.beds||'?'}bd/${d.baths||'?'}ba · ${d.sqft ? parseInt(d.sqft).toLocaleString() : '?'} sqft${ppsqft}</div>
       <div class="di-meta">
         <span class="di-price">${price}</span>
         <span class="badge ${badgeCls}">${status}</span>
