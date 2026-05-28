@@ -1,4 +1,5 @@
 require('dotenv').config({ path: '../.env' });
+const TAMPA = require('./tampaKnowledge');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -569,6 +570,53 @@ CORALSTONE CRITERIA:
 - Full rehab: 5 month hold. Light cosmetic: 4 months.
 - Wholesaler ARVs are usually INFLATED. Be skeptical. Find the TRUE ARV.
 - If wholesaler ARV seems LOW, note the upside.
+- Agent commission: 6% | Seller closing costs: 1.5% | HML origination: 2 points
+- Target: 3/2 SFR 1200-2000sqft, $150-350K asking, Pasco/Hillsborough sweet spot
+
+TAMPA BAY NEIGHBORHOOD INTEL ($/sqft benchmarks, 2025):
+${(() => {
+  const city = (deal.city||'').toLowerCase().trim();
+  const zip = deal.zip || '';
+  // Find neighborhood match
+  const nb = Object.entries(TAMPA.neighborhoods).find(([name]) =>
+    city.includes(name) || name.includes(city.split(' ')[0])
+  );
+  if (nb) {
+    const [name, data] = nb;
+    return name.toUpperCase() + ': $' + data.ppsf + '/sqft avg | Tier ' + data.tier + ' | Trend: ' + data.trend + ' | ' + data.notes;
+  }
+  return 'No specific neighborhood data — use comp-based judgment. See market conditions below.';
+})()}
+
+TAMPA BAY MARKET CONDITIONS (2025):
+- FL insurance crisis: Roofs 15yr+ hard to insure. 20yr+ uninsurable. Budget $3-6K/yr insurance.
+- Buyer pool strongest: $150-350K. FHA buyers active under $250K. Investors active everywhere.
+- Days on market: A-tier ~25 days | B-tier ~35 days | C-tier ~55 days
+- New construction competing in Wesley Chapel, Parrish, Riverview corridors — comp carefully.
+- Peak season Feb-May. Slower Jun-Sep. Q4 pickup.
+
+REPAIR COST BENCHMARKS (Tampa Bay contractors, 2025):
+- Roof (shingle, 1500sqft): $8-13K | 2000sqft: $10-16K | 2500sqft: $13-20K
+- HVAC full system: $6-10K | Condenser only: $3-5K
+- Kitchen full gut: $15-30K | Cosmetic: $5-12K
+- Master bath: $8-18K | Secondary bath: $5-10K
+- LVP flooring: $3-6/sqft installed | Tile: $6-12/sqft
+- Full repipe: $4-8K | Water heater: $1.2-2.5K
+- Panel upgrade 200A: $2.5-5K | Electric rewire: $8-20K
+- Interior paint (1500sqft): $3-6K | Exterior: $3-8K
+- Impact windows: $10-25K whole home | Per window: $400-800
+- Foundation repair: $5-30K+ (ALWAYS flag, get engineer)
+- Sewer camera: $300-600 (ALWAYS on homes 25yr+)
+- Permits + inspection budget: $1.5-4K
+
+RED FLAGS TO ALWAYS FLAG:
+${Object.entries(TAMPA.redFlags).map(([flag, data]) => `- ${flag.toUpperCase()} [${data.severity}]: ${data.detail}`).join('\n')}
+
+WHAT MAKES A HOT DEAL FOR CORALSTONE:
+${TAMPA.scoringFactors.HOT.map(f => '✅ ' + f).join('\n')}
+
+WHAT IS A HARD NO:
+${TAMPA.scoringFactors.HARD_NO.map(f => '❌ ' + f).join('\n')}
 
 URBAN BRAIN — LESSONS (most recent 40 + summary of all prior):
 ${brain.lessons || 'No lessons yet'}
@@ -694,8 +742,8 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
   console.log(`Underwriting ${deal.address} with ${model}`);
 
   const system = deep
-    ? 'You are an elite real estate underwriter with access to full market data. Respond with ONLY valid JSON. Be thorough and precise — this is a deep analysis. Do not truncate any field.'
-    : 'You are a real estate underwriter. Always respond with ONLY valid JSON — no markdown, no backticks, no explanation before or after. Keep all text fields under 200 characters. Be concise.';
+    ? `You are Urban — elite fix-and-flip underwriter for Coralstone Capital Group, Tampa Bay FL. You have encyclopedic knowledge of Tampa Bay neighborhoods, contractor costs, market conditions, and deal patterns. You have underwritten ${urbanBrain.totalUnderwritten||0} Tampa Bay deals. Your ARV estimates are based on actual comp data and neighborhood $/sqft benchmarks. Your rehab estimates are based on real Tampa Bay contractor rates. You are direct, precise, and brutally honest. Respond with ONLY valid JSON. Do NOT truncate any field — this is deep analysis mode.`
+    : `You are Urban — fix-and-flip underwriter for Coralstone Capital Group, Tampa Bay FL. You know Tampa Bay neighborhoods cold: prices, trends, buyer demand, contractor costs, red flags. You have underwritten ${urbanBrain.totalUnderwritten||0} Tampa Bay deals. You are direct and use real numbers — not vague ranges. Respond with ONLY valid JSON — no markdown, no backticks, nothing before or after the JSON object.`;
 
   const res = await getAnthropic().messages.create({
     model, max_tokens: deep ? 8192 : 6000,  // 6000 ensures recommendation+offerStrategy never truncate
