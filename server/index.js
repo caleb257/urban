@@ -564,12 +564,18 @@ CORALSTONE CRITERIA:
 - Wholesaler ARVs are usually INFLATED. Be skeptical. Find the TRUE ARV.
 - If wholesaler ARV seems LOW, note the upside.
 
-URBAN BRAIN — LESSONS (last 25):
+URBAN BRAIN — LESSONS (most recent 40 + summary of all prior):
 ${brain.lessons || 'No lessons yet'}
 
 WHOLESALER INTEL:
 ${brain.wholesalerNotes}
 ${brain.wholesalerStats}
+CREDIBILITY NOTE: ${
+  brain.wholesalerStats.includes('VERIFIED ARV INFLATOR') ? 'This wholesaler is a VERIFIED ARV inflator. Aggressively haircut their ARV.' :
+  brain.wholesalerStats.includes('ARV inflation warning') ? 'This wholesaler has an ARV inflation warning. Be skeptical of their ARV.' :
+  brain.wholesalerStats.includes('prior deals') && brain.wholesalerStats.includes('avg ARV inflation: 0') ? 'Wholesaler ARV has been accurate historically.' :
+  'No credibility data yet — treat wholesaler ARV with standard skepticism.'
+}
 
 MARKET CONTEXT: ${brain.marketContext}
 LIFETIME: ${urbanBrain.totalUnderwritten || 0} deals | ${urbanBrain.hotDeals || 0} HOT | ${urbanBrain.passedDeals || 0} passed
@@ -595,8 +601,9 @@ Highlights: ${deal.highlights}
 Notes: ${deal.additionalNotes}
 
 WHOLESALER NUMBERS:
-Asking: $${askingPrice.toLocaleString()} | Their ARV: $${wholesalerARV.toLocaleString()}
-Repairs: ${wholesalerRepairs ? '$'+wholesalerRepairs.toLocaleString() : 'NOT PROVIDED'}
+Asking: $${askingPrice.toLocaleString()} | Their ARV: $${wholesalerARV.toLocaleString()} | Their Repairs: ${wholesalerRepairs ? '$'+wholesalerRepairs.toLocaleString() : 'NOT PROVIDED'}
+Their MAO implication: $${wholesalerARV ? Math.round(wholesalerARV*0.7 - (wholesalerRepairs||0)).toLocaleString() : '?'} (ARV×70%-Repairs)
+Gap vs asking: $${wholesalerARV ? Math.round(wholesalerARV*0.7 - (wholesalerRepairs||0) - askingPrice).toLocaleString() : '?'} (positive = room to negotiate, negative = overpriced)
 Taxes: $${annualTaxes.toLocaleString()}/yr | Close: ${deal.closeDate} | EMD: ${deal.earnestMoney}
 
 COMPS:
@@ -666,7 +673,7 @@ Respond ONLY with a JSON object (no markdown, no backticks, just raw JSON):
   "urbanNotes": "<1 sentence max>"
 }
 
-IMPORTANT: Keep ALL text values under 200 characters. Valid JSON only. No markdown.`;
+IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other text fields under 150 chars.. Valid JSON only. No markdown.`;
 
   const model = deep ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5-20251001';
   console.log(`Underwriting ${deal.address} with ${model}`);
@@ -1233,17 +1240,42 @@ app.post('/api/override/:uid', auth, (req, res) => {
 
 // Stats
 app.get('/api/stats', auth, (req, res) => {
-  const all = Object.values(underwrites);
+  const all = Object.values(underwrites).filter(u => u.verdict && !u.restoredFromSheet);
   const verdicts = {};
   all.forEach(u => { verdicts[u.verdict] = (verdicts[u.verdict]||0) + 1; });
+  const profits = all.map(u => u.financials?.netProfitAtAsking).filter(p => p && p > 0);
+  const avgProfit = profits.length ? Math.round(profits.reduce((a,b)=>a+b,0)/profits.length) : null;
+  const scores = all.map(u => u.score).filter(Boolean);
+  const avgScore = scores.length ? scores.reduce((a,b)=>a+b,0)/scores.length : null;
+  // Wholesaler quality rankings from brain
+  const wsRankings = Object.entries(urbanBrain.wholesalerStats || {})
+    .filter(([, ws]) => ws.deals >= 3)
+    .sort((a, b) => (b[1].hotDeals||0) - (a[1].hotDeals||0))
+    .slice(0, 5)
+    .map(([email, ws]) => ({
+      email, name: ws.name || email,
+      deals: ws.deals, hotDeals: ws.hotDeals || 0,
+      avgInflation: ws.avgARVInflation,
+      isInflator: ws.verifiedInflator || ws.inflationWarning
+    }));
   res.json({
-    totalUnderwritten: all.length, verdicts,
-    avgScore: all.length ? (all.reduce((s,u)=>s+(u.score||0),0)/all.length).toFixed(1) : 0,
-    lessonsLearned: urbanBrain.lessons.length,
-    corrections: urbanBrain.correctionHistory.length
+    totalUnderwritten: all.length,
+    verdicts,
+    avgScore: avgScore ? parseFloat(avgScore.toFixed(1)) : null,
+    avgProfit,
+    lessonsLearned: (urbanBrain.lessons||[]).length,
+    correctionsApplied: (urbanBrain.correctionHistory||[]).length,
+    topWholesalers: wsRankings,
+    marketSummary: Object.entries(urbanBrain.marketNotes||{})
+      .filter(([, mn]) => mn.deals >= 3)
+      .map(([county, mn]) => ({
+        county, deals: mn.deals,
+        avgARV: mn.avgARV,
+        avgSqft: mn.avgSqft,
+        hotRate: mn.deals ? Math.round((mn.hotDeals||0)/mn.deals*100) : 0
+      }))
   });
 });
-
 // Brain
 app.get('/api/brain', auth, (req, res) => res.json(urbanBrain));
 

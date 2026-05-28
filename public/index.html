@@ -509,9 +509,15 @@ async function doLoadStats() {
     const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
     const s = await r.json();
     $('st-total').textContent = s.totalUnderwritten || 0;
-    $('st-avg').textContent = s.avgScore || '—';
-    $('st-hot').textContent = s.verdicts?.HOT || 0;
+    $('st-avg').textContent = s.avgScore ? s.avgScore.toFixed(1) : '—';
+    $('st-hot').textContent = (s.verdicts?.HOT||0) + (s.verdicts?.BUY||0);
     $('st-lessons').textContent = s.lessonsLearned || 0;
+    if ($('st-profit')) $('st-profit').textContent = s.avgProfit ? '$'+Math.round(s.avgProfit/1000)+'K avg' : '—';
+    if ($('st-pct')) {
+      const total = s.totalUnderwritten || 1;
+      const good = (s.verdicts?.HOT||0) + (s.verdicts?.BUY||0);
+      $('st-pct').textContent = Math.round(good/total*100) + '% HOT/BUY';
+    }
   } catch {}
 }
 
@@ -668,6 +674,21 @@ document.querySelectorAll('.ftab').forEach(t => t.addEventListener('click', () =
 function renderList() {
   const q = $('search-input').value.toLowerCase();
   const list = $('deal-list');
+  // Apply sort
+  const sortBy = $('sort-select')?.value || 'date-new';
+  deals.sort((a, b) => {
+    if (sortBy === 'date-new') return new Date(b.dateReceived||0) - new Date(a.dateReceived||0);
+    if (sortBy === 'date-old') return new Date(a.dateReceived||0) - new Date(b.dateReceived||0);
+    if (sortBy === 'score-high') return (b.underwriteScore||0) - (a.underwriteScore||0);
+    if (sortBy === 'profit-high') {
+      // Try to get profit from underwrite cache — fall back to estimated MAO gap
+      const profA = a.netProfitAtAsking || 0;
+      const profB = b.netProfitAtAsking || 0;
+      return profB - profA;
+    }
+    if (sortBy === 'ask-low') return (parseFloat(a.askingPrice)||999999) - (parseFloat(b.askingPrice)||999999);
+    return 0;
+  });
   const filtered = deals.filter(d => {
     const status = d.underwriteStatus || 'PENDING';
     const normStatus = status === 'HARD NO' ? 'HARDNO' : status;
@@ -694,6 +715,8 @@ function renderList() {
     const isActive = curDeal && (curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`) === uid;
     const el = document.createElement('div');
     const warnBadge = inflationWarn ? ' <span style="color:#ff6b35;font-size:9px;font-weight:700;vertical-align:middle" title="ARV Inflation Warning">⚠️ ARV</span>' : '';
+    // High risk flag badge from underwrite
+    const hasHighFlag = (() => { try { const u = underwrites && underwrites[uid]; return u?.riskFlags?.some(f=>f.severity==='HIGH'); } catch { return false; } })();
     el.className = 'di' + (isActive ? ' active' : '');
     el.dataset.uid = uid;
     // Calculate deal age
