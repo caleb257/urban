@@ -744,6 +744,12 @@ function renderList() {
 // ── SELECT DEAL ────────────────────────────────────────────────────────────────
 async function selectDeal(d) {
   curDeal = d;
+  // Always update chat header to show which deal Urban is talking about
+  const chatLabel = $('chat-deal-label');
+  if (chatLabel) chatLabel.textContent = d.address ? `— ${d.address}` : '';
+  // Clear chat history display when switching deals so it loads fresh
+  const msgs = $('chat-msgs');
+  if (msgs) msgs.innerHTML = '';
   const uid = d.uid || `${d.address}-${d.dateReceived}`;
   document.querySelectorAll('.di').forEach(el => el.classList.toggle('active', el.dataset.uid === uid));
   $('main-empty').style.display = 'none';
@@ -1151,25 +1157,31 @@ $('chat-in').addEventListener('keydown', e => { if (e.key==='Enter' && (e.metaKe
 
 async function doChat() {
   const msg = $('chat-in').value.trim();
-  if (!msg || !curDeal) return;
-  const uid = curUW?.uid || curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
+  if (!msg) { addMsg('a', '⚠️ Select a deal first, then type your question.'); return; }
+  if (!curDeal) { addMsg('a', '⚠️ No deal selected. Click a deal in the list first.'); return; }
+
+  // Always derive uid from curDeal — never from stale curUW
+  // Server can look up by address if uid doesn't match
+  const uid = curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
+  const address = curDeal.address;
+
   $('chat-in').value = '';
   addMsg('u', `${author.toUpperCase()}: ${msg}`);
-  addMsg('a', '...');
+  addMsg('a', '⏳ Urban is thinking about ${address}...');
   try {
     const r = await fetch(`/api/chat/${encodeURIComponent(uid)}`, {
       method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg, author })
+      body: JSON.stringify({ message: msg, author, address, city: curDeal.city, activeTab: curTab || 'overview' })
     });
     const data = await r.json();
     const msgs = $('chat-msgs');
-    msgs.removeChild(msgs.lastChild); // remove "..."
+    msgs.removeChild(msgs.lastChild); // remove thinking indicator
     if (data.reply) addMsg('a', data.reply);
-    else if (data.error) addMsg('a', '⚠️ Error: ' + data.error);
+    else if (data.error) addMsg('a', `⚠️ ${data.error}`);
   } catch(e) {
     const msgs = $('chat-msgs');
     if (msgs.lastChild) msgs.removeChild(msgs.lastChild);
-    addMsg('a', '⚠️ Error: ' + e.message);
+    addMsg('a', '⚠️ Connection error: ' + e.message);
   }
 }
 

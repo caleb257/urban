@@ -1106,13 +1106,45 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
   try {
     const { uid } = req.params;
     const { message, author } = req.body;
+    // Look up underwrite — try uid directly, then all known uid formats, then by address
+    const { address: hintAddress, city: hintCity } = req.body;
     let uw = underwrites[uid];
+
     if (!uw) {
+      // Try every possible uid format in the cache
+      uw = Object.values(underwrites).find(u =>
+        u.uid === uid ||
+        u.deal?.address === uid ||
+        (u.deal?.address && hintAddress && u.deal.address.toLowerCase() === hintAddress.toLowerCase())
+      );
+    }
+
+    if (!uw) {
+      // Fall back to fetching the deal from the sheet by address or uid
       const deals = await getDealsFromSheet();
-      const deal = deals.find(d => (d.uid || `${d.address}-${d.dateReceived}`) === uid);
-      if (!deal) return res.status(404).json({ error: 'Deal not found' });
-      const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip);
-      uw = await underwriteDeal(deal, comps, false, false);
+      const deal = deals.find(d => {
+        if ((d.uid || `${d.address}-${d.dateReceived}`) === uid) return true;
+        if (hintAddress && d.address?.toLowerCase() === hintAddress.toLowerCase()) return true;
+        return false;
+      });
+
+      if (!deal) {
+        console.log(`Chat: deal not found — uid="${uid}", address hint="${hintAddress}"`);
+        return res.status(404).json({
+          error: `Deal not found. Make sure the deal has been underwritten first. (Looking for: ${hintAddress || uid})`
+        });
+      }
+
+      // Check if it's already underwritten under a different uid format
+      const altUid = `${deal.address}-${deal.dateReceived}`;
+      uw = underwrites[deal.uid] || underwrites[altUid];
+
+      if (!uw) {
+        // Not underwritten yet — underwrite it now (Haiku, cheap)
+        console.log(`Chat: auto-underwriting ${deal.address} for chat context...`);
+        const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+        uw = await underwriteDeal(deal, comps, false, false);
+      }
     }
 
     const chatHistory = uw.chatHistory || [];
@@ -1121,8 +1153,21 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
     const ws = urbanBrain.wholesalerStats[uw.deal.contact1Email || ''];
     const wHistory = ws ? `${ws.deals} prior deals, avg ARV inflation ${ws.avgARVInflation}%` : 'first deal from this wholesaler';
 
-    const systemPrompt = `You are Urban, Coralstone Capital Group's real estate underwriter for Tampa Bay. You report to Caleb and Grant.
+    const activeTab = req.body.activeTab || 'overview';
+    const tabContext = {
+      overview: 'User is looking at the Overview — verdict, profit, ARV summary, recommendation.',
+      arv: 'User is on the ARV tab — focused on comp analysis, ARV confidence, wholesaler vs Urban ARV.',
+      rehab: 'User is on the Rehab tab — focused on repair line items, scope, confidence.',
+      financials: 'User is on the Financials tab — focused on MAO, hard money, holding costs, net profit.',
+      rental: 'User is on the Rental tab — focused on rental yield, cap rate, cash flow.',
+      flags: 'User is on the Risk Flags tab — focused on specific risk items.',
+      property: 'User is on the Property tab — looking at raw property details from the sheet.',
+      chat: 'User is in the chat — may ask anything about this deal.'
+    }[activeTab] || '';
 
+    const systemPrompt = `You are Urban, Coralstone Capital Group's real estate underwriter for Tampa Bay. You report to Caleb and Grant.
+${tabContext ? `ACTIVE TAB CONTEXT: ${tabContext}
+` : ''}
 DEAL YOU UNDERWROTE:
 ${uw.deal.address}, ${uw.deal.city} FL | ${uw.deal.beds}/${uw.deal.baths}bd/ba | ${uw.deal.sqft} sqft | ${uw.deal.yearBuilt}
 Asking: $${parseInt(uw.deal.askingPrice||0).toLocaleString()} | Your ARV: $${uw.arv?.urbanARV?.toLocaleString()} | Wholesaler ARV: $${uw.arv?.wholesalerARV?.toLocaleString()}
