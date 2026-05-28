@@ -443,9 +443,9 @@ async function fetchDeepComps(address, city, state, zip, beds, baths, sqft, prop
   comps._meta = { arvEstimate: null, dataQuality: 'DEEP' };
 
   try {
-    // 2 Haiku searches in parallel — cheap, fast
-    const [r1, r2] = await Promise.all([
-      // Search 1: recent sold comps
+    // 3 searches in parallel for deep mode — sold comps, wider radius, active listings
+    const [r1, r2, r3] = await Promise.all([
+      // Search 1: recent sold comps (tight radius)
       fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -544,7 +544,38 @@ async function underwriteDeal(deal, comps, forceRefresh = false, deep = false) {
   const uid = deal.uid || `${deal.address}-${deal.dateReceived}`;
   if (underwrites[uid] && !forceRefresh) return underwrites[uid];
 
-  const brain = getBrainContext(deal.contact1Email, deal.county || deal.city);
+  // ── SMART LESSON INJECTION: match by county + property type + wholesaler ──
+function getRelevantLessons(deal, maxLessons = 15) {
+  const all = urbanBrain.lessons || [];
+  const city = (deal.city || '').toLowerCase();
+  const county = (deal.county || '').toLowerCase();
+  const wsEmail = (deal.contact1Email || '').toLowerCase();
+  const wsName  = (deal.wholesalerCompany || deal.contact1Name || '').toLowerCase();
+
+  // Score each lesson by relevance
+  const scored = all.map(l => {
+    const ll = l.toLowerCase();
+    let score = 0;
+    if (ll.includes(city)) score += 4;
+    if (ll.includes(county)) score += 3;
+    if (wsEmail && ll.includes(wsEmail.split('@')[0])) score += 5;
+    if (wsName && ll.includes(wsName.split(' ')[0])) score += 3;
+    // Recency: newer lessons score higher (last 20 get +2, last 5 get +3)
+    const idx = all.indexOf(l);
+    if (idx >= all.length - 5)  score += 3;
+    if (idx >= all.length - 20) score += 2;
+    return { lesson: l, score };
+  });
+
+  // Sort by score descending, take top N
+  const relevant = scored.sort((a, b) => b.score - a.score).slice(0, maxLessons);
+  const rest = all.slice(-5).filter(l => !relevant.find(r => r.lesson === l)); // always include last 5
+
+  return [...new Set([...relevant.map(r => r.lesson), ...rest])].join('\n');
+}
+
+const brain = getBrainContext(deal.contact1Email, deal.county || deal.city);
+const relevantLessons = getRelevantLessons(deal);
   const sqft = parseFloat(deal.sqft) || 0;
   const askingPrice = parseFloat(deal.askingPrice) || 0;
   const wholesalerARV = parseFloat(deal.wholesalerARV) || 0;
@@ -618,8 +649,8 @@ ${TAMPA.scoringFactors.HOT.map(f => '✅ ' + f).join('\n')}
 WHAT IS A HARD NO:
 ${TAMPA.scoringFactors.HARD_NO.map(f => '❌ ' + f).join('\n')}
 
-URBAN BRAIN — LESSONS (most recent 40 + summary of all prior):
-${brain.lessons || 'No lessons yet'}
+URBAN BRAIN — RELEVANT LESSONS (matched by county, wholesaler, recency):
+${relevantLessons || 'No lessons yet — first deal in this area'}
 
 WHOLESALER INTEL:
 ${brain.wholesalerNotes}
@@ -660,7 +691,46 @@ Their MAO implication: $${wholesalerARV ? Math.round(wholesalerARV*0.7 - (wholes
 Gap vs asking: $${wholesalerARV ? Math.round(wholesalerARV*0.7 - (wholesalerRepairs||0) - askingPrice).toLocaleString() : '?'} (positive = room to negotiate, negative = overpriced)
 Taxes: $${annualTaxes.toLocaleString()}/yr | Close: ${deal.closeDate} | EMD: ${deal.earnestMoney}
 
-COMPS:
+PRIVATE COMP DATABASE (Coralstone past deals — real numbers we paid for):
+${(() => {
+  const city = (deal.city||'').toLowerCase();
+  const county = (deal.county||'').toLowerCase();
+  const targetSqft = parseFloat(deal.sqft) || 0;
+  const privatComps = Object.values(underwrites)
+    .filter(uw =>
+      uw.verdict && uw.arv?.urbanARV && uw.deal?.address &&
+      uw.deal.address !== deal.address && // not the same deal
+      !uw.restoredFromSheet && // has full data
+      ((uw.deal.city||'').toLowerCase().includes(city.split(' ')[0]) ||
+       (uw.deal.county||'').toLowerCase().includes(county.split(' ')[0]))
+    )
+    .map(uw => ({
+      addr: uw.deal.address,
+      arv: uw.arv.urbanARV,
+      sqft: parseFloat(uw.deal.sqft) || 0,
+      beds: uw.deal.beds,
+      baths: uw.deal.baths,
+      verdict: uw.verdict,
+      ppsf: uw.arv.urbanARV && uw.deal.sqft ? Math.round(uw.arv.urbanARV / parseFloat(uw.deal.sqft)) : null,
+      date: uw.underwroteAt ? new Date(uw.underwroteAt).toLocaleDateString() : '?'
+    }))
+    .sort((a, b) => {
+      // sort by sqft proximity to subject
+      const da = Math.abs(a.sqft - targetSqft);
+      const db = Math.abs(b.sqft - targetSqft);
+      return da - db;
+    })
+    .slice(0, 5);
+
+  if (!privatComps.length) return 'None yet in this area — this may be first deal here.';
+  return privatComps.map(c =>
+    c.addr + ' | ' + (c.sqft||'?') + 'sqft ' + (c.beds||'?') + 'bd/' + (c.baths||'?') + 'ba' +
+    ' | Our ARV: $' + c.arv.toLocaleString() + (c.ppsf ? ' ($'+c.ppsf+'/sqft)' : '') +
+    ' | ' + c.verdict + ' | ' + c.date
+  ).join('\n');
+})()}
+
+MARKET COMPS (Zillow/web search):
 ${compsText}
 
 MARKET CONTEXT FOR THIS COUNTY (${deal.county || deal.city}):
@@ -742,7 +812,7 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
   console.log(`Underwriting ${deal.address} with ${model}`);
 
   const system = deep
-    ? `You are Urban — elite fix-and-flip underwriter for Coralstone Capital Group, Tampa Bay FL. You have encyclopedic knowledge of Tampa Bay neighborhoods, contractor costs, market conditions, and deal patterns. You have underwritten ${urbanBrain.totalUnderwritten||0} Tampa Bay deals. Your ARV estimates are based on actual comp data and neighborhood $/sqft benchmarks. Your rehab estimates are based on real Tampa Bay contractor rates. You are direct, precise, and brutally honest. Respond with ONLY valid JSON. Do NOT truncate any field — this is deep analysis mode.`
+    ? `You are Urban — elite fix-and-flip underwriter for Coralstone Capital Group, Tampa Bay FL. You have underwritten ${urbanBrain.totalUnderwritten||0} Tampa Bay deals. DEEP ANALYSIS MODE: Run 2 comp searches with different search strategies. Check active listings competing with the flip. Be extremely precise on rehab — go line by line. Give your highest-confidence ARV with detailed comp justification. Show your full reasoning. Do NOT truncate any field.`
     : `You are Urban — fix-and-flip underwriter for Coralstone Capital Group, Tampa Bay FL. You know Tampa Bay neighborhoods cold: prices, trends, buyer demand, contractor costs, red flags. You have underwritten ${urbanBrain.totalUnderwritten||0} Tampa Bay deals. You are direct and use real numbers — not vague ranges. Respond with ONLY valid JSON — no markdown, no backticks, nothing before or after the JSON object.`;
 
   const res = await getAnthropic().messages.create({
@@ -772,8 +842,79 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
   underwrite.deal = deal;
   underwrite.comps = comps;
   underwrite.underwroteAt = new Date().toISOString();
+
+  // ── NEGOTIATION LADDER ────────────────────────────────────────────────────
+  // 5 price points so Caleb/Grant know exactly where the deal pencils
+  try {
+    const arv     = underwrite.arv?.urbanARV || 0;
+    const repairs = underwrite.rehab?.urbanEstimate || 0;
+    const mao     = underwrite.financials?.mao || Math.round(arv * 0.7 - repairs);
+    const ask     = parseFloat(deal.askingPrice) || 0;
+    const costs   = (underwrite.financials?.holdingCosts?.total || 0) +
+                    (underwrite.financials?.sellingCosts?.total || 0) +
+                    (underwrite.financials?.hardMoney?.totalInterest || 0) +
+                    (underwrite.financials?.hardMoney?.originationPoints || 0);
+    // Generate 5 meaningful price points between MAO-10% and asking+5%
+    const pts = [
+      Math.round(ask * 1.00),             // asking (baseline)
+      Math.round(ask * 0.95),             // 5% under ask
+      Math.round((ask + mao) / 2),        // midpoint
+      Math.round(mao * 1.00),             // MAO
+      Math.round(mao * 0.90),             // 10% under MAO (stretch offer)
+    ].filter((p, i, arr) => p > 0 && arr.indexOf(p) === i)
+     .sort((a, b) => b - a); // highest to lowest
+
+    underwrite.negotiationLadder = pts.map(price => ({
+      price,
+      label: price === Math.round(ask) ? 'Asking' :
+             price === mao ? 'MAO' :
+             price < mao ? 'Stretch offer' :
+             price > Math.round(ask * 0.98) ? 'Near ask' : 'Counter',
+      profit: Math.round(arv - price - repairs - costs),
+      meetsMin: Math.round(arv - price - repairs - costs) >= 40000,
+      roi:   arv > 0 ? parseFloat(((arv - price - repairs - costs) / (price + repairs) * 100).toFixed(1)) : 0
+    }));
+  } catch(e) { /* non-critical */ }
   underwrite.chatHistory = underwrite.chatHistory || [];
   underwrite.model = model;
+
+  // ── EXIT ANALYSIS ──────────────────────────────────────────────────────────
+  try {
+    const city = (deal.city||'').toLowerCase();
+    const nb = Object.entries(TAMPA.neighborhoods).find(([name]) =>
+      city.includes(name.split(' ')[0]) || name.includes(city.split(' ')[0])
+    );
+    const tier = nb ? nb[1].tier : 'C';
+    const tierKey = tier.startsWith('A') ? 'a_tier' : tier.startsWith('B') ? 'b_tier' : 'c_tier';
+    const dom  = TAMPA.marketConditions.days_on_market[tierKey] || 45;
+    const lsr  = TAMPA.marketConditions.list_to_sale_ratio[tierKey] || 0.94;
+    const arv  = underwrite.arv?.urbanARV || 0;
+    const ask  = parseFloat(deal.askingPrice) || 0;
+    const repairs = underwrite.rehab?.urbanEstimate || 0;
+
+    // Extra hold cost from DOM vs assumed hold
+    const holdMonths = underwrite.financials?.holdMonths || 5;
+    const domMonths  = Math.ceil(dom / 30);
+    const extraMonths = Math.max(0, domMonths - 1); // 1 month to close after list
+    const extraHoldCost = extraMonths * 350; // $350/mo extra carrying per extra month
+
+    // Realistic sale price = ARV * list-to-sale ratio
+    const realisticSalePrice = Math.round(arv * lsr);
+
+    underwrite.exitAnalysis = {
+      neighborhoodTier: tier,
+      estimatedDOM: dom,
+      listToSaleRatio: lsr,
+      realisticSalePrice,
+      realisticSalePriceNote: `${arv.toLocaleString()} ARV × ${(lsr*100).toFixed(0)}% list-to-sale`,
+      adjustedProfit: Math.round((underwrite.financials?.netProfitAtAsking||0) - (arv - realisticSalePrice) - extraHoldCost),
+      extraCarryingCost: extraHoldCost,
+      totalHoldEstimate: holdMonths + extraMonths,
+      buyerProfile: tier.startsWith('A') ? 'Move-up/luxury buyers. 25 day DOM typical.' :
+                    tier.startsWith('B') ? 'First-time + move-up buyers. 35 day DOM typical. Strong demand.' :
+                    'Value/investor buyers. 55 day DOM typical. Price sensitively high.',
+    };
+  } catch(e) { /* non-critical */ }
 
   underwrites[uid] = underwrite;
   saveJSON(UNDERWRITES_FILE, underwrites);
@@ -956,6 +1097,18 @@ app.post('/api/agent-feedback', async (req, res) => {
 });
 
 // Adam queries Urban directly
+
+// Keep deal alive — reset 7-day stale timer
+app.post('/api/keep-deal/:uid', auth, (req, res) => {
+  const uid  = decodeURIComponent(req.params.uid);
+  const days = parseInt((req.body && req.body.days) || 7);
+  if (!urbanBrain.keptDeals) urbanBrain.keptDeals = {};
+  urbanBrain.keptDeals['kept:' + uid] = new Date(Date.now() + days * 86400000).toISOString();
+  saveBrain().catch(() => {});
+  console.log('📌 Kept: ' + uid + ' for ' + days + ' days');
+  res.json({ ok: true });
+});
+
 app.post('/api/agent-query', async (req, res) => {
   const token = req.headers['x-urban-token'];
   if (token !== PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
@@ -1084,8 +1237,39 @@ app.get('/api/deals', auth, async (req, res) => {
     const deals = await getDealsFromSheet();
     const out = deals.map(d => {
       const uid = d.uid || `${d.address}-${d.dateReceived}`;
-      const uw = underwrites[uid];
-      return { ...d, underwriteStatus: uw ? uw.verdict : 'PENDING', underwriteScore: uw ? uw.score : null, underwroteAt: uw ? uw.underwroteAt : null };
+      const uw  = underwrites[uid];
+
+      // Stale detection — 7 days default, unless "kept"
+      const received  = d.dateReceived ? new Date(d.dateReceived) : null;
+      const daysOld   = received ? Math.floor((Date.now() - received) / 86400000) : null;
+      const keptKey   = 'kept:' + uid;
+      const keptUntil = urbanBrain.keptDeals?.[keptKey];
+      const isKept    = keptUntil && new Date(keptUntil) > new Date();
+      const isStale   = daysOld !== null && daysOld >= 7 && !isKept;
+
+      // Brain enrichment — fill missing contact info from wholesaler profile
+      const wsEmail = d.contact1Email || d.contact2Email || '';
+      const wsProfile = wsEmail && urbanBrain.wholesalerStats[wsEmail];
+
+      return {
+        ...d,
+        contact1Name:    d.contact1Name    || wsProfile?.name    || '',
+        contact1Email:   wsEmail,
+        contact1Phone:   d.contact1Phone   || wsProfile?.phone   || '',
+        wholesalerCompany: d.wholesalerCompany || wsProfile?.company || '',
+        // Underwrite data
+        underwriteStatus: uw ? uw.verdict : (d.underwriteStatus || 'PENDING'),
+        underwriteScore:  uw ? uw.score   : null,
+        underwroteAt:     uw ? uw.underwroteAt : null,
+        arv:              uw ? uw.arv      : null,
+        financials:       uw ? uw.financials : null,
+        // Stale
+        isStale, daysOld, keptUntil: keptUntil || null,
+        // Wholesaler brain stats
+        wholesalerDeals:           wsProfile?.deals || 0,
+        wholesalerAvgInflation:    wsProfile?.avgARVInflation || null,
+        wholesalerInflationWarning: wsProfile?.inflationWarning || wsProfile?.verifiedInflator || false,
+      };
     });
     res.json(out);
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -1445,7 +1629,54 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
 
       urbanBrain.lastUpdated = new Date().toISOString();
 
-      // 4. IMMEDIATELY save to sheet so it survives the next redeploy
+      // 4. Re-trigger line item math if key values changed
+      if (uw.arv?.urbanARV && uw.rehab?.urbanEstimate) {
+        const arv     = uw.arv.urbanARV;
+        const repairs = uw.rehab.urbanEstimate;
+        const ask     = parseFloat(uw.deal?.askingPrice) || 0;
+        const costs   = (uw.financials?.holdingCosts?.total||0) +
+                        (uw.financials?.sellingCosts?.total||0) +
+                        (uw.financials?.hardMoney?.totalInterest||0) +
+                        (uw.financials?.hardMoney?.originationPoints||0);
+        // Update MAO and profit with corrected numbers
+        if (uw.financials) {
+          uw.financials.mao              = Math.round(arv * 0.7 - repairs);
+          uw.financials.overUnderMAO     = Math.round(ask - uw.financials.mao);
+          uw.financials.netProfitAtAsking = Math.round(arv - ask - repairs - costs);
+          uw.financials.netProfitAtMAO   = Math.round(arv - uw.financials.mao - repairs - costs);
+          uw.financials.meetsMinimumProfit = uw.financials.netProfitAtAsking >= 40000;
+          if (arv > 0 && ask > 0) {
+            uw.financials.roi = parseFloat(((uw.financials.netProfitAtAsking / (ask + repairs)) * 100).toFixed(1));
+          }
+        }
+        // Recalculate negotiation ladder with corrected numbers
+        const pts = [ask, Math.round(ask*0.95), Math.round((ask+uw.financials.mao)/2), uw.financials.mao, Math.round(uw.financials.mao*0.9)]
+          .filter((p,i,arr) => p>0 && arr.indexOf(p)===i).sort((a,b)=>b-a);
+        uw.negotiationLadder = pts.map(price => ({
+          price,
+          label: price >= Math.round(ask*0.98) ? 'Asking' : price === uw.financials.mao ? 'MAO' : price < uw.financials.mao ? 'Stretch' : 'Counter',
+          profit: Math.round(arv - price - repairs - costs),
+          meetsMin: Math.round(arv - price - repairs - costs) >= 40000
+        }));
+        console.log('🔢 Recalculated: MAO=' + uw.financials.mao + ' Profit=' + uw.financials.netProfitAtAsking);
+      }
+
+      // If Urban mentions a specific repair item was resolved, zero it out
+      const msgLow = message.toLowerCase();
+      if ((msgLow.includes('roof') && (msgLow.includes('replaced') || msgLow.includes('new') || msgLow.includes('2020') || msgLow.includes('2021') || msgLow.includes('2022') || msgLow.includes('2023') || msgLow.includes('2024'))) && uw.rehab?.lineItems?.roof) {
+        const saved = uw.rehab.lineItems.roof;
+        uw.rehab.lineItems.roof = 0;
+        uw.rehab.urbanEstimate = Math.max(0, (uw.rehab.urbanEstimate||0) - saved);
+        console.log('🏠 Roof line item zeroed out ($'+saved+' saved) based on chat correction');
+      }
+      if ((msgLow.includes('hvac') || msgLow.includes('ac ') || msgLow.includes('air condition')) && (msgLow.includes('replaced') || msgLow.includes('new') || msgLow.includes('202')) && uw.rehab?.lineItems?.hvac) {
+        const saved = uw.rehab.lineItems.hvac;
+        uw.rehab.lineItems.hvac = 0;
+        uw.rehab.urbanEstimate = Math.max(0, (uw.rehab.urbanEstimate||0) - saved);
+        console.log('❄️ HVAC line item zeroed out ($'+saved+' saved) based on chat correction');
+      }
+
+      // 5. IMMEDIATELY save to sheet so it survives the next redeploy
       await saveBrain();
       console.log('📝 Correction saved to brain + sheet: ' + message.slice(0,80));
     }

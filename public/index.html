@@ -294,7 +294,12 @@ a{color:var(--accent)}
 
         <!-- OVERVIEW -->
         <div class="tc active" id="t-overview">
-          <div class="rec-box">
+          <!-- NEGOTIATION LADDER -->
+            <div id="neg-ladder" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:16px;margin-bottom:16px;display:none">
+              <div class="ct" style="margin-bottom:10px">Negotiation Ladder</div>
+              <div id="neg-rows"></div>
+            </div>
+            <div class="rec-box">
             <div class="ct">Urban's Recommendation</div>
             <div class="rec-txt" id="ov-rec"></div>
             <div class="off-strat" id="ov-off"></div>
@@ -673,6 +678,26 @@ async function doReviewChat() {
   btn.textContent = '📚 Review Chats';
 }
 
+// ── KEEP DEAL (reset 7-day expiry) ───────────────────────────────────────────
+async function keepDeal(uid, address) {
+  try {
+    const r = await fetch('/api/keep-deal/' + encodeURIComponent(uid), {
+      method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days: 7 })
+    });
+    if (r.ok) {
+      // Remove stale badge from current deal
+      curDeal.isStale = false;
+      document.querySelectorAll('.stale-badge').forEach(el => el.remove());
+      // Show confirmation
+      const btn = document.querySelector('.keep-btn');
+      if (btn) { btn.textContent = '✅ Kept 7 more days'; btn.disabled = true; }
+      // Reload list
+      await doLoadDeals(true);
+    }
+  } catch(e) { console.error('Keep deal error:', e); }
+}
+
 document.querySelectorAll('.ftab').forEach(t => t.addEventListener('click', () => {
   document.querySelectorAll('.ftab').forEach(x => x.classList.remove('on'));
   t.classList.add('on'); curFilter = t.dataset.f; renderList();
@@ -731,6 +756,7 @@ function renderList() {
       ? Math.floor((Date.now() - new Date(d.dateReceived)) / 86400000)
       : null;
     const ageLabel = ageDays === null ? '' : ageDays === 0 ? '🟢 Today' : ageDays === 1 ? '🟡 1d' : ageDays <= 3 ? `🟡 ${ageDays}d` : ageDays <= 7 ? `🟠 ${ageDays}d` : `🔴 ${ageDays}d`;
+    const staleLabel = d.isStale ? '<span class="stale-badge">⏰ STALE</span>' : '';
     const sqftLabel = d.sqft ? `${parseInt(d.sqft).toLocaleString()} sf` : '';
     const ppsqft = (d.underwriteScore && d.arv?.arvPerSqft) ? ` · $${Math.round(d.arv.arvPerSqft)}/sf` : '';
 
@@ -742,6 +768,7 @@ function renderList() {
         <span class="badge ${badgeCls}">${status}</span>
         ${d.underwriteScore ? `<span class="di-score">${d.underwriteScore}/10</span>` : ''}
         ${ageLabel ? `<span class="di-age">${ageLabel}</span>` : ''}
+        ${staleLabel}
       </div>`;
     el.addEventListener('click', () => selectDeal(d));
     list.appendChild(el);
@@ -754,6 +781,19 @@ async function selectDeal(d) {
   // Update chat header to show which deal is active
   const chatLabel = $('chat-deal-label');
   if (chatLabel) chatLabel.textContent = d.address ? `— ${d.address}` : '';
+
+  // Show/hide stale warning + keep button in deal header
+  const staleWarn = $('stale-warning');
+  if (staleWarn) {
+    if (d.isStale) {
+      const uid = d.uid || (d.address + '-' + d.dateReceived);
+      staleWarn.style.display = '';
+      staleWarn.innerHTML = `<span style="color:var(--hot);font-size:11px;font-weight:600">⏰ ${d.daysOld} days old — may be taken</span>
+        <button class="keep-btn" onclick="keepDeal('${uid}','${d.address}')" style="margin-left:8px;padding:2px 8px;font-size:10px;background:rgba(255,60,90,.12);border:1px solid rgba(255,60,90,.3);color:var(--hot);border-radius:4px;cursor:pointer">Keep in Urban 7 days</button>`;
+    } else {
+      staleWarn.style.display = 'none';
+    }
+  }
   const uid = d.uid || `${d.address}-${d.dateReceived}`;
   document.querySelectorAll('.di').forEach(el => el.classList.toggle('active', el.dataset.uid === uid));
   $('main-empty').style.display = 'none';
@@ -1008,6 +1048,43 @@ function renderUW(uw) {
       flagEl.innerHTML += `<div class="flag flag-${f.severity}"><div class="fn">⚑ ${f.flag} · ${f.severity}</div><div class="fd">${f.detail}</div></div>`;
     });
   if (!uw.riskFlags?.length) flagEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No risk flags identified</div>';
+
+  // NEGOTIATION LADDER
+  const ladder = uw.negotiationLadder;
+  const ladderEl = $('neg-ladder');
+  if (ladder?.length) {
+    ladderEl.style.display = '';
+    $('neg-rows').innerHTML = ladder.map(r => {
+      const pc = r.meetsMin ? 'neg-ok' : r.profit >= 0 ? 'neg-no' : 'neg-bad';
+      const lc = r.label === 'Asking' ? 'background:rgba(255,160,32,.15);color:var(--review)' :
+                 r.label === 'MAO'    ? 'background:rgba(60,200,130,.15);color:var(--buy)' :
+                 r.label === 'Stretch'? 'background:rgba(60,120,255,.12);color:#7799ff' : '';
+      return `<div class="neg-row">
+        <span class="neg-price">$${r.price.toLocaleString()}</span>
+        <span class="neg-label" style="${lc}">${r.label}</span>
+        <span class="neg-profit ${pc}">${r.profit >= 0 ? '+' : ''}$${r.profit.toLocaleString()}</span>
+        ${r.roi !== undefined ? `<span class="neg-roi">${r.roi}%</span>` : ''}
+      </div>`;
+    }).join('');
+  } else {
+    ladderEl.style.display = 'none';
+  }
+
+  // EXIT ANALYSIS
+  const ex = uw.exitAnalysis;
+  const exEl = $('exit-analysis');
+  if (ex) {
+    exEl.style.display = '';
+    $('ex-dom').textContent  = ex.estimatedDOM ? ex.estimatedDOM + ' days' : '—';
+    $('ex-lsr').textContent  = ex.listToSaleRatio ? (ex.listToSaleRatio * 100).toFixed(0) + '% of list' : '—';
+    $('ex-rsp').textContent  = ex.realisticSalePrice ? fmt(ex.realisticSalePrice) + (ex.realisticSalePriceNote ? ' (' + ex.realisticSalePriceNote + ')' : '') : '—';
+    const adj = ex.adjustedProfit;
+    $('ex-adj').textContent  = adj != null ? (adj >= 0 ? '+' : '') + fmt(adj) : '—';
+    $('ex-adj').className    = `fv ${adj >= 40000 ? 'g' : adj >= 0 ? '' : 'r'}`;
+    $('ex-buyer').textContent = ex.buyerProfile || '—';
+  } else {
+    exEl.style.display = 'none';
+  }
 
   // CHAT HISTORY
   renderChat(uw.chatHistory || []);
