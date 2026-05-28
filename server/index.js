@@ -1253,6 +1253,88 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
     chatHistory.push({ role: 'assistant', content: reply, timestamp: new Date().toISOString() });
     uw.chatHistory = chatHistory;
 
+    // ── PARSE REPLY FOR NEW NUMBERS + UPDATE UNDERWRITE OBJECT ───────────────
+    // If Urban recalculated, extract the new figures and write them back
+    // so the deal card UI reflects the corrected data immediately
+    const replyLower = reply.toLowerCase();
+    const hasCalc = replyLower.includes('new verdict') || replyLower.includes('recalculate') ||
+                    replyLower.includes('new numbers') || replyLower.includes('updated verdict') ||
+                    replyLower.includes('→ new') || replyLower.includes('mao:');
+
+    if (hasCalc) {
+      // Extract ARV — look for "ARV: $X" or "arv of $X"
+      const arvMatch = reply.match(/(?:arv|after repair value)[:\s]+\$?([\d,]+)/i);
+      if (arvMatch) {
+        const newARV = parseInt(arvMatch[1].replace(/,/g, ''));
+        if (newARV > 50000 && newARV < 5000000) {
+          uw.arv = uw.arv || {};
+          uw.arv.correctedARV = newARV;
+          uw.arv.urbanARV = newARV;
+          uw.arv.arvNotes = (uw.arv.arvNotes || '') + ` [Chat correction ${new Date().toLocaleDateString()}: ARV updated to $${newARV.toLocaleString()} by ${author||'team'}]`;
+        }
+      }
+
+      // Extract Rehab
+      const rehabMatch = reply.match(/(?:rehab|repairs)[:\s]+\$?([\d,]+)/i);
+      if (rehabMatch) {
+        const newRehab = parseInt(rehabMatch[1].replace(/,/g, ''));
+        if (newRehab > 1000 && newRehab < 1000000) {
+          uw.rehab = uw.rehab || {};
+          uw.rehab.correctedEstimate = newRehab;
+          uw.rehab.urbanEstimate = newRehab;
+        }
+      }
+
+      // Extract MAO
+      const maoMatch = reply.match(/mao[:\s]+\$?([\d,]+)/i) || reply.match(/\$([\d,]+)\s*mao/i);
+      if (maoMatch) {
+        const newMAO = parseInt(maoMatch[1].replace(/,/g, ''));
+        if (newMAO > 10000 && newMAO < 3000000) {
+          uw.financials = uw.financials || {};
+          uw.financials.mao = newMAO;
+        }
+      }
+
+      // Extract net profit
+      const profitMatch = reply.match(/(?:net profit|profit)[:\s]+\$?([\d,]+)/i) ||
+                          reply.match(/\$([\d,]+)\s*profit/i);
+      if (profitMatch) {
+        const newProfit = parseInt(profitMatch[1].replace(/,/g, ''));
+        if (newProfit > -500000 && newProfit < 2000000) {
+          uw.financials = uw.financials || {};
+          uw.financials.netProfitAtAsking = newProfit;
+        }
+      }
+
+      // Extract new verdict
+      const verdictMatch = reply.match(/(?:new verdict|updated verdict|verdict)[:\s→]+([A-Z ]+?)\s*\((\d+)\/10\)/i);
+      if (verdictMatch) {
+        const newVerdict = verdictMatch[1].trim().toUpperCase();
+        const newScore   = parseInt(verdictMatch[2]);
+        const validVerdicts = ['HOT', 'BUY', 'REVIEW', 'PASS', 'HARD NO'];
+        if (validVerdicts.includes(newVerdict) && newScore >= 1 && newScore <= 10) {
+          uw.verdict        = newVerdict;
+          uw.score          = newScore;
+          uw.verdictReason  = `Chat correction by ${author||'team'} on ${new Date().toLocaleDateString()}`;
+          uw.chatCorrected  = true;
+          uw.chatCorrectedAt = new Date().toISOString();
+          // Recalculate overUnderMAO if we have the data
+          if (uw.financials?.mao && uw.deal?.askingPrice) {
+            uw.financials.overUnderMAO = parseInt(uw.deal.askingPrice) - uw.financials.mao;
+          }
+          if (uw.arv?.urbanARV && uw.financials?.mao) {
+            uw.financials.meetsMinimumProfit = (uw.financials.netProfitAtAsking || 0) >= 40000;
+          }
+          console.log('💬 Chat correction applied: ' + newVerdict + ' (' + newScore + '/10) on ' + uw.deal.address);
+        }
+      }
+
+      // Also log to sheet status column so the deal list reflects the new verdict
+      if (uw.chatCorrected) {
+        logUnderwriteToSheet(uw.deal, uw).catch(() => {});
+      }
+    }
+
     // Save corrections to brain
     // ── CORRECTION DETECTION + IMMEDIATE CROSS-DEAL LEARNING ─────────────────
     // Detect if this message is a correction or new data point
@@ -1306,8 +1388,16 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
 
     underwrites[uid] = uw;
     saveJSON(UNDERWRITES_FILE, underwrites);
-    // Return uid so frontend can keep track of it
-    res.json({ reply, chatHistory, uid, address: uw.deal?.address });
+    if (uw.chatCorrected) await saveBrain().catch(() => {});
+    res.json({
+      reply, chatHistory,
+      uid, address: uw.deal?.address,
+      updated: !!uw.chatCorrected,   // tells frontend to refresh the panel
+      verdict: uw.verdict,
+      score: uw.score,
+      arv: uw.arv,
+      financials: uw.financials
+    });
   } catch(e) {
     console.error(e);
     res.status(500).json({ error: e.message });

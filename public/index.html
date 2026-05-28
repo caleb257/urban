@@ -1203,6 +1203,28 @@ async function doChat() {
     const data = await r.json();
     if (data.reply) addMsg('a', data.reply);
     else if (data.error) addMsg('a', `⚠️ ${data.error}`);
+
+    // If Urban recalculated numbers, refresh the underwrite panel so UI reflects changes
+    if (data.updated && curDeal) {
+      // Re-fetch the deal's underwrite and refresh the display
+      try {
+        const r2 = await fetch(`/api/underwrite/${encodeURIComponent(data.uid || uid)}/result`, {
+          headers: { 'x-urban-token': TOKEN }
+        });
+        if (r2.ok) {
+          const fresh = await r2.json();
+          curUW = fresh;
+          renderUW(fresh);
+          // Flash the verdict badge to show it changed
+          const badge = document.querySelector('.verdict-badge');
+          if (badge) {
+            badge.style.transition = 'opacity .3s';
+            badge.style.opacity = '0.3';
+            setTimeout(() => badge.style.opacity = '1', 300);
+          }
+        }
+      } catch {}
+    }
   } catch(e) {
     if (thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
     addMsg('a', '⚠️ Could not reach Urban. Check your connection.');
