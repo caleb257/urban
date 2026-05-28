@@ -615,11 +615,22 @@ Taxes: $${annualTaxes.toLocaleString()}/yr | Close: ${deal.closeDate} | EMD: ${d
 COMPS:
 ${compsText}
 
-Respond ONLY with a JSON object (no markdown, no backticks, just raw JSON):
+MARKET CONTEXT FOR THIS COUNTY (${deal.county || deal.city}):
+${(() => {
+  const mn = urbanBrain.marketNotes[deal.county || deal.city];
+  if (!mn || mn.deals < 2) return 'Limited data — use comp-based judgment.';
+  const ppsf = mn.avgARV && mn.avgSqft ? Math.round(mn.avgARV/mn.avgSqft) : null;
+  return `${mn.deals} deals analyzed | Avg ARV: $${mn.avgARV?.toLocaleString()||'?'} | ${ppsf?'Avg $/sqft: $'+ppsf+' | ':''}HOT/BUY rate: ${Math.round((mn.hotDeals||0)/mn.deals*100)}%`;
+})()}
+
+Respond ONLY with a JSON object (no markdown, no backticks, just raw JSON).
+PUT THESE FIELDS FIRST — they are most important:
 {
-  "score": <1-10>,
   "verdict": "<HOT|BUY|REVIEW|PASS|HARD NO>",
-  "verdictReason": "<one punchy sentence>",
+  "score": <1-10>,
+  "verdictReason": "<one punchy sentence why>",
+  "recommendation": "<REQUIRED - 2-3 hard sentences. Example: 'Walk away. ARV is inflated by 15% and at $215K you have $8K profit — zero margin. Pass unless they come down to $160K.' OR: 'Pull the trigger. At $185K your profit is $62K at a clean 8.4% ROI. Roof is 8 years old, HVAC 2019 — it pencils. Counter at $175K to grab another $10K.'>",
+  "offerStrategy": "<REQUIRED - if HOT/BUY: 'Offer $X, close in Y days, $Z EMD, AS-IS, 7-day inspection.' If PASS/HARD NO: 'Would work at $X — X% below ask. Not worth countering above that.'>",
   "arv": {
     "wholesalerARV": <number>,
     "urbanARV": <number>,
@@ -674,8 +685,6 @@ Respond ONLY with a JSON object (no markdown, no backticks, just raw JSON):
   "riskFlags": [{"flag":"<name>","severity":"<HIGH|MEDIUM|LOW>","detail":"<explanation>"}],
   "marketAnalysis": {"neighborhood":"<assessment>","trend":"<IMPROVING|STABLE|DECLINING>","daysOnMarket":"<typical DOM>","notes":"<context>"},
   "wholesalerCredibility": {"assessment":"<TRUSTED|UNKNOWN|QUESTIONABLE>","arvAccuracy":"<TYPICALLY ACCURATE|INFLATED|UNKNOWN>","notes":"<read>"},
-  "recommendation": "<2-3 sentence max direct recommendation for Caleb and Grant>",
-  "offerStrategy": "<if worth pursuing: offer price and key terms in 1-2 sentences>",
   "urbanNotes": "<1 sentence max>"
 }
 
@@ -689,7 +698,7 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
     : 'You are a real estate underwriter. Always respond with ONLY valid JSON — no markdown, no backticks, no explanation before or after. Keep all text fields under 200 characters. Be concise.';
 
   const res = await getAnthropic().messages.create({
-    model, max_tokens: deep ? 8192 : 5000,  // 5000 standard so rehab line items never truncate
+    model, max_tokens: deep ? 8192 : 6000,  // 6000 ensures recommendation+offerStrategy never truncate
     system,
     messages: [{ role: 'user', content: prompt }]
   });
@@ -753,9 +762,16 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
     }
     urbanBrain.wholesalerNotes[email] = `${ws.name} (${ws.company}) | ${ws.deals} deals | avg ARV inflation: ${ws.avgARVInflation}%${ws.verifiedInflator ? ' | ⚠️ VERIFIED INFLATOR' : ws.inflationWarning ? ' | ⚠️ INFLATION WARNING (unverified)' : ''} | verdicts: ${JSON.stringify(ws.verdicts)}`;
 
-    const lesson = `${underwrite.verdict} | ${deal.address}, ${deal.city} | Ask $${deal.askingPrice?.toLocaleString()} | Urban ARV $${underwrite.arv?.urbanARV?.toLocaleString()} | Net profit $${underwrite.financials?.netProfitAtAsking?.toLocaleString()} | ${underwrite.verdictReason}`;
-    urbanBrain.lessons.push(`[${new Date().toLocaleDateString()}] ${lesson}`);
-    if (urbanBrain.lessons.length > 100) urbanBrain.lessons.shift();
+    const lesson = `${underwrite.verdict} (${underwrite.score}/10) | ${deal.address}, ${deal.city} | ` +
+      `Ask $${parseInt(deal.askingPrice||0).toLocaleString()} | ARV $${(underwrite.arv?.urbanARV||0).toLocaleString()} | ` +
+      `Rehab $${(underwrite.rehab?.urbanEstimate||0).toLocaleString()} | Profit $${(underwrite.financials?.netProfitAtAsking||0).toLocaleString()} | ` +
+      `${underwrite.verdictReason}` +
+      (underwrite.recommendation ? ` | REC: ${underwrite.recommendation.slice(0,120)}` : '');
+    urbanBrain.lessons.push('[' + new Date().toLocaleDateString() + '] ' + lesson);
+    if (urbanBrain.lessons.length > 150) urbanBrain.lessons.shift();
+
+    // Save brain immediately so lessons survive any crash or redeploy
+    saveBrain().catch(() => {});
 
     const ck = deal.county || deal.city;
     if (!urbanBrain.marketNotes[ck]) urbanBrain.marketNotes[ck] = { deals: 0, avgARV: 0, arvSamples: [] };

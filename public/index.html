@@ -158,7 +158,8 @@ hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
 .flag-HIGH .fn{color:var(--hot)}.flag-MEDIUM .fn{color:var(--review)}.flag-LOW .fn{color:var(--pass)}
 .fd{font-size:12px;color:var(--muted);line-height:1.5}
 /* OVERVIEW */
-.rec-box{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:22px;margin-bottom:20px}
+.rec-box{background:linear-gradient(135deg,rgba(200,169,110,.08),rgba(200,169,110,.03));border:1px solid rgba(200,169,110,.3);border-radius:8px;padding:20px 22px;margin-bottom:20px;position:relative}
+.rec-box::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);border-radius:8px 0 0 8px}
 .rec-txt{font-size:14px;line-height:1.8;color:var(--text);margin-bottom:14px}
 .off-strat{font-size:13px;line-height:1.7;color:var(--accent);font-style:italic}
 /* CHAT */
@@ -900,8 +901,13 @@ function renderUW(uw) {
   $('cc-risk').textContent = highFlags > 0 ? `⚠️ ${highFlags} High` : '✅ Low';
   $('cc-risk').className = `mv ${highFlags > 0 ? 'r' : 'g'}`;
   $('cc-scope').textContent = uw.rehab?.scopeLevel || '—';
-  $('ov-rec').textContent = uw.recommendation || '';
-  $('ov-off').textContent = uw.offerStrategy || '';
+  const recEl = $('ov-rec');
+  recEl.textContent = uw.recommendation || '';
+  recEl.style.color = uw.recommendation ? '' : 'var(--muted)';
+  if (!uw.recommendation) recEl.textContent = 'No recommendation yet — underwrite this deal to generate one.';
+  const offEl = $('ov-off');
+  offEl.textContent = uw.offerStrategy || '';
+  offEl.closest('.off-str').style.display = uw.offerStrategy ? '' : 'none';
 
   // ARV TAB
   $('arv-ws').textContent = fmt(uw.arv?.wholesalerARV);
