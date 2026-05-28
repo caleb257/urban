@@ -1191,9 +1191,10 @@ YOUR ROLE:
       content: h.content
     }));
 
+    // Chat uses Sonnet — this is human conversation, quality matters more than cost here
     const r2 = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1200,
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
       system: systemPrompt,
       messages: historyForAPI
     });

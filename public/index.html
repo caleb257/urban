@@ -455,7 +455,10 @@ a{color:var(--accent)}
   <!-- CHAT PANEL -->
   <div id="chat-panel">
     <div id="chat-hdr">
-      <h3>URBAN AI</h3>
+      <div>
+        <h3>URBAN AI</h3>
+        <div id="chat-deal-label" style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;letter-spacing:.3px"></div>
+      </div>
       <button id="chat-x">✕</button>
     </div>
     <div id="chat-msgs"></div>
@@ -1208,7 +1211,15 @@ function renderChat(history) {
   const msgs = $('chat-msgs');
   msgs.innerHTML = '';
   if (!history?.length) {
-    msgs.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">No conversation yet.<br>Ask Urban anything about this deal.<br>Corrections are remembered permanently.</div>';
+    msgs.innerHTML = (() => {
+    const d = curDeal;
+    if (!d) return '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Select a deal to start chatting with Urban.</div>';
+    return `<div style="color:var(--muted);font-size:11px;padding:14px;line-height:1.7;border-bottom:1px solid var(--border);background:var(--bg2)">
+      <div style="font-weight:700;color:var(--text);margin-bottom:6px">📋 ${d.address}, ${d.city} FL</div>
+      Ask Urban anything. Give better comps, correct the ARV, update repair costs — Urban recalculates everything and remembers your corrections permanently.
+      <div style="margin-top:6px;font-size:10px;opacity:.6">Try: "The roof was replaced in 2021" · "I have a comp at $285K" · "What if ARV is $310K?"</div>
+    </div>`;
+  })();
     return;
   }
   history.forEach(h => addMsg(h.role==='user'?'u':'a', h.content, h.timestamp));
@@ -1218,7 +1229,18 @@ function addMsg(role, content, ts) {
   const msgs = $('chat-msgs');
   const d = document.createElement('div');
   d.className = `cm ${role}`;
-  d.innerHTML = `<div class="bbl">${content.replace(/\n/g,'<br>')}</div>${ts?`<div class="cts">${new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>`:''}`;
+  // Parse "CALEB: " or "GRANT: " prefix for sender label
+  let displayContent = content.replace(/\n/g,'<br>');
+  let senderLabel = role === 'a' ? 'URBAN' : '';
+  const prefixMatch = content.match(/^(CALEB|GRANT|USER):\s*/i);
+  if (prefixMatch) {
+    senderLabel = prefixMatch[1].toUpperCase();
+    displayContent = content.slice(prefixMatch[0].length).replace(/\n/g,'<br>');
+  }
+  const timeStr = ts ? new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+  d.innerHTML = `
+    <div class="sender">${senderLabel}${timeStr ? ' · ' + timeStr : ''}</div>
+    <div class="bbl">${displayContent}</div>`;
   msgs.appendChild(d);
   msgs.scrollTop = msgs.scrollHeight;
 }
