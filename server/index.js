@@ -1427,9 +1427,12 @@ app.post('/api/override/:uid', auth, (req, res) => {
 
 // Stats
 app.get('/api/stats', auth, (req, res) => {
-  const all = Object.values(underwrites).filter(u => u.verdict && !u.restoredFromSheet);
+  // Include restored stubs for verdict counts, full objects for financials
+  const allUw = Object.values(underwrites).filter(u => u.verdict);
+  const full  = allUw.filter(u => !u.restoredFromSheet);
   const verdicts = {};
-  all.forEach(u => { verdicts[u.verdict] = (verdicts[u.verdict]||0) + 1; });
+  allUw.forEach(u => { verdicts[u.verdict] = (verdicts[u.verdict]||0) + 1; });
+  const all = full; // use full objects for score/profit calcs
   const profits = all.map(u => u.financials?.netProfitAtAsking).filter(p => p && p > 0);
   const avgProfit = profits.length ? Math.round(profits.reduce((a,b)=>a+b,0)/profits.length) : null;
   const scores = all.map(u => u.score).filter(Boolean);
