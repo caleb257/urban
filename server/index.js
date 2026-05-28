@@ -85,6 +85,12 @@ async function loadBrainFromSheet() {
   }
 }
 
+// saveBrain = save to local file + sheet (use this everywhere)
+async function saveBrain() {
+  saveJSON(BRAIN_FILE, urbanBrain);
+  await saveBrainToSheet().catch(e => console.log('Brain sheet save err:', e.message));
+}
+
 async function saveBrainToSheet() {
   try {
     const s = getSheets();
