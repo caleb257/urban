@@ -236,6 +236,7 @@ a{color:var(--accent)}
       <div class="ftab" data-f="REVIEW">Review</div>
       <div class="ftab" data-f="PASS">Pass</div>
       <div class="ftab" data-f="HARDNO">Hard No</div>
+      <div class="ftab" data-f="NEEDS_ARV">No ARV</div>
       <div class="ftab" data-f="PENDING">Pending</div>
     </div>
     <div id="deal-list"></div>
@@ -672,7 +673,9 @@ function renderList() {
     const normStatus = status === 'HARD NO' ? 'HARDNO' : status;
     const matchFilter = curFilter === 'ALL' 
       || normStatus === curFilter
-      || (curFilter === 'PASS' && (status === 'PASS' || status === 'HARD NO'));
+      || (curFilter === 'PASS' && status === 'PASS')
+      || (curFilter === 'HARDNO' && status === 'HARD NO')
+      || (curFilter === 'NEEDS_ARV' && (!d.arv || !d.arv.wholesalerARV || d.arv.wholesalerARV === 0) && !['PASS','HARD NO'].includes(status));
     const matchSearch = !q || `${d.address} ${d.city} ${d.wholesalerCompany} ${d.contact1Name}`.toLowerCase().includes(q);
     return matchFilter && matchSearch;
   });

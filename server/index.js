@@ -175,7 +175,12 @@ async function getDealsFromSheet() {
   const col = {};
   headers.forEach((h, i) => { col[h] = i; });
 
-  return rows.slice(1).filter(r => r[col['Address']]).map(r => {
+  return rows.slice(1).filter(r => {
+    const addr = r[col['Address']];
+    // Skip rows with no address OR redacted XXXX address — Urban can't underwrite without it
+    if (!addr || addr.trim() === '' || addr.trim().toUpperCase() === 'XXXX') return false;
+    return true;
+  }).map(r => {
     const get = (h) => r[col[h]] || '';
     return {
       uid: get('Email UID'),
