@@ -744,12 +744,9 @@ function renderList() {
 // ── SELECT DEAL ────────────────────────────────────────────────────────────────
 async function selectDeal(d) {
   curDeal = d;
-  // Always update chat header to show which deal Urban is talking about
+  // Update chat header to show which deal is active
   const chatLabel = $('chat-deal-label');
   if (chatLabel) chatLabel.textContent = d.address ? `— ${d.address}` : '';
-  // Clear chat history display when switching deals so it loads fresh
-  const msgs = $('chat-msgs');
-  if (msgs) msgs.innerHTML = '';
   const uid = d.uid || `${d.address}-${d.dateReceived}`;
   document.querySelectorAll('.di').forEach(el => el.classList.toggle('active', el.dataset.uid === uid));
   $('main-empty').style.display = 'none';
@@ -1159,31 +1156,51 @@ $('chat-in').addEventListener('keydown', e => { if (e.key==='Enter' && (e.metaKe
 
 async function doChat() {
   const msg = $('chat-in').value.trim();
-  if (!msg) { addMsg('a', '⚠️ Select a deal first, then type your question.'); return; }
-  if (!curDeal) { addMsg('a', '⚠️ No deal selected. Click a deal in the list first.'); return; }
+  if (!msg) return;
+  if (!curDeal) {
+    addMsg('a', '⚠️ No deal selected — click a deal in the list first.');
+    return;
+  }
 
-  // Always derive uid from curDeal — never from stale curUW
-  // Server can look up by address if uid doesn't match
+  // Derive uid from the currently selected deal — always fresh, never stale
   const uid = curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
   const address = curDeal.address;
+  const tab = (typeof curTab !== 'undefined' ? curTab : null) || 'overview';
 
   $('chat-in').value = '';
   addMsg('u', `${author.toUpperCase()}: ${msg}`);
-  addMsg('a', '⏳ Urban is thinking about ${address}...');
+
+  // Add thinking bubble and keep reference to it
+  const thinkingEl = document.createElement('div');
+  thinkingEl.className = 'cm a';
+  thinkingEl.innerHTML = `<div class="bbl">⏳ Urban is thinking about ${address}...</div>`;
+  const chatMsgs = $('chat-msgs');
+  chatMsgs.appendChild(thinkingEl);
+  chatMsgs.scrollTop = chatMsgs.scrollHeight;
+
   try {
     const r = await fetch(`/api/chat/${encodeURIComponent(uid)}`, {
-      method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg, author, address, city: curDeal.city, activeTab: curTab || 'overview' })
+      method: 'POST',
+      headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, author, address, city: curDeal.city, activeTab: tab })
     });
+
+    // Remove thinking bubble safely
+    if (thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ error: `Server error ${r.status}` }));
+      addMsg('a', `⚠️ ${err.error || 'Unknown error'}`);
+      return;
+    }
+
     const data = await r.json();
-    const msgs = $('chat-msgs');
-    msgs.removeChild(msgs.lastChild); // remove thinking indicator
     if (data.reply) addMsg('a', data.reply);
     else if (data.error) addMsg('a', `⚠️ ${data.error}`);
   } catch(e) {
-    const msgs = $('chat-msgs');
-    if (msgs.lastChild) msgs.removeChild(msgs.lastChild);
-    addMsg('a', '⚠️ Connection error: ' + e.message);
+    if (thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
+    addMsg('a', '⚠️ Could not reach Urban. Check your connection.');
+    console.error('Chat error:', e.message);
   }
 }
 
