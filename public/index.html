@@ -785,7 +785,9 @@ function showPending() {
 }
 
 // ── TABS ───────────────────────────────────────────────────────────────────────
+let curTab = 'overview'; // tracks which tab is active for chat context
 function switchTab(name) {
+  curTab = name;
   document.querySelectorAll('.stab').forEach(t => t.classList.toggle('on', t.dataset.t === name));
   document.querySelectorAll('.tc').forEach(t => t.classList.remove('active'));
   const el = $('t-' + name);
