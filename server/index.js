@@ -1154,7 +1154,9 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
     }
 
     const chatHistory = uw.chatHistory || [];
-    chatHistory.push({ role: 'user', content: `${(author||'USER').toUpperCase()}: ${message}`, timestamp: new Date().toISOString() });
+    // Store clean message — author is tracked separately
+    // Keep "AUTHOR: message" format for brain/correction detection but display strips it
+    chatHistory.push({ role: 'user', content: `${(author||'USER').toUpperCase()}: ${message}`, author: author||'user', timestamp: new Date().toISOString() });
 
     const ws = urbanBrain.wholesalerStats[uw.deal.contact1Email || ''];
     const wHistory = ws ? `${ws.deals} prior deals, avg ARV inflation ${ws.avgARVInflation}%` : 'first deal from this wholesaler';
@@ -1171,26 +1173,68 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
       chat: 'User is in the chat — may ask anything about this deal.'
     }[activeTab] || '';
 
-    const systemPrompt = `You are Urban, Coralstone Capital Group's real estate underwriter for Tampa Bay. You report to Caleb and Grant.
-${tabContext ? `ACTIVE TAB CONTEXT: ${tabContext}
-` : ''}
-DEAL YOU UNDERWROTE:
-${uw.deal.address}, ${uw.deal.city} FL | ${uw.deal.beds}/${uw.deal.baths}bd/ba | ${uw.deal.sqft} sqft | ${uw.deal.yearBuilt}
-Asking: $${parseInt(uw.deal.askingPrice||0).toLocaleString()} | Your ARV: $${uw.arv?.urbanARV?.toLocaleString()} | Wholesaler ARV: $${uw.arv?.wholesalerARV?.toLocaleString()}
-Rehab: $${uw.rehab?.urbanEstimate?.toLocaleString()} (${uw.rehab?.scopeLevel})
-MAO: $${uw.financials?.mao?.toLocaleString()} | Net Profit @ Asking: $${uw.financials?.netProfitAtAsking?.toLocaleString()}
-Verdict: ${uw.verdict} (${uw.score}/10) — ${uw.verdictReason}
-Wholesaler: ${uw.deal.wholesalerCompany||'Unknown'} | ${wHistory}
+    // Build rich system prompt with ALL deal data
+    const n = v => v ? '$'+parseInt(v).toLocaleString() : '?';
+    const li = uw.rehab?.lineItems || {};
+    const liText = Object.entries(li).filter(([,v])=>v>0)
+      .map(([k,v])=>k+': '+n(v)).join(' | ') || 'not broken out';
+    const compsText2 = (uw.comps||[]).slice(0,5).map(c=>
+      (c.address||'?')+' — '+(c.sqft||'?')+'sqft '+n(c.salePrice)+' ('+( c.saleDate||'?')+') '+(c.distanceMiles||'?')+'mi'
+    ).join('\n') || 'none on file';
+    const flags = (uw.riskFlags||[]).map(f=>'['+f.severity+'] '+f.flag+': '+f.detail).join('\n') || 'none';
+    const lessons = urbanBrain.lessons.slice(-12).map(l=>'• '+l).join('\n') || 'none yet';
 
-RECENT LESSONS:
-${urbanBrain.lessons.slice(-8).map(l=>`• ${l}`).join('\n') || 'None yet'}
-
-YOUR ROLE:
-- Answer deal questions directly and specifically
-- If given corrected numbers (better comps, actual repairs, real ARV), immediately recalculate MAO, profit, verdict — show the math
-- Be concise. No fluff.
-- End corrections with: "Updated verdict: [VERDICT] ([score]/10)"
-- Note learnings with: "🧠 Noted: [lesson]"`;
+    const systemPrompt = [
+      'You are Urban — Coralstone Capital Group real estate underwriter. You report to Caleb and Grant.',
+      tabContext ? 'CONTEXT: '+tabContext : '',
+      '',
+      '━━ DEAL ━━',
+      uw.deal.address+', '+uw.deal.city+' FL '+(uw.deal.zip||''),
+      (uw.deal.beds||'?')+'bd/'+(uw.deal.baths||'?')+'ba | '+(uw.deal.sqft ? parseInt(uw.deal.sqft).toLocaleString()+' sqft' : '? sqft')+' | Built '+(uw.deal.yearBuilt||'?'),
+      'Condition: '+(uw.deal.overall_condition||'?')+' | Occupancy: '+(uw.deal.occupancy||'?')+' | Flood: '+(uw.deal.floodZone||'none'),
+      'Roof: '+(uw.deal.roofType||'?')+' '+(uw.deal.roofAge||'')+' | AC: '+(uw.deal.acYear||'?'),
+      'Updated: '+(uw.deal.whatIsUpdated||'unknown'),
+      'Needs work: '+(uw.deal.whatNeedsWork||'unknown'),
+      'Red flags: '+(uw.deal.redFlags||'none'),
+      '',
+      '━━ NUMBERS ━━',
+      'Asking: '+n(uw.deal.askingPrice)+' | Wholesaler ARV: '+n(uw.arv?.wholesalerARV)+' | Your ARV: '+n(uw.arv?.urbanARV)+' ('+(uw.arv?.arvConfidence||'?')+' confidence)',
+      'ARV notes: '+(uw.arv?.arvNotes||'none'),
+      'Rehab: '+n(uw.rehab?.urbanEstimate)+' | Range: '+n(uw.rehab?.urbanEstimateRange?.low)+'–'+n(uw.rehab?.urbanEstimateRange?.high)+' | Scope: '+(uw.rehab?.scopeLevel||'?'),
+      'Rehab breakdown: '+liText,
+      'MAO: '+n(uw.financials?.mao)+' | Gap vs asking: '+n(uw.financials?.overUnderMAO)+' ('+((uw.financials?.overUnderMAO||0)>0?'over MAO — deal is expensive':'under MAO — room to negotiate')+')',
+      'Net profit @ asking: '+n(uw.financials?.netProfitAtAsking)+' | @ MAO: '+n(uw.financials?.netProfitAtMAO)+' | ROI: '+(uw.financials?.roi||'?')+'%',
+      'Hold: '+(uw.financials?.holdMonths||'?')+' months | Hard money: '+n(uw.financials?.hardMoney?.monthlyPayment)+'/mo, '+n(uw.financials?.hardMoney?.totalInterest)+' total interest',
+      'Meets $40K min profit: '+(uw.financials?.meetsMinimumProfit?'YES ✅':'NO ❌'),
+      '',
+      '━━ VERDICT ━━',
+      uw.verdict+' ('+uw.score+'/10) — '+uw.verdictReason,
+      'Recommendation: '+(uw.recommendation||''),
+      'Offer strategy: '+(uw.offerStrategy||''),
+      '',
+      '━━ COMPS ━━',
+      compsText2,
+      '',
+      '━━ RISK FLAGS ━━',
+      flags,
+      '',
+      '━━ WHOLESALER ━━',
+      (uw.deal.wholesalerCompany||uw.deal.contact1Name||'Unknown')+' | '+wHistory,
+      'Credibility: '+(uw.wholesalerCredibility?.assessment||'UNKNOWN')+' | ARV accuracy: '+(uw.wholesalerCredibility?.arvAccuracy||'UNKNOWN'),
+      '',
+      '━━ BRAIN LESSONS ━━',
+      lessons,
+      '',
+      '━━ RULES ━━',
+      '- Talk like a sharp real estate colleague. Direct. No fluff.',
+      '- Answer specifically about THIS deal using the actual numbers above.',
+      '- When given new data (comp price, repair cost, roof age, new ARV): IMMEDIATELY recalculate MAO and net profit. Show every step.',
+      '- What-ifs ("what if ARV was $X"): run full calc, state new verdict.',
+      '- Always end a recalculation: "→ New verdict: [VERDICT] ([score]/10) | Net profit: [amount]"',
+      '- Log brain lessons: "🧠 Noted: [insight]"',
+      '- Be honest if your estimate was off. Own it and update.',
+      '- MAO formula: ARV × 70% - Repairs | Min profit $40K | Hard money 9.5% | Pasco/Hillsborough/Polk/Pinellas/Hernando'
+    ].filter(Boolean).join('\n')
 
     const historyForAPI = chatHistory.slice(-10).map(h => ({
       role: h.role === 'user' ? 'user' : 'assistant',
@@ -1262,7 +1306,8 @@ YOUR ROLE:
 
     underwrites[uid] = uw;
     saveJSON(UNDERWRITES_FILE, underwrites);
-    res.json({ reply, chatHistory });
+    // Return uid so frontend can keep track of it
+    res.json({ reply, chatHistory, uid, address: uw.deal?.address });
   } catch(e) {
     console.error(e);
     res.status(500).json({ error: e.message });
