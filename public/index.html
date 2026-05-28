@@ -696,6 +696,12 @@ function renderList() {
     const warnBadge = inflationWarn ? ' <span style="color:#ff6b35;font-size:9px;font-weight:700;vertical-align:middle" title="ARV Inflation Warning">⚠️ ARV</span>' : '';
     el.className = 'di' + (isActive ? ' active' : '');
     el.dataset.uid = uid;
+    // Calculate deal age
+    const ageDays = d.dateReceived
+      ? Math.floor((Date.now() - new Date(d.dateReceived)) / 86400000)
+      : null;
+    const ageLabel = ageDays === null ? '' : ageDays === 0 ? '🟢 Today' : ageDays === 1 ? '🟡 1d' : ageDays <= 3 ? `🟡 ${ageDays}d` : ageDays <= 7 ? `🟠 ${ageDays}d` : `🔴 ${ageDays}d`;
+
     el.innerHTML = `
       <div class="di-addr">${d.address || 'No address'}</div>
       <div class="di-city">${d.city}, ${d.state} · ${d.beds||'?'}bd/${d.baths||'?'}ba · ${d.sqft ? parseInt(d.sqft).toLocaleString() : '?'} sqft</div>
@@ -703,6 +709,7 @@ function renderList() {
         <span class="di-price">${price}</span>
         <span class="badge ${badgeCls}">${status}</span>
         ${d.underwriteScore ? `<span class="di-score">${d.underwriteScore}/10</span>` : ''}
+        ${ageLabel ? `<span class="di-age">${ageLabel}</span>` : ''}
       </div>`;
     el.addEventListener('click', () => selectDeal(d));
     list.appendChild(el);

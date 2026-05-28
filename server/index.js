@@ -1228,6 +1228,61 @@ app.get('/api/brain', auth, (req, res) => res.json(urbanBrain));
 const PORT = process.env.PORT || 3001;
 // Load brain from sheet on boot
 loadBrainFromSheet().catch(e => console.log('Brain boot load:', e.message));
+// ── UPDATE DEREK WHOLESALER QUALITY IN SHEET ──────────────────────────────────
+// Urban writes quality scores to Derek's Brain sheet after each underwrite.
+// Derek reads this on every extraction to know which senders to prioritize.
+async function updateDerekWholesalerQuality(email, name, verdict, score) {
+  try {
+    const s = getSheets();
+    const res = await s.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID, range: "Derek's Brain!A:J"
+    });
+    const rows = res.data.values || [];
+    let rowIdx = -1;
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === email) { rowIdx = i + 1; break; }
+    }
+
+    const isGood  = ['HOT', 'BUY'].includes(verdict);
+    const isBad   = ['HARD NO', 'PASS'].includes(verdict);
+
+    if (rowIdx > 0) {
+      // Update existing row — increment quality counters
+      const row   = rows[rowIdx - 1];
+      const deals = parseInt(row[1]) || 0;
+      const hot   = parseInt(row[8] || '0');
+      const pass  = parseInt(row[9] || '0');
+      const newHot  = hot  + (isGood ? 1 : 0);
+      const newPass = pass + (isBad  ? 1 : 0);
+      const quality = deals > 0 ? Math.round((newHot / (newHot + newPass + 1)) * 10) : 5;
+      // Write cols H (quality score), I (HOT count), J (PASS count)
+      await s.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: `Derek's Brain!H${rowIdx}:J${rowIdx}`,
+        valueInputOption: 'RAW',
+        requestBody: { values: [[quality, newHot, newPass]] }
+      });
+      console.log(`📊 Derek brain: ${name||email} quality=${quality} (${newHot} HOT, ${newPass} PASS)`);
+    } else {
+      // New wholesaler — ensure header exists then append
+      const hot  = isGood ? 1 : 0;
+      const pass = isBad  ? 1 : 0;
+      // Check if header row has quality columns
+      if (rows[0] && !rows[0][7]) {
+        await s.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID,
+          range: "Derek's Brain!H1:J1",
+          valueInputOption: 'RAW',
+          requestBody: { values: [['Quality Score (0-10)', 'HOT Deals', 'PASS/NO Deals']] }
+        });
+      }
+      console.log(`📊 Derek brain: first verdict for ${name||email} — ${verdict}`);
+    }
+  } catch(e) {
+    if (!e.message?.includes('Unable to parse')) console.log('Derek brain update err:', e.message);
+  }
+}
+
 // ── RESTORE BRAIN + VERDICT INDEX FROM SHEET ON STARTUP ──────────────────────
 // This is how corrections, lessons, and past verdicts survive redeployments.
 async function restoreBrainFromSheet() {
