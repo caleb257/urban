@@ -1231,7 +1231,23 @@ loadBrainFromSheet().catch(e => console.log('Brain boot load:', e.message));
 // ── UPDATE DEREK WHOLESALER QUALITY IN SHEET ──────────────────────────────────
 // Urban writes quality scores to Derek's Brain sheet after each underwrite.
 // Derek reads this on every extraction to know which senders to prioritize.
-async function updateDerekWholesalerQuality(email, name, verdict, score) {
+async function updateDerekWholesalerQuality(email, name, verdict, score, isDuplicate) {
+  // Quality scoring rules:
+  // HOT or BUY = good deal, counts positive
+  // HARD NO = genuinely bad deal, counts negative
+  // PASS = didn't work for us (price, timing, capacity) — NOT the wholesaler's fault, don't count
+  // Duplicates caught by Derek = don't count at all against wholesaler
+  if (isDuplicate) {
+    console.log(`📊 Derek brain: skipping quality update for ${name||email} — duplicate deal`);
+    return;
+  }
+
+  const isGood = ['HOT', 'BUY'].includes(verdict);
+  const isBad  = verdict === 'HARD NO'; // PASS is neutral — price issue not wholesaler quality
+
+  // Only update if we have a clear signal
+  if (!isGood && !isBad) return;
+
   try {
     const s = getSheets();
     const res = await s.spreadsheets.values.get({
@@ -1243,40 +1259,32 @@ async function updateDerekWholesalerQuality(email, name, verdict, score) {
       if (rows[i][0] === email) { rowIdx = i + 1; break; }
     }
 
-    const isGood  = ['HOT', 'BUY'].includes(verdict);
-    const isBad   = ['HARD NO', 'PASS'].includes(verdict);
-
     if (rowIdx > 0) {
-      // Update existing row — increment quality counters
-      const row   = rows[rowIdx - 1];
-      const deals = parseInt(row[1]) || 0;
-      const hot   = parseInt(row[8] || '0');
-      const pass  = parseInt(row[9] || '0');
-      const newHot  = hot  + (isGood ? 1 : 0);
-      const newPass = pass + (isBad  ? 1 : 0);
-      const quality = deals > 0 ? Math.round((newHot / (newHot + newPass + 1)) * 10) : 5;
-      // Write cols H (quality score), I (HOT count), J (PASS count)
+      const row    = rows[rowIdx - 1];
+      const hot    = parseInt(row[8] || '0');
+      const hardno = parseInt(row[9] || '0');
+      const newHot    = hot    + (isGood ? 1 : 0);
+      const newHardno = hardno + (isBad  ? 1 : 0);
+      // Quality = HOT deals / (HOT + HARD NO) * 10, defaulting to 5 with no data
+      const total   = newHot + newHardno;
+      const quality = total > 0 ? Math.round((newHot / total) * 10) : 5;
       await s.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
         range: `Derek's Brain!H${rowIdx}:J${rowIdx}`,
         valueInputOption: 'RAW',
-        requestBody: { values: [[quality, newHot, newPass]] }
+        requestBody: { values: [[quality, newHot, newHardno]] }
       });
-      console.log(`📊 Derek brain: ${name||email} quality=${quality} (${newHot} HOT, ${newPass} PASS)`);
+      console.log(`📊 Derek brain: ${name||email} quality=${quality}/10 (${newHot} HOT, ${newHardno} HARD NO — PASS not counted)`);
     } else {
-      // New wholesaler — ensure header exists then append
-      const hot  = isGood ? 1 : 0;
-      const pass = isBad  ? 1 : 0;
-      // Check if header row has quality columns
-      if (rows[0] && !rows[0][7]) {
+      // Ensure header exists
+      if (rows[0] && !rows[0][8]) {
         await s.spreadsheets.values.update({
-          spreadsheetId: SHEET_ID,
-          range: "Derek's Brain!H1:J1",
+          spreadsheetId: SHEET_ID, range: "Derek's Brain!H1:J1",
           valueInputOption: 'RAW',
-          requestBody: { values: [['Quality Score (0-10)', 'HOT Deals', 'PASS/NO Deals']] }
+          requestBody: { values: [['Quality Score (0-10)', 'HOT/BUY Deals', 'Hard No Deals']] }
         });
       }
-      console.log(`📊 Derek brain: first verdict for ${name||email} — ${verdict}`);
+      console.log(`📊 Derek brain: first quality signal for ${name||email} — ${verdict}`);
     }
   } catch(e) {
     if (!e.message?.includes('Unable to parse')) console.log('Derek brain update err:', e.message);
