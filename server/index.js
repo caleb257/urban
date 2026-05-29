@@ -292,7 +292,7 @@ async function getDealsFromSheet() {
 }
 
 // ── COMP ENGINE ───────────────────────────────────────────────────────────────
-async function fetchComps(address, city, state, zip) {
+async function fetchComps(address, city, state, zip, deal = {}) {
   const comps = [];
   comps._meta = { arvEstimate: null };
   try {
@@ -438,7 +438,7 @@ function getBrainContext(wholesalerEmail, county) {
 
 // ── DEEP COMP ENGINE (Haiku searches + Sonnet analysis) ─────────────────────
 // Cost: 2 Haiku searches ~$0.003 total. Sonnet only used for the analysis step.
-async function fetchDeepComps(address, city, state, zip, beds, baths, sqft, propType) {
+async function fetchDeepComps(address, city, state, zip, beds, baths, sqft, propType, deal = {}) {
   const comps = [];
   comps._meta = { arvEstimate: null, dataQuality: 'DEEP' };
 
@@ -591,6 +591,44 @@ const relevantLessons = getRelevantLessons(deal);
     ? arvLine + '\n' + comps.map(c => `- ${c.address}: $${c.salePrice?.toLocaleString()} sold ${c.saleDate} (${c.source})`).join('\n')
     : arvLine;
 
+  // Pre-compute ALL template values to avoid IIFE scope issues
+  const _mn = urbanBrain.marketNotes[deal.county || deal.city];
+  const marketContextStr = _mn && _mn.deals >= 2
+    ? `${_mn.deals} deals analyzed | Avg ARV: $${(_mn.avgARV||0).toLocaleString()} | ${_mn.avgARV && _mn.avgSqft ? 'Avg $/sqft: $'+Math.round(_mn.avgARV/_mn.avgSqft)+' | ' : ''}HOT/BUY rate: ${Math.round((_mn.hotDeals||0)/_mn.deals*100)}%`
+    : 'Limited data — use comp-based judgment.';
+
+  // Pre-compute neighborhood intel string
+  const _city = (deal.city||'').toLowerCase().trim();
+  const _nb = Object.entries(TAMPA.neighborhoods).find(([name]) =>
+    _city.includes(name) || name.includes(_city.split(' ')[0])
+  );
+  const neighborhoodStr = _nb
+    ? _nb[0].toUpperCase() + ': $' + _nb[1].ppsf + '/sqft avg | Tier ' + _nb[1].tier + ' | Trend: ' + _nb[1].trend + ' | ' + _nb[1].notes
+    : 'No specific neighborhood data — use comp-based judgment.';
+
+  // Pre-compute private comps string
+  const _targetSqft = parseFloat(deal.sqft) || 0;
+  const _county = (deal.county||'').toLowerCase();
+  const _privateComps = Object.values(underwrites)
+    .filter(uw => uw.verdict && uw.arv?.urbanARV && uw.deal?.address &&
+      uw.deal.address !== deal.address && !uw.restoredFromSheet &&
+      ((uw.deal.city||'').toLowerCase().includes(_city.split(' ')[0]) ||
+       (uw.deal.county||'').toLowerCase().includes(_county.split(' ')[0])))
+    .map(uw => {
+      const ppsf = uw.arv.urbanARV && uw.deal.sqft ? Math.round(uw.arv.urbanARV/parseFloat(uw.deal.sqft)) : null;
+      return (uw.deal.address||'?') + ' | ' + (uw.deal.sqft||'?') + 'sqft ' + (uw.deal.beds||'?') + 'bd/' + (uw.deal.baths||'?') + 'ba' +
+        ' | Our ARV: $' + uw.arv.urbanARV.toLocaleString() + (ppsf ? ' ($'+ppsf+'/sqft)' : '') +
+        ' | ' + uw.verdict + ' | ' + (uw.underwroteAt ? new Date(uw.underwroteAt).toLocaleDateString() : '?');
+    })
+    .sort((a,b) => {
+      // sort by sqft proximity
+      const aSqft = parseFloat((a.match(/(\d+)sqft/)||[])[1])||0;
+      const bSqft = parseFloat((b.match(/(\d+)sqft/)||[])[1])||0;
+      return Math.abs(aSqft-_targetSqft) - Math.abs(bSqft-_targetSqft);
+    })
+    .slice(0,5)
+    .join('\n') || 'None yet in this area.';
+
   const prompt = `${deep ? 'DEEP ANALYSIS MODE — Sonnet is running. Be thorough. Show your full reasoning on ARV and rehab. Longer text fields allowed.\n\n' : ''}You are Urban, elite real estate underwriter for Coralstone Capital Group, Tampa Bay FL. 20+ years fix-and-flip experience in Pasco, Hillsborough, Polk, Pinellas, Hernando counties.
 
 CORALSTONE CRITERIA:
@@ -605,19 +643,7 @@ CORALSTONE CRITERIA:
 - Target: 3/2 SFR 1200-2000sqft, $150-350K asking, Pasco/Hillsborough sweet spot
 
 TAMPA BAY NEIGHBORHOOD INTEL ($/sqft benchmarks, 2025):
-${(() => {
-  const city = (deal.city||'').toLowerCase().trim();
-  const zip = deal.zip || '';
-  // Find neighborhood match
-  const nb = Object.entries(TAMPA.neighborhoods).find(([name]) =>
-    city.includes(name) || name.includes(city.split(' ')[0])
-  );
-  if (nb) {
-    const [name, data] = nb;
-    return name.toUpperCase() + ': $' + data.ppsf + '/sqft avg | Tier ' + data.tier + ' | Trend: ' + data.trend + ' | ' + data.notes;
-  }
-  return 'No specific neighborhood data — use comp-based judgment. See market conditions below.';
-})()}
+${neighborhoodStr}
 
 TAMPA BAY MARKET CONDITIONS (2025):
 - FL insurance crisis: Roofs 15yr+ hard to insure. 20yr+ uninsurable. Budget $3-6K/yr insurance.
@@ -694,54 +720,13 @@ Gap vs asking: $${wholesalerARV ? Math.round(wholesalerARV*0.7 - (wholesalerRepa
 Taxes: $${annualTaxes.toLocaleString()}/yr | Close: ${deal.closeDate} | EMD: ${deal.earnestMoney}
 
 PRIVATE COMP DATABASE (Coralstone past deals — real numbers we paid for):
-${(() => {
-  const city = (deal.city||'').toLowerCase();
-  const county = (deal.county||'').toLowerCase();
-  const targetSqft = parseFloat(deal.sqft) || 0;
-  const privatComps = Object.values(underwrites)
-    .filter(uw =>
-      uw.verdict && uw.arv?.urbanARV && uw.deal?.address &&
-      uw.deal.address !== deal.address && // not the same deal
-      !uw.restoredFromSheet && // has full data
-      ((uw.deal.city||'').toLowerCase().includes(city.split(' ')[0]) ||
-       (uw.deal.county||'').toLowerCase().includes(county.split(' ')[0]))
-    )
-    .map(uw => ({
-      addr: uw.deal.address,
-      arv: uw.arv.urbanARV,
-      sqft: parseFloat(uw.deal.sqft) || 0,
-      beds: uw.deal.beds,
-      baths: uw.deal.baths,
-      verdict: uw.verdict,
-      ppsf: uw.arv.urbanARV && uw.deal.sqft ? Math.round(uw.arv.urbanARV / parseFloat(uw.deal.sqft)) : null,
-      date: uw.underwroteAt ? new Date(uw.underwroteAt).toLocaleDateString() : '?'
-    }))
-    .sort((a, b) => {
-      // sort by sqft proximity to subject
-      const da = Math.abs(a.sqft - targetSqft);
-      const db = Math.abs(b.sqft - targetSqft);
-      return da - db;
-    })
-    .slice(0, 5);
-
-  if (!privatComps.length) return 'None yet in this area — this may be first deal here.';
-  return privatComps.map(c =>
-    c.addr + ' | ' + (c.sqft||'?') + 'sqft ' + (c.beds||'?') + 'bd/' + (c.baths||'?') + 'ba' +
-    ' | Our ARV: $' + c.arv.toLocaleString() + (c.ppsf ? ' ($'+c.ppsf+'/sqft)' : '') +
-    ' | ' + c.verdict + ' | ' + c.date
-  ).join('\n');
-})()}
+${_privateComps}
 
 MARKET COMPS (Zillow/web search):
 ${compsText}
 
 MARKET CONTEXT FOR THIS COUNTY (${deal.county || deal.city}):
-${(() => {
-  const mn = urbanBrain.marketNotes[deal.county || deal.city];
-  if (!mn || mn.deals < 2) return 'Limited data — use comp-based judgment.';
-  const ppsf = mn.avgARV && mn.avgSqft ? Math.round(mn.avgARV/mn.avgSqft) : null;
-  return `${mn.deals} deals analyzed | Avg ARV: $${mn.avgARV?.toLocaleString()||'?'} | ${ppsf?'Avg $/sqft: $'+ppsf+' | ':''}HOT/BUY rate: ${Math.round((mn.hotDeals||0)/mn.deals*100)}%`;
-})()}
+${marketContextStr}
 
 Respond ONLY with a JSON object (no markdown, no backticks, just raw JSON).
 PUT THESE FIELDS FIRST — they are most important:
@@ -1333,7 +1318,7 @@ app.post('/api/auto-underwrite-batch', auth, async (req, res) => {
         }
         try {
           send({ status: `Fetching comps for ${deal.address}...`, address: deal.address });
-          const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+          const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip, deal);
           const uw = await underwriteDeal(deal, comps, false, false);
           underwrites[uw.uid] = uw; // uid is set inside underwriteDeal
           saveJSON(UNDERWRITES_FILE, underwrites);
@@ -1425,7 +1410,7 @@ app.post('/api/underwrite/:uid', auth, async (req, res) => {
     send({ status: deep ? '🔍 Deep analysis: running 3 parallel comp searches (Zillow + Redfin + county records)...' : 'Fetching comps...' });
     const comps = deep
       ? await fetchDeepComps(deal.address, deal.city, deal.state, deal.zip, deal.beds, deal.baths, deal.sqft, deal.propertyType)
-      : await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+      : await fetchComps(deal.address, deal.city, deal.state, deal.zip, deal);
     send({ status: `Got ${comps.length} comps — ${deep ? 'running Sonnet deep analysis' : 'Urban is analyzing'}...` });
 
     const uw = await underwriteDeal(deal, comps, forceRefresh || false, deep || false);
@@ -1470,7 +1455,7 @@ app.post('/api/underwrite-by-address/:address', auth, async (req, res) => {
     send({ status: deep ? '🔍 Deep analysis: running 3 parallel comp searches (Zillow + Redfin + county records)...' : `Fetching comps for ${deal.address}...` });
     const comps = deep
       ? await fetchDeepComps(deal.address, deal.city, deal.state, deal.zip, deal.beds, deal.baths, deal.sqft, deal.propertyType)
-      : await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+      : await fetchComps(deal.address, deal.city, deal.state, deal.zip, deal);
     send({ status: `Got ${comps.length} comps — ${deep ? 'running Sonnet deep analysis' : 'underwriting'}...` });
 
     const uw = await underwriteDeal(deal, comps, false, deep || false);
@@ -1523,7 +1508,7 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
       if (!uw) {
         // Not underwritten yet — underwrite it now (Haiku, cheap)
         console.log(`Chat: auto-underwriting ${deal.address} for chat context...`);
-        const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip);
+        const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip, deal);
         uw = await underwriteDeal(deal, comps, false, false);
       }
     }
