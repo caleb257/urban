@@ -809,17 +809,18 @@ async function selectDeal(d) {
     const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, { headers: { 'x-urban-token': TOKEN } });
     if (r.ok) {
       curUW = await r.json();
-      // If it's a restored stub (minimal data), show partial
-      if (curUW.restoredFromSheet && !curUW.arv?.urbanARV && !curUW.financials?.netProfitAtAsking) {
-        showPending(curUW);
-      } else {
-        renderUW(curUW);
-      }
+      try { renderUW(curUW); } catch(re) { console.warn('renderUW err:', re.message); showPending(curUW); }
     } else {
-      showPending(null);
+      const p = (d.underwriteStatus && d.underwriteStatus !== 'PENDING')
+        ? { verdict: d.underwriteStatus, score: d.underwriteScore, verdictReason: 'Loading — hit Re-run for full data.' }
+        : null;
+      showPending(p);
     }
-  } catch {
-    showPending();
+  } catch(fe) {
+    const p2 = (d.underwriteStatus && d.underwriteStatus !== 'PENDING')
+      ? { verdict: d.underwriteStatus, score: d.underwriteScore, verdictReason: 'Loading — hit Re-run for full data.' }
+      : null;
+    showPending(p2);
   }
 }
 
