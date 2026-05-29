@@ -685,6 +685,8 @@ Red Flags: ${deal.redFlags}
 Highlights: ${deal.highlights}
 Notes: ${deal.additionalNotes}
 
+${deal._extractionConfidence !== undefined ? `DATA QUALITY NOTE FROM DEREK: Extraction confidence ${deal._extractionConfidence}/10 — ${deal._extractionNote || (deal._extractionConfidence >= 8 ? 'high confidence, data reliable' : deal._extractionConfidence >= 5 ? 'medium confidence, some fields estimated' : 'LOW confidence — verify key fields before trusting numbers')}` : ''}
+
 WHOLESALER NUMBERS:
 Asking: $${askingPrice.toLocaleString()} | Their ARV: $${wholesalerARV.toLocaleString()} | Their Repairs: ${wholesalerRepairs ? '$'+wholesalerRepairs.toLocaleString() : 'NOT PROVIDED'}
 Their MAO implication: $${wholesalerARV ? Math.round(wholesalerARV*0.7 - (wholesalerRepairs||0)).toLocaleString() : '?'} (ARV×70%-Repairs)
@@ -1107,6 +1109,47 @@ app.post('/api/keep-deal/:uid', auth, (req, res) => {
   saveBrain().catch(() => {});
   console.log('📌 Kept: ' + uid + ' for ' + days + ' days');
   res.json({ ok: true });
+});
+
+// Feedback from Adam — Caleb/Grant's actual decisions feed back as lessons
+// Called when someone pursues or passes a deal on Telegram — NO AI call, template-based
+app.post('/api/feedback', auth, (req, res) => {
+  const { address, city, verdict, score, action, who, reason, askingPrice, profit } = req.body;
+  if (!address || !action) return res.status(400).json({ error: 'address and action required' });
+
+  const n = v => v ? '$' + parseInt(v).toLocaleString() : '?';
+  const dateStr = new Date().toLocaleDateString();
+
+  let lesson = '';
+  if (action === 'pursue') {
+    lesson = '[' + dateStr + '] PURSUED by ' + (who||'team') + ': ' + address + ', ' + (city||'?') +
+      ' | Urban said ' + (verdict||'?') + ' (' + (score||'?') + '/10)' +
+      ' | Ask ' + n(askingPrice) + ' | Projected profit ' + n(profit) +
+      (reason ? ' | Note: ' + reason : '') +
+      ' → CONFIRMED WORTH PURSUING';
+  } else if (action === 'pass') {
+    lesson = '[' + dateStr + '] PASSED by ' + (who||'team') + ': ' + address + ', ' + (city||'?') +
+      ' | Urban said ' + (verdict||'?') + ' (' + (score||'?') + '/10)' +
+      ' | Ask ' + n(askingPrice) +
+      (reason ? ' | Reason: ' + reason : ' | Team passed — review ARV/scope assumptions') +
+      ' → NOT PURSUED';
+  } else if (action === 'counter') {
+    const counterPrice = req.body.counterPrice;
+    lesson = '[' + dateStr + '] COUNTER by ' + (who||'team') + ': ' + address + ', ' + (city||'?') +
+      ' | Urban MAO was ' + n(req.body.mao) + ' | Counter at ' + n(counterPrice) +
+      ' → ACTIVELY NEGOTIATING';
+  }
+
+  if (lesson) {
+    urbanBrain.lessons = urbanBrain.lessons || [];
+    urbanBrain.lessons.push(lesson);
+    if (urbanBrain.lessons.length > 150) urbanBrain.lessons.shift();
+    // High-priority: save immediately
+    saveBrain().catch(() => {});
+    console.log('📚 Feedback lesson added:', lesson.slice(0, 80));
+  }
+
+  res.json({ ok: true, lesson });
 });
 
 app.post('/api/agent-query', async (req, res) => {
@@ -1718,6 +1761,50 @@ app.post('/api/override/:uid', auth, (req, res) => {
     saveJSON(UNDERWRITES_FILE, underwrites);
     res.json(uw);
   } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Market intel endpoint — Derek reads this to pre-score deals by county/city
+// Returns county-level averages so Derek can hint extraction with market context
+app.get('/api/market-intel', auth, (req, res) => {
+  const county = req.query.county || req.query.city;
+  const notes  = urbanBrain.marketNotes || {};
+
+  if (county) {
+    // Return specific county
+    const mn = notes[county] || null;
+    if (!mn) return res.json({ county, noData: true });
+    const ppsf = mn.avgARV && mn.avgSqft ? Math.round(mn.avgARV / mn.avgSqft) : null;
+    return res.json({
+      county, deals: mn.deals,
+      avgARV: mn.avgARV, avgSqft: mn.avgSqft, ppsf,
+      hotRate: mn.deals ? Math.round((mn.hotDeals||0) / mn.deals * 100) : 0,
+      signal: mn.deals < 3 ? 'insufficient data' : (mn.hotDeals||0)/mn.deals > 0.4 ? 'HOT MARKET' : (mn.hotDeals||0)/mn.deals < 0.1 ? 'COLD MARKET' : 'NORMAL MARKET'
+    });
+  }
+
+  // Return all counties summary
+  const summary = Object.entries(notes)
+    .filter(([, mn]) => mn.deals >= 2)
+    .map(([county, mn]) => {
+      const ppsf = mn.avgARV && mn.avgSqft ? Math.round(mn.avgARV / mn.avgSqft) : null;
+      return { county, deals: mn.deals, avgARV: mn.avgARV, ppsf,
+               hotRate: mn.deals ? Math.round((mn.hotDeals||0)/mn.deals*100) : 0 };
+    })
+    .sort((a, b) => b.deals - a.deals);
+
+  // Also expose top/worst wholesalers so Derek can fast-track or flag
+  const wsRankings = Object.entries(urbanBrain.wholesalerStats || {})
+    .filter(([, ws]) => ws.deals >= 3)
+    .map(([email, ws]) => ({
+      email, deals: ws.deals,
+      hotDeals: ws.hotDeals || 0,
+      avgInflation: ws.avgARVInflation,
+      isInflator: !!(ws.verifiedInflator || ws.inflationWarning),
+      quality: ws.hotDeals > ws.deals * 0.4 ? 'HIGH' : ws.verifiedInflator ? 'INFLATOR' : ws.deals > 5 && (ws.hotDeals||0) < 1 ? 'LOW' : 'MED'
+    }))
+    .sort((a, b) => b.hotDeals - a.hotDeals);
+
+  res.json({ markets: summary, wholesalers: wsRankings, lessonsCount: (urbanBrain.lessons||[]).length });
 });
 
 // Stats
