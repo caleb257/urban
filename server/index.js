@@ -2045,15 +2045,25 @@ async function restoreBrainFromSheet() {
       const viRows = (vi.data.values || []).slice(1); // skip header
       let restored = 0;
       for (const row of viRows) {
-        const [uid, verdict, score, address] = row;
+        const [uid, verdict, score, address, snapshotJson] = row;
         if (uid && verdict && !underwrites[uid]) {
-          underwrites[uid] = { uid, verdict, score: parseInt(score)||0, deal: { address }, restoredFromSheet: true };
+          let snapshot = { uid, verdict, score: parseInt(score)||0, deal: { address }, restoredFromSheet: true };
+          if (snapshotJson) {
+            try {
+              const parsed = JSON.parse(snapshotJson);
+              // Merge snapshot fields — keeps arv, rehab, financials, recommendation etc
+              snapshot = { ...snapshot, ...parsed, deal: { ...(parsed.deal || {}), address: address || parsed.deal?.address }, restoredFromSheet: true };
+            } catch {}
+          }
+          underwrites[uid] = snapshot;
           restored++;
         }
       }
       if (restored > 0) {
         saveJSON(UNDERWRITES_FILE, underwrites);
         console.log('✅ Verdict index restored: ' + restored + ' deals (will not re-underwrite)');
+        // Upgrade the sheet with full snapshots for any deals that have full data
+        persistVerdictIndexToSheet().catch(() => {});
       }
     } catch(e) {
       // Verdict index columns may not exist yet — that's fine
@@ -2068,16 +2078,36 @@ async function restoreBrainFromSheet() {
 async function persistVerdictIndexToSheet() {
   try {
     const s = getSheets();
-    const idx = Object.entries(underwrites)
+    const rows = Object.entries(underwrites)
       .filter(([, uw]) => uw.verdict && uw.verdict !== 'PENDING')
-      .map(([uid, uw]) => [uid, uw.verdict, String(uw.score || ''), uw.deal?.address || uid]);
-    if (!idx.length) return;
+      .map(([uid, uw]) => {
+        // Store enough data so the UI never shows "not yet underwritten"
+        const snapshot = {
+          uid,
+          verdict:          uw.verdict,
+          score:            uw.score || 0,
+          verdictReason:    uw.verdictReason || '',
+          recommendation:   uw.recommendation || '',
+          offerStrategy:    uw.offerStrategy || '',
+          arv:              uw.arv || null,
+          rehab:            uw.rehab || null,
+          financials:       uw.financials || null,
+          riskFlags:        uw.riskFlags || [],
+          negotiationLadder: uw.negotiationLadder || [],
+          exitAnalysis:     uw.exitAnalysis || null,
+          underwroteAt:     uw.underwroteAt || null,
+          model:            uw.model || null,
+          chatCorrected:    uw.chatCorrected || false,
+        };
+        return [uid, uw.verdict, String(uw.score||0), uw.deal?.address||uid, JSON.stringify(snapshot)];
+      });
+    if (!rows.length) return;
     await s.spreadsheets.values.update({
       spreadsheetId: SHEET_ID, range: `${BRAIN_TAB}!D1`,
       valueInputOption: 'RAW',
-      requestBody: { values: [['UID', 'Verdict', 'Score', 'Address'], ...idx] }
+      requestBody: { values: [['UID','Verdict','Score','Address','Snapshot'], ...rows] }
     });
-  } catch(e) { /* non-critical */ }
+  } catch(e) { console.log('Persist verdict index err:', e.message); }
 }
 
 app.listen(PORT, async () => {

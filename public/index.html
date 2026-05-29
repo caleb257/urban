@@ -809,16 +809,58 @@ async function selectDeal(d) {
     const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, { headers: { 'x-urban-token': TOKEN } });
     if (r.ok) {
       curUW = await r.json();
-      renderUW(curUW);
+      // If it's a restored stub (minimal data), show partial
+      if (curUW.restoredFromSheet && !curUW.arv?.urbanARV && !curUW.financials?.netProfitAtAsking) {
+        showPending(curUW);
+      } else {
+        renderUW(curUW);
+      }
     } else {
-      showPending();
+      showPending(null);
     }
   } catch {
     showPending();
   }
 }
 
-function showPending() {
+function showPending(partialUW) {
+  // If we have a restored stub with at least a verdict, show it
+  if (partialUW && partialUW.verdict && partialUW.verdict !== 'PENDING') {
+    // Show verdict badge and score
+    $('dv-v').textContent = partialUW.verdict;
+    $('dv-v').className = 'verdict-big v' + partialUW.verdict.replace(' ','');
+    $('dv-sc').textContent = partialUW.score || '?';
+    $('dv-vr').textContent = partialUW.verdictReason || 'Underwrite data restored from sheet';
+    $('pending-card').style.display = 'none';
+    // Show partial content with what we have
+    $('uw-content').style.display = 'block';
+    $('loading-state').style.display = 'none';
+    // Show recommendation if available
+    if (partialUW.recommendation) {
+      const recEl = $('ov-rec');
+      if (recEl) recEl.textContent = partialUW.recommendation;
+    }
+    const offEl = $('ov-off');
+    if (offEl) {
+      if (partialUW.offerStrategy) {
+        offEl.textContent = partialUW.offerStrategy;
+        offEl.closest('.off-str').style.display = '';
+      } else {
+        offEl.closest('.off-str').style.display = 'none';
+      }
+    }
+    // Show re-underwrite notice
+    const existingNotice = document.getElementById('stale-uw-notice');
+    if (!existingNotice) {
+      const notice = document.createElement('div');
+      notice.id = 'stale-uw-notice';
+      notice.style.cssText = 'background:rgba(200,169,110,.08);border:1px solid rgba(200,169,110,.2);border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted)';
+      notice.textContent = 'Full analysis restored from sheet. Hit Re-Underwrite for fresh comps and complete data.';
+      const uwContent = $('uw-content');
+      if (uwContent?.firstChild) uwContent.insertBefore(notice, uwContent.firstChild);
+    }
+    return;
+  }
   $('dv-v').textContent = 'PENDING';
   $('dv-v').className = 'verdict-big vPENDING';
   $('dv-sc').textContent = '?';
@@ -826,6 +868,8 @@ function showPending() {
   $('pending-card').style.display = 'block';
   $('loading-state').style.display = 'none';
   $('uw-content').style.display = 'none';
+  const n = document.getElementById('stale-uw-notice');
+  if (n) n.remove();
 }
 
 // ── TABS ───────────────────────────────────────────────────────────────────────
