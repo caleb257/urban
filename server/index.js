@@ -2047,8 +2047,37 @@ async function restoreBrainFromSheet() {
       if (restored > 0) {
         saveJSON(UNDERWRITES_FILE, underwrites);
         console.log('✅ Verdict index restored: ' + restored + ' deals (will not re-underwrite)');
-        // Upgrade the sheet with full snapshots for any deals that have full data
         persistVerdictIndexToSheet().catch(() => {});
+
+        // Silently re-underwrite bare stubs in background (no arv/financials saved yet)
+        // Runs 1 at a time, cheap, restores full data so UI never shows "not yet underwritten"
+        const bareStubs = Object.values(underwrites).filter(uw =>
+          uw.restoredFromSheet && !uw.arv?.urbanARV && !uw.financials?.mao
+        );
+        if (bareStubs.length > 0) {
+          console.log('🔄 Re-underwriting ' + bareStubs.length + ' bare stubs in background...');
+          (async () => {
+            const deals = await getDealsFromSheet().catch(() => []);
+            let done = 0;
+            for (const stub of bareStubs) {
+              try {
+                const deal = deals.find(d =>
+                  (d.uid && d.uid === stub.uid) ||
+                  (d.address && stub.deal?.address && d.address.toLowerCase() === stub.deal.address.toLowerCase())
+                );
+                if (!deal) continue;
+                const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip, deal);
+                await underwriteDeal(deal, comps, true, false); // forceRefresh=true
+                done++;
+                console.log('✅ Re-underwritten: ' + deal.address + ' (' + done + '/' + bareStubs.length + ')');
+                await new Promise(r => setTimeout(r, 2000)); // 2s between each — don't hammer API
+              } catch(e) {
+                console.log('⚠️ Re-underwrite skip ' + (stub.deal?.address||stub.uid) + ': ' + e.message);
+              }
+            }
+            console.log('✅ Background re-underwrite complete: ' + done + ' deals restored');
+          })().catch(e => console.log('Background re-underwrite error:', e.message));
+        }
       }
     } catch(e) {
       // Verdict index columns may not exist yet — that's fine
