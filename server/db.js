@@ -1,75 +1,105 @@
 'use strict';
-// ── DATABASE LAYER ────────────────────────────────────────────────────────────
-// Tries to load better-sqlite3 (available if Railway Volume + build tools present)
-// Falls back to in-memory JSON if unavailable — no crash, no login failure
+// ── DATABASE LAYER (PostgreSQL) ───────────────────────────────────────────────
+// Uses Railway Postgres via DATABASE_URL env var
+// Falls back to in-memory JSON if unavailable — zero crash risk
 
-const fs   = require('fs');
-const path = require('path');
+let pool = null;
+let ready = false;
 
-const DB_DIR  = process.env.DB_DIR || '/data';
-const DB_PATH = path.join(DB_DIR, 'urban.db');
-
-let db = null;
-
-function initDB() {
+async function initDB() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.log('ℹ️  No DATABASE_URL — running in JSON-only mode');
+    return false;
+  }
   try {
-    // better-sqlite3 must be installed separately (Railway Volume setup)
-    // If not available, we run in JSON-only mode — that's fine
-    fs.mkdirSync(DB_DIR, { recursive: true });
-    const Database = require('better-sqlite3');
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-    db.pragma('synchronous = NORMAL');
-    db.exec(`
+    const { Pool } = require('pg');
+    pool = new Pool({ connectionString: url, ssl: { rejectUnauthorized: false } });
+    // Test connection
+    await pool.query('SELECT 1');
+    // Create tables
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS underwrites (
-        uid TEXT PRIMARY KEY, address TEXT, city TEXT,
-        verdict TEXT, score INTEGER, data TEXT NOT NULL,
-        updated_at INTEGER DEFAULT (unixepoch())
+        uid        TEXT PRIMARY KEY,
+        address    TEXT,
+        city       TEXT,
+        verdict    TEXT,
+        score      INTEGER,
+        data       JSONB NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-      CREATE TABLE IF NOT EXISTS brain (
-        key TEXT PRIMARY KEY, value TEXT NOT NULL,
-        updated_at INTEGER DEFAULT (unixepoch())
+      CREATE TABLE IF NOT EXISTS brain_store (
+        key        TEXT PRIMARY KEY,
+        value      JSONB NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-      CREATE INDEX IF NOT EXISTS idx_uw_updated ON underwrites(updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_uw_verdict    ON underwrites(verdict);
+      CREATE INDEX IF NOT EXISTS idx_uw_updated_at ON underwrites(updated_at DESC);
     `);
-    console.log('✅ SQLite database ready at ' + DB_PATH);
+    ready = true;
+    console.log('✅ PostgreSQL connected and tables ready');
     return true;
   } catch(e) {
-    // Not installed or Volume not mounted — run in JSON mode
-    if (!e.message.includes('Cannot find module')) {
-      console.warn('⚠️  SQLite: ' + e.message.slice(0,80) + ' — using JSON mode');
-    } else {
-      console.log('ℹ️  SQLite not installed — using JSON persistence (add Volume to enable SQLite)');
-    }
-    db = null;
+    console.warn('⚠️  PostgreSQL init failed: ' + e.message.slice(0,80) + ' — using JSON mode');
+    pool = null;
+    ready = false;
     return false;
   }
 }
 
-function saveUnderwrite(uid, uw) {
-  if (!db) return;
+// ── UNDERWRITES ───────────────────────────────────────────────────────────────
+async function saveUnderwrite(uid, uw) {
+  if (!pool || !ready) return;
   try {
-    db.prepare(`INSERT OR REPLACE INTO underwrites (uid,address,city,verdict,score,data,updated_at) VALUES (?,?,?,?,?,?,unixepoch())`)
-      .run(uid, uw.deal?.address||'', uw.deal?.city||'', uw.verdict||'', uw.score||0, JSON.stringify(uw));
-  } catch(e) { /* non-critical */ }
+    await pool.query(
+      `INSERT INTO underwrites (uid,address,city,verdict,score,data,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,NOW())
+       ON CONFLICT (uid) DO UPDATE SET
+         address=EXCLUDED.address, city=EXCLUDED.city, verdict=EXCLUDED.verdict,
+         score=EXCLUDED.score, data=EXCLUDED.data, updated_at=NOW()`,
+      [uid, uw.deal?.address||'', uw.deal?.city||'', uw.verdict||'', uw.score||0, JSON.stringify(uw)]
+    );
+  } catch(e) { console.error('DB saveUnderwrite:', e.message); }
 }
 
-function getUnderwrite(uid) {
-  if (!db) return null;
-  try { const r = db.prepare('SELECT data FROM underwrites WHERE uid=?').get(uid); return r ? JSON.parse(r.data) : null; }
-  catch { return null; }
+async function getUnderwrite(uid) {
+  if (!pool || !ready) return null;
+  try {
+    const r = await pool.query('SELECT data FROM underwrites WHERE uid=$1', [uid]);
+    return r.rows[0] ? r.rows[0].data : null;
+  } catch { return null; }
 }
 
-function getAllUnderwrites() {
-  if (!db) return {};
+async function getAllUnderwrites() {
+  if (!pool || !ready) return {};
   try {
-    const rows = db.prepare('SELECT uid,data FROM underwrites').all();
+    const r = await pool.query('SELECT uid, data FROM underwrites ORDER BY updated_at DESC');
     const out = {};
-    for (const r of rows) { try { out[r.uid] = JSON.parse(r.data); } catch {} }
+    for (const row of r.rows) out[row.uid] = row.data;
     return out;
-  } catch { return {}; }
+  } catch(e) { console.error('DB getAllUnderwrites:', e.message); return {}; }
 }
 
-function isAvailable() { return !!db; }
+// ── BRAIN ─────────────────────────────────────────────────────────────────────
+async function saveBrainToDB(brain) {
+  if (!pool || !ready) return;
+  try {
+    await pool.query(
+      `INSERT INTO brain_store (key, value, updated_at) VALUES ('main', $1, NOW())
+       ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`,
+      [JSON.stringify(brain)]
+    );
+  } catch(e) { console.error('DB saveBrain:', e.message); }
+}
 
-module.exports = { initDB, isAvailable, saveUnderwrite, getUnderwrite, getAllUnderwrites };
+async function loadBrainFromDB() {
+  if (!pool || !ready) return null;
+  try {
+    const r = await pool.query("SELECT value FROM brain_store WHERE key='main'");
+    return r.rows[0] ? r.rows[0].value : null;
+  } catch { return null; }
+}
+
+function isAvailable() { return ready; }
+
+module.exports = { initDB, isAvailable, saveUnderwrite, getUnderwrite, getAllUnderwrites, saveBrainToDB, loadBrainFromDB };

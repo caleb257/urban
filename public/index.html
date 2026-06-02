@@ -505,12 +505,12 @@ async function doLogin() {
   TOKEN = $('pw').value.trim();
   const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
   if (r.ok) {
-    show('login-screen', false);
-    show('app', !('flex' === 'none' || 'flex' === ''));
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
     doLoadStats();
     doLoadDeals();
   } else {
-    show('login-err', !('block' === 'none' || 'block' === ''));
+    document.getElementById('login-err').style.display = 'block';
     TOKEN = '';
   }
 }
