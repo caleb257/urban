@@ -505,12 +505,12 @@ async function doLogin() {
   TOKEN = $('pw').value.trim();
   const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
   if (r.ok) {
-    $('login-screen').style.display = 'none';
-    $('app').style.display = 'flex';
+    show('login-screen', false);
+    show('app', !('flex' === 'none' || 'flex' === ''));
     doLoadStats();
     doLoadDeals();
   } else {
-    $('login-err').style.display = 'block';
+    show('login-err', !('block' === 'none' || 'block' === ''));
     TOKEN = '';
   }
 }
@@ -796,8 +796,8 @@ async function selectDeal(d) {
   }
   const uid = d.uid || `${d.address}-${d.dateReceived}`;
   document.querySelectorAll('.di').forEach(el => el.classList.toggle('active', el.dataset.uid === uid));
-  $('main-empty').style.display = 'none';
-  $('dv').style.display = 'block';
+  show('main-empty', false);
+  show('dv', !('block' === 'none' || 'block' === ''));
   $('dv-addr').textContent = d.address || 'Unknown';
   $('dv-city').textContent = `${d.city}, ${d.state} ${d.zip} · ${d.county} County · ${d.propertyType}`;
 
@@ -832,10 +832,10 @@ function showPending(partialUW) {
     $('dv-v').className = 'verdict-big v' + partialUW.verdict.replace(' ','');
     $('dv-sc').textContent = partialUW.score || '?';
     $('dv-vr').textContent = partialUW.verdictReason || 'Underwrite data restored from sheet';
-    $('pending-card').style.display = 'none';
+    show('pending-card', false);
     // Show partial content with what we have
-    $('uw-content').style.display = 'block';
-    $('loading-state').style.display = 'none';
+    show('uw-content', !('block' === 'none' || 'block' === ''));
+    show('loading-state', false);
     // Show recommendation if available
     if (partialUW.recommendation) {
       const recEl = $('ov-rec');
@@ -843,12 +843,9 @@ function showPending(partialUW) {
     }
     const offEl = $('ov-off');
     if (offEl) {
-      if (partialUW.offerStrategy) {
-        offEl.textContent = partialUW.offerStrategy;
-        offEl.closest('.off-str').style.display = '';
-      } else {
-        offEl.closest('.off-str').style.display = 'none';
-      }
+      offEl.textContent = partialUW.offerStrategy || '';
+      const offStr = offEl.closest ? offEl.closest('.off-str') : null;
+      if (offStr) offStr.style.display = partialUW.offerStrategy ? '' : 'none';
     }
     // Show re-underwrite notice
     const existingNotice = document.getElementById('stale-uw-notice');
@@ -866,9 +863,9 @@ function showPending(partialUW) {
   $('dv-v').className = 'verdict-big vPENDING';
   $('dv-sc').textContent = '?';
   $('dv-vr').textContent = 'Not yet underwritten';
-  $('pending-card').style.display = 'block';
-  $('loading-state').style.display = 'none';
-  $('uw-content').style.display = 'none';
+  show('pending-card', !('block' === 'none' || 'block' === ''));
+  show('loading-state', false);
+  show('uw-content', false);
   const n = document.getElementById('stale-uw-notice');
   if (n) n.remove();
 }
@@ -896,9 +893,9 @@ $('btn-reuw').addEventListener('click', () => doUnderwrite(true, false));
 async function doUnderwrite(force, deep) {
   if (!curDeal) return;
   const uid = curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
-  $('pending-card').style.display = 'none';
-  $('uw-content').style.display = 'none';
-  $('loading-state').style.display = 'block';
+  show('pending-card', false);
+  show('uw-content', false);
+  show('loading-state', !('block' === 'none' || 'block' === ''));
   $('load-msg').textContent = deep ? '🔬 Deep underwriting with Sonnet 4...' : '⚡ Fetching comps and underwriting...';
 
   try {
@@ -921,7 +918,7 @@ async function doUnderwrite(force, deep) {
           if (data.status) $('load-msg').textContent = data.status;
           if (data.done) {
             curUW = data.underwrite;
-            $('loading-state').style.display = 'none';
+            show('loading-state', false);
             renderUW(curUW);
             doLoadStats();
             // Update deal status in list without re-triggering auto-underwrite
@@ -930,23 +927,28 @@ async function doUnderwrite(force, deep) {
             renderList();
           }
           if (data.error) {
-            $('loading-state').style.display = 'none';
+            show('loading-state', false);
             alert('Error: ' + data.error);
           }
         } catch {}
       }
     }
   } catch(e) {
-    $('loading-state').style.display = 'none';
+    show('loading-state', false);
     alert('Error: ' + e.message);
   }
 }
 
 // ── RENDER UNDERWRITE ──────────────────────────────────────────────────────────
 function renderUW(uw) {
-  $('pending-card').style.display = 'none';
-  $('loading-state').style.display = 'none';
-  $('uw-content').style.display = 'block';
+  if (!uw) return;
+  // Safe element setter — never crashes on missing elements
+  const set = (id, val, prop = 'textContent') => { const el = $(id); if (el) el[prop] = val; };
+  const cls = (id, c) => { const el = $(id); if (el) el.className = c; };
+  const show = (id, visible) => { const el = $(id); if (el) el.style.display = visible ? '' : 'none'; };
+  show('pending-card', false);
+  show('loading-state', false);
+  show('uw-content', !('block' === 'none' || 'block' === ''));
   switchTab('overview');
 
   const v = uw.verdict || 'REVIEW';
@@ -991,42 +993,50 @@ function renderUW(uw) {
   recEl.style.color = uw.recommendation ? '' : 'var(--muted)';
   if (!uw.recommendation) recEl.textContent = 'No recommendation yet — underwrite this deal to generate one.';
   const offEl = $('ov-off');
-  offEl.textContent = uw.offerStrategy || '';
-  offEl.closest('.off-str').style.display = uw.offerStrategy ? '' : 'none';
+  if (offEl) {
+    offEl.textContent = uw.offerStrategy || '';
+    const offStr = offEl.closest('.off-str');
+    if (offStr) offStr.style.display = uw.offerStrategy ? '' : 'none';
+  }
 
   // ARV TAB
-  $('arv-ws').textContent = fmt(uw.arv?.wholesalerARV);
-  $('arv-ur').textContent = fmt(uw.arv?.urbanARV);
-  $('arv-dn').textContent = diff > 1000
+  set('arv-ws', fmt(uw.arv?.wholesalerARV));
+  set('arv-ur', fmt(uw.arv?.urbanARV));
+  set('arv-dn', diff > 1000
     ? `Wholesaler is ${fmt(diff)} (${((diff/(uw.arv?.urbanARV||1))*100).toFixed(1)}%) ABOVE Urban's TRUE ARV`
     : diff < -1000 ? `Wholesaler is ${fmt(Math.abs(diff))} BELOW Urban's ARV — possible upside`
-    : 'Urban agrees with wholesaler ARV';
+    : 'Urban agrees with wholesaler ARV');
   const ac = uw.arv?.arvConfidence || 'MEDIUM';
-  $('arv-conf').textContent = ac;
-  $('arv-conf').className = `conf conf-${ac}`;
-  $('arv-notes').textContent = uw.arv?.arvNotes || '';
+  set('arv-conf', ac);
+  cls('arv-conf', `conf conf-${ac}`);
+  set('arv-notes', uw.arv?.arvNotes || '');
   const compsTb = $('comps-body');
-  compsTb.innerHTML = '';
-  (uw.comps||[]).forEach(c => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${c.address||'—'}</td><td>${c.beds||'?'}/${c.baths||'?'}</td><td>${c.sqft?parseInt(c.sqft).toLocaleString():'—'}</td><td class="p">${fmt(c.salePrice)}</td><td>${c.saleDate||'—'}</td><td>${c.distanceMiles||'?'}mi</td>`;
-    compsTb.appendChild(tr);
-  });
-  if (!uw.comps?.length) compsTb.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No comps — Urban estimated from market knowledge</td></tr>';
+  if (compsTb) compsTb.innerHTML = '';
+  if (compsTb) {
+    (uw.comps||[]).forEach(c => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${c.address||'—'}</td><td>${c.beds||'?'}/${c.baths||'?'}</td><td>${c.sqft?parseInt(c.sqft).toLocaleString():'—'}</td><td class="p">${fmt(c.salePrice)}</td><td>${c.saleDate||'—'}</td><td>${c.distanceMiles||'?'}mi</td>`;
+      compsTb.appendChild(tr);
+    });
+    if (!uw.comps?.length) compsTb.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No comps — Urban estimated from market knowledge</td></tr>';
+  }
 
   // REHAB TAB
   const sl = (uw.rehab?.scopeLevel||'').toUpperCase();
   const sc = sl.includes('FULL')?'FULL':sl.includes('LIGHT')?'LIGHT':'MEDIUM';
-  $('rehab-scope').innerHTML = `<div class="scope-tag sc-${sc}">${uw.rehab?.scopeLevel||'MEDIUM'} · ${uw.financials?.holdMonths||5} Month Hold</div>`;
+  const rehabScopeEl = $('rehab-scope');
+  if (rehabScopeEl) rehabScopeEl.innerHTML = `<div class="scope-tag sc-${sc}">${uw.rehab?.scopeLevel||'MEDIUM'} · ${uw.financials?.holdMonths||5} Month Hold</div>`;
   const liEl = $('rehab-li');
-  liEl.innerHTML = '';
+  if (liEl) liEl.innerHTML = '';
   const items = uw.rehab?.lineItems || {};
   let tot = 0;
-  Object.entries(items).forEach(([k, vv]) => {
-    if (!vv) return; tot += vv;
-    liEl.innerHTML += `<div class="rr"><span class="rn">${k.replace(/_/g,' ')}</span><span class="rv">${fmt(vv)}</span></div>`;
-  });
-  liEl.innerHTML += `<div class="rt"><span class="rn">TOTAL</span><span class="rv">${fmt(tot)}</span></div>`;
+  if (liEl) {
+    Object.entries(items).forEach(([k, vv]) => {
+      if (!vv) return; tot += vv;
+      liEl.innerHTML += `<div class="rr"><span class="rn">${k.replace(/_/g,' ')}</span><span class="rv">${fmt(vv)}</span></div>`;
+    });
+    liEl.innerHTML += `<div class="rt"><span class="rn">TOTAL</span><span class="rv">${fmt(tot)}</span></div>`;
+  }
   const rng = uw.rehab?.urbanEstimateRange;
   $('rehab-rng').textContent = rng ? `Range: ${fmt(rng.low)} – ${fmt(rng.high)}` : '';
   $('rehab-notes').textContent = uw.rehab?.notes || '';
