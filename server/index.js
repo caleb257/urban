@@ -540,6 +540,92 @@ async function fetchDeepComps(address, city, state, zip, beds, baths, sqft, prop
 
 
 // ── UNDERWRITE ENGINE ─────────────────────────────────────────────────────────
+// ── REGENERATE VERDICT ────────────────────────────────────────────────────────
+// Called after any number override — re-computes verdict/score/recommendation
+// from updated numbers WITHOUT re-running comps (cheap Haiku call)
+async function regenerateVerdict(uw) {
+  const deal = uw.deal || {};
+  const arv      = uw.arv?.urbanARV || 0;
+  const repairs  = uw.rehab?.urbanEstimate || 0;
+  const asking   = parseFloat(deal.askingPrice) || 0;
+  const mao      = uw.financials?.mao || Math.round(arv * 0.7 - repairs);
+  const costs    = (uw.financials?.holdingCosts?.total || 0) + 
+                   (uw.financials?.sellingCosts?.total || 0) +
+                   (uw.financials?.hardMoney?.totalInterest || 0) +
+                   (uw.financials?.hardMoney?.originationPoints || 0);
+  const profit   = Math.round(arv - asking - repairs - costs);
+  const roi      = arv > 0 && asking > 0 ? parseFloat(((profit / (asking + repairs)) * 100).toFixed(1)) : 0;
+  const wsARV    = uw.arv?.wholesalerARV || 0;
+  const arvGap   = wsARV ? Math.round(((wsARV - arv) / arv) * 100) : 0;
+
+  // Recalculate all financials from scratch with corrected numbers
+  uw.financials = {
+    ...uw.financials,
+    mao,
+    overUnderMAO:       Math.round(asking - mao),
+    netProfitAtAsking:  profit,
+    netProfitAtMAO:     Math.round(arv - mao - repairs - costs),
+    roi,
+    meetsMinimumProfit: profit >= 40000,
+  };
+
+  // Rebuild negotiation ladder
+  const pts = [asking, Math.round(asking*0.95), Math.round((asking+mao)/2), mao, Math.round(mao*0.9)]
+    .filter((p, i, arr) => p > 0 && arr.indexOf(p) === i).sort((a,b) => b-a);
+  uw.negotiationLadder = pts.map(price => ({
+    price,
+    label:    price >= Math.round(asking*0.98) ? 'Asking' : price === mao ? 'MAO' : price < mao ? 'Stretch' : 'Counter',
+    profit:   Math.round(arv - price - repairs - costs),
+    meetsMin: Math.round(arv - price - repairs - costs) >= 40000,
+    roi:      arv > 0 ? parseFloat(((Math.round(arv - price - repairs - costs) / (price + repairs)) * 100).toFixed(1)) : 0
+  }));
+
+  // Rebuild exit analysis if we have Tampa neighborhood data
+  const _city = (deal.city||'').toLowerCase();
+  const _nb   = Object.entries(TAMPA.neighborhoods).find(([name]) => _city.includes(name) || name.includes(_city.split(' ')[0]));
+  if (_nb) {
+    const tier = _nb[1].tier;
+    const dom  = TAMPA.marketConditions.days_on_market[tier.startsWith('A') ? 'a_tier' : tier.startsWith('B') ? 'b_tier' : 'c_tier'] || 45;
+    const lsr  = TAMPA.marketConditions.list_to_sale_ratio[tier.startsWith('A') ? 'a_tier' : tier.startsWith('B') ? 'b_tier' : 'c_tier'] || 0.94;
+    uw.exitAnalysis = { ...uw.exitAnalysis, estimatedDOM: dom, listToSaleRatio: lsr, realisticSalePrice: Math.round(arv * lsr), adjustedProfit: Math.round(profit - (arv - Math.round(arv * lsr))) };
+  }
+
+  // Re-run verdict/recommendation via Haiku (cheap — just the judgment, not the full analysis)
+  const regenPrompt = 'You are Urban, elite Tampa Bay fix-and-flip underwriter for Coralstone Capital Group.\n\n' +
+    'UPDATED NUMBERS (user corrected these):\n' +
+    'Address: ' + (deal.address||'?') + ', ' + (deal.city||'?') + ' FL\n' +
+    'Urban TRUE ARV: $' + arv.toLocaleString() + ' | Wholesaler ARV: $' + wsARV.toLocaleString() + (arvGap ? ' (inflated ' + arvGap + '%)' : '') + '\n' +
+    'Repairs: $' + repairs.toLocaleString() + ' | Asking: $' + asking.toLocaleString() + '\n' +
+    'MAO (ARV×70%-repairs): $' + mao.toLocaleString() + '\n' +
+    'Net Profit @ Ask: $' + profit.toLocaleString() + ' | ROI: ' + roi + '%\n' +
+    'Meets $40K min: ' + (profit >= 40000 ? 'YES' : 'NO — ' + (40000 - profit).toLocaleString() + ' short') + '\n' +
+    'Prior verdict: ' + (uw.verdict||'?') + ' (' + (uw.score||0) + '/10)\n\n' +
+    'Based ONLY on these corrected numbers, give a new verdict, score, reason, and recommendation.\n' +
+    'Respond with ONLY valid JSON (no markdown):\n' +
+    '{"verdict":"<HOT|BUY|REVIEW|PASS|HARD NO>","score":<1-10>,"verdictReason":"<one sentence>","recommendation":"<2-3 hard sentences with specific numbers>","offerStrategy":"<one sentence on what price to offer>"}';
+
+  try {
+    const res = await getAnthropic().messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 400,
+      messages: [{ role: 'user', content: regenPrompt }]
+    });
+    const raw = res.content[0].text.trim();
+    const f = raw.indexOf('{'), l = raw.lastIndexOf('}');
+    if (f !== -1 && l > f) {
+      const parsed = JSON.parse(raw.slice(f, l+1));
+      uw.verdict       = parsed.verdict       || uw.verdict;
+      uw.score         = parsed.score         || uw.score;
+      uw.verdictReason = parsed.verdictReason || uw.verdictReason;
+      uw.recommendation = parsed.recommendation || uw.recommendation;
+      uw.offerStrategy  = parsed.offerStrategy  || uw.offerStrategy;
+      uw.lastRegenAt   = new Date().toISOString();
+    }
+  } catch(e) { console.log('Regen Haiku call failed:', e.message); }
+
+  return uw;
+}
+
 async function underwriteDeal(deal, comps, forceRefresh = false, deep = false) {
   const uid = deal.uid || `${deal.address}-${deal.dateReceived}`;
   if (underwrites[uid] && !forceRefresh) return underwrites[uid];
@@ -1084,6 +1170,24 @@ app.post('/api/agent-feedback', async (req, res) => {
 });
 
 // Adam queries Urban directly
+
+// Manually regenerate verdict/recommendation with current numbers (no new comps)
+app.post('/api/regen-verdict/:uid', auth, async (req, res) => {
+  const uid = decodeURIComponent(req.params.uid);
+  const uw  = underwrites[uid];
+  if (!uw) return res.status(404).json({ error: 'Not found' });
+  try {
+    const updated = await regenerateVerdict(uw);
+    underwrites[uid] = updated;
+    saveJSON(UNDERWRITES_FILE, underwrites);
+    DB.saveUnderwrite(uid, updated);
+    persistVerdictIndexToSheet().catch(() => {});
+    console.log('🔄 Manual regen: ' + (uw.deal?.address||uid) + ' → ' + updated.verdict + ' (' + updated.score + '/10)');
+    res.json({ ok: true, verdict: updated.verdict, score: updated.score, verdictReason: updated.verdictReason, recommendation: updated.recommendation });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // Keep deal alive — reset 7-day stale timer
 app.post('/api/keep-deal/:uid', auth, (req, res) => {
@@ -1788,7 +1892,19 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
         console.log('❄️ HVAC line item zeroed out ($'+saved+' saved) based on chat correction');
       }
 
-      // 5. IMMEDIATELY save to sheet so it survives the next redeploy
+      // 5. Regenerate verdict/recommendation/score with updated numbers
+      try {
+        const updatedUW = await regenerateVerdict(uw);
+        if (updatedUW) {
+          underwrites[req.params.uid] = updatedUW;
+          uw = updatedUW;
+          saveJSON(UNDERWRITES_FILE, underwrites);
+          DB.saveUnderwrite(req.params.uid, updatedUW);
+          console.log('🔄 Verdict regenerated: ' + updatedUW.verdict + ' (' + updatedUW.score + '/10)');
+        }
+      } catch(rErr) { console.log('Regen skipped:', rErr.message); }
+
+      // 6. Save to sheet
       await saveBrain();
       console.log('📝 Correction saved to brain + sheet: ' + message.slice(0,80));
     }
