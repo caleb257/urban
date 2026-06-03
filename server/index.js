@@ -1,4 +1,5 @@
 require('dotenv').config({ path: '../.env' });
+const DB = require('./db');
 const TAMPA = require('./tampaKnowledge');
 const express = require('express');
 const path = require('path');
@@ -88,7 +89,12 @@ async function loadBrainFromSheet() {
 
 // saveBrain = save to local file + sheet (use this everywhere)
 async function saveBrain() {
+  // Trim lessons to prevent 50K Google Sheets cell limit — DB keeps full history
+  if (urbanBrain.lessons && urbanBrain.lessons.length > 100) {
+    urbanBrain.lessons = urbanBrain.lessons.slice(-100);
+  }
   saveJSON(BRAIN_FILE, urbanBrain);
+  DB.saveBrainToDB(urbanBrain).catch(() => {}); // Postgres (full brain, no limit)
   await saveBrainToSheet().catch(e => console.log('Brain sheet save err:', e.message));
 }
 
@@ -991,6 +997,7 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
 
   underwrites[uid] = underwrite;
   saveJSON(UNDERWRITES_FILE, underwrites);
+  DB.saveUnderwrite(uid, underwrite).catch(() => {}); // Postgres
   // Async persist verdict index to sheet — non-blocking
   persistVerdictIndexToSheet().catch(() => {});
 
@@ -1899,7 +1906,7 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
           underwrites[req.params.uid] = updatedUW;
           uw = updatedUW;
           saveJSON(UNDERWRITES_FILE, underwrites);
-          DB.saveUnderwrite(req.params.uid, updatedUW);
+          DB.saveUnderwrite(req.params.uid, updatedUW).catch(() => {});
           console.log('🔄 Verdict regenerated: ' + updatedUW.verdict + ' (' + updatedUW.score + '/10)');
         }
       } catch(rErr) { console.log('Regen skipped:', rErr.message); }
@@ -2242,6 +2249,24 @@ async function persistVerdictIndexToSheet() {
 
 app.listen(PORT, async () => {
   console.log(`🏙️ Urban on port ${PORT}`);
+
+  // ── DATABASE INIT ──────────────────────────────────────────────────────────
+  await DB.initDB().catch(e => console.warn('DB init:', e.message));
+  if (DB.isAvailable()) {
+    // Load underwrites from Postgres (overwrites JSON file data)
+    const fromDB = await DB.getAllUnderwrites().catch(() => ({}));
+    if (Object.keys(fromDB).length > 0) {
+      Object.assign(underwrites, fromDB);
+      console.log('✅ Underwrites loaded from Postgres: ' + Object.keys(underwrites).length);
+    } else if (Object.keys(underwrites).length > 0) {
+      // Migrate JSON → Postgres
+      console.log('📦 Migrating ' + Object.keys(underwrites).length + ' underwrites to Postgres...');
+      for (const [uid, uw] of Object.entries(underwrites)) {
+        await DB.saveUnderwrite(uid, uw).catch(() => {});
+      }
+      console.log('✅ Migration complete');
+    }
+  }
 
   // RESTORE BRAIN + VERDICT INDEX FROM SHEET ON EVERY STARTUP
   // This is what keeps Grant's corrections and past underwrites alive across redeploys

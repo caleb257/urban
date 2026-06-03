@@ -265,6 +265,7 @@ a{color:var(--accent)}
         <button class="btn primary" id="btn-uw">⚡ Underwrite</button>
         <button class="btn btn-deep" id="btn-deep" title="Sonnet 4 — deeper, ~$0.05">🔬 Deep</button>
         <button class="btn" id="btn-reuw">↻ Re-run</button>
+        <button class="btn" id="btn-regen" title="Recalculate verdict from current numbers — no new comps, cheap" style="background:rgba(100,200,150,.08);border-color:rgba(100,200,150,.25);color:rgba(100,200,150,.9)">⚡ Regen</button>
         <button class="btn" id="btn-chat">💬 Chat</button>
         <button class="btn" id="btn-sheet">📊 Sheet</button>
       </div>
@@ -797,7 +798,7 @@ async function selectDeal(d) {
   const uid = d.uid || `${d.address}-${d.dateReceived}`;
   document.querySelectorAll('.di').forEach(el => el.classList.toggle('active', el.dataset.uid === uid));
   show('main-empty', false);
-  show('dv', !('block' === 'none' || 'block' === ''));
+  show('dv', true);
   $('dv-addr').textContent = d.address || 'Unknown';
   $('dv-city').textContent = `${d.city}, ${d.state} ${d.zip} · ${d.county} County · ${d.propertyType}`;
 
@@ -834,7 +835,7 @@ function showPending(partialUW) {
     $('dv-vr').textContent = partialUW.verdictReason || 'Underwrite data restored from sheet';
     show('pending-card', false);
     // Show partial content with what we have
-    show('uw-content', !('block' === 'none' || 'block' === ''));
+    show('uw-content', true);
     show('loading-state', false);
     // Show recommendation if available
     if (partialUW.recommendation) {
@@ -863,7 +864,7 @@ function showPending(partialUW) {
   $('dv-v').className = 'verdict-big vPENDING';
   $('dv-sc').textContent = '?';
   $('dv-vr').textContent = 'Not yet underwritten';
-  show('pending-card', !('block' === 'none' || 'block' === ''));
+  show('pending-card', true);
   show('loading-state', false);
   show('uw-content', false);
   const n = document.getElementById('stale-uw-notice');
@@ -890,12 +891,30 @@ $('btn-uw-now').addEventListener('click', () => doUnderwrite(false, false));
 $('btn-deep').addEventListener('click', () => doUnderwrite(true, true));
 $('btn-reuw').addEventListener('click', () => doUnderwrite(true, false));
 
+$('btn-regen')?.addEventListener('click', async () => {
+  if (!curUW) return;
+  const uid = encodeURIComponent(curUW.uid);
+  const btn = $('btn-regen');
+  if (btn) { btn.textContent = 'Running...'; btn.disabled = true; }
+  try {
+    const r = await fetch(`/api/regen-verdict/${uid}`, {
+      method: 'POST', headers: { 'x-urban-token': TOKEN }
+    });
+    if (r.ok) {
+      const d = await r.json();
+      if (curUW) { curUW.verdict = d.verdict; curUW.score = d.score; curUW.verdictReason = d.verdictReason; curUW.recommendation = d.recommendation; curUW.offerStrategy = d.offerStrategy; }
+      renderUW(curUW);
+    }
+  } catch(e) {}
+  if (btn) { btn.textContent = '⚡ Regen'; btn.disabled = false; }
+});
+
 async function doUnderwrite(force, deep) {
   if (!curDeal) return;
   const uid = curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`;
   show('pending-card', false);
   show('uw-content', false);
-  show('loading-state', !('block' === 'none' || 'block' === ''));
+  show('loading-state', true);
   $('load-msg').textContent = deep ? '🔬 Deep underwriting with Sonnet 4...' : '⚡ Fetching comps and underwriting...';
 
   try {
@@ -945,10 +964,10 @@ function renderUW(uw) {
   // Safe element setter — never crashes on missing elements
   const set = (id, val, prop = 'textContent') => { const el = $(id); if (el) el[prop] = val; };
   const cls = (id, c) => { const el = $(id); if (el) el.className = c; };
-  const show = (id, visible) => { const el = $(id); if (el) el.style.display = visible ? '' : 'none'; };
+  const show = (id, visible, displayVal) => { const el = $(id); if (el) el.style.display = visible ? (displayVal || '') : 'none'; };
   show('pending-card', false);
   show('loading-state', false);
-  show('uw-content', !('block' === 'none' || 'block' === ''));
+  show('uw-content', true);
   switchTab('overview');
 
   const v = uw.verdict || 'REVIEW';
