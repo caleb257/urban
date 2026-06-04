@@ -1152,15 +1152,15 @@ function renderUW(uw) {
         </div>`;
       }).join('');
     }
-  } else if (ladderEl) {
-    ladderEl.style.display = 'none';
+  } else {
+    if (ladderEl) ladderEl.style.display = 'none';
   }
 
   // EXIT ANALYSIS
   const ex = uw.exitAnalysis;
   const exEl = $('exit-analysis');
-  if (ex && exEl) {
-    exEl.style.display = '';
+  if (ex) {
+    if (exEl) exEl.style.display = '';
     $('ex-dom').textContent  = ex.estimatedDOM ? ex.estimatedDOM + ' days' : '—';
     $('ex-lsr').textContent  = ex.listToSaleRatio ? (ex.listToSaleRatio * 100).toFixed(0) + '% of list' : '—';
     $('ex-rsp').textContent  = ex.realisticSalePrice ? fmt(ex.realisticSalePrice) + (ex.realisticSalePriceNote ? ' (' + ex.realisticSalePriceNote + ')' : '') : '—';
