@@ -969,7 +969,7 @@ async function doUnderwrite(force, deep) {
 // ── GLOBAL SAFE DOM HELPERS ──────────────────────────────────────────────────
 const set = (id, val, prop = 'textContent') => { const el = document.getElementById(id); if (el) el[prop] = val; };
 const cls = (id, c) => { const el = document.getElementById(id); if (el) el.className = c; };
-const show = (id, visible, displayVal) => { const el = document.getElementById(id); if (el) el.style.display = visible ? (displayVal || '') : 'none'; };
+const show = (id, visible, displayVal) => { const el = document.getElementById(id); if (el) el.style.display = visible ? (displayVal || 'block') : 'none'; };
 
 function renderUW(uw) {
   if (!uw) return;
