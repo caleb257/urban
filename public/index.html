@@ -980,41 +980,41 @@ function renderUW(uw) {
 
   const v = uw.verdict || 'REVIEW';
   const vc = v.replace(/\s/g,'').toUpperCase();
-  $('dv-v').textContent = v;
-  $('dv-v').className = `verdict-big v${vc}`;
-  $('dv-sc').textContent = uw.score || '?';
-  $('dv-vr').textContent = uw.verdictReason || '';
+  set('dv-v', v);
+  cls('dv-v', `verdict-big v${vc}`);
+  set('dv-sc', uw.score || '?');
+  set('dv-vr', uw.verdictReason || '');
 
   // OVERVIEW
   const profit = uw.financials?.netProfitAtAsking;
-  $('ov-arv').textContent = fmt(uw.arv?.urbanARV);
-  $('ov-rehab').textContent = fmt(uw.rehab?.urbanEstimate);
-  $('ov-mao').textContent = fmt(uw.financials?.mao);
-  $('ov-ask').textContent = fmt(curDeal?.askingPrice);
-  $('ov-profit').textContent = fmt(profit);
-  $('ov-profit').className = `mv ${profit >= 40000 ? 'g' : profit >= 0 ? 'y' : 'r'}`;
-  $('ov-warv').textContent = fmt(uw.arv?.wholesalerARV);
+  set('ov-arv', fmt(uw.arv?.urbanARV));
+  set('ov-rehab', fmt(uw.rehab?.urbanEstimate));
+  set('ov-mao', fmt(uw.financials?.mao));
+  set('ov-ask', fmt(curDeal?.askingPrice));
+  set('ov-profit', fmt(profit));
+  cls('ov-profit', `mv ${profit >= 40000 ? 'g' : profit >= 0 ? 'y' : 'r'}`);
+  set('ov-warv', fmt(uw.arv?.wholesalerARV));
   const diff = (uw.arv?.wholesalerARV||0) - (uw.arv?.urbanARV||0);
-  $('ov-arvdiff').textContent = diff > 1000 ? `Inflated by ${fmt(diff)}` : diff < -1000 ? `Undervalued by ${fmt(Math.abs(diff))}` : 'Matches Urban';
-  $('ov-arvdiff').className = `mv ${diff > 10000 ? 'r' : diff < -10000 ? 'g' : ''}`;
+  set('ov-arvdiff', diff > 1000 ? `Inflated by ${fmt(diff)}` : diff < -1000 ? `Undervalued by ${fmt(Math.abs(diff))}` : 'Matches Urban');
+  cls('ov-arvdiff', `mv ${diff > 10000 ? 'r' : diff < -10000 ? 'g' : ''}`);
   const cred = uw.wholesalerCredibility?.assessment || 'UNKNOWN';
-  $('ov-cred').textContent = cred;
-  $('ov-cred').className = `mv ${cred==='TRUSTED'?'g':cred==='QUESTIONABLE'?'y':'mu'}`;
-  $('ov-trend').textContent = uw.marketAnalysis?.trend || '—';
-  $('ov-hold').textContent = uw.financials?.holdMonths ? `${uw.financials.holdMonths} months` : '—';
-  $('cc-profit').textContent = uw.financials?.meetsMinimumProfit ? '✅ Yes' : '❌ No';
-  $('cc-profit').className = `mv ${uw.financials?.meetsMinimumProfit ? 'g' : 'r'}`;
+  set('ov-cred', cred);
+  cls('ov-cred', `mv ${cred==='TRUSTED'?'g':cred==='QUESTIONABLE'?'y':'mu'}`);
+  set('ov-trend', uw.marketAnalysis?.trend || '—');
+  set('ov-hold', uw.financials?.holdMonths ? `${uw.financials.holdMonths} months` : '—');
+  set('cc-profit', uw.financials?.meetsMinimumProfit ? '✅ Yes' : '❌ No');
+  cls('cc-profit', `mv ${uw.financials?.meetsMinimumProfit ? 'g' : 'r'}`);
   const inMkt = ['pasco','hillsborough','polk','pinellas','hernando'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
-  $('cc-mkt').textContent = inMkt ? '✅ In Market' : '⚠️ Extended';
-  $('cc-mkt').className = `mv ${inMkt ? 'g' : 'y'}`;
+  set('cc-mkt', inMkt ? '✅ In Market' : '⚠️ Extended');
+  cls('cc-mkt', `mv ${inMkt ? 'g' : 'y'}`);
   const flood = curDeal?.floodZone;
   const hasFlood = flood && !['no','n/a','','none','x'].includes((flood||'').toLowerCase());
-  $('cc-flood').textContent = hasFlood ? `⚠️ ${flood}` : '✅ None';
-  $('cc-flood').className = `mv ${hasFlood ? 'r' : 'g'}`;
+  set('cc-flood', hasFlood ? `⚠️ ${flood}` : '✅ None');
+  cls('cc-flood', `mv ${hasFlood ? 'r' : 'g'}`);
   const highFlags = (uw.riskFlags||[]).filter(f => f.severity==='HIGH').length;
-  $('cc-risk').textContent = highFlags > 0 ? `⚠️ ${highFlags} High` : '✅ Low';
-  $('cc-risk').className = `mv ${highFlags > 0 ? 'r' : 'g'}`;
-  $('cc-scope').textContent = uw.rehab?.scopeLevel || '—';
+  set('cc-risk', highFlags > 0 ? `⚠️ ${highFlags} High` : '✅ Low');
+  cls('cc-risk', `mv ${highFlags > 0 ? 'r' : 'g'}`);
+  set('cc-scope', uw.rehab?.scopeLevel || '—');
   const recEl = $('ov-rec');
   if (recEl) {
     recEl.textContent = uw.recommendation || 'No recommendation yet — underwrite this deal to generate one.';
@@ -1066,61 +1066,61 @@ function renderUW(uw) {
     liEl.innerHTML += `<div class="rt"><span class="rn">TOTAL</span><span class="rv">${fmt(tot)}</span></div>`;
   }
   const rng = uw.rehab?.urbanEstimateRange;
-  $('rehab-rng').textContent = rng ? `Range: ${fmt(rng.low)} – ${fmt(rng.high)}` : '';
-  $('rehab-notes').textContent = uw.rehab?.notes || '';
-  $('rehab-miss').textContent = uw.rehab?.missingInfo ? `⚠️ Missing: ${uw.rehab.missingInfo}` : '';
-  $('rh-ws').textContent = uw.rehab?.wholesalerEstimate ? fmt(uw.rehab.wholesalerEstimate) : 'Not provided';
-  $('rh-ur').textContent = fmt(uw.rehab?.urbanEstimate);
+  set('rehab-rng', rng ? `Range: ${fmt(rng.low)} – ${fmt(rng.high)}` : '');
+  set('rehab-notes', uw.rehab?.notes || '');
+  set('rehab-miss', uw.rehab?.missingInfo ? `⚠️ Missing: ${uw.rehab.missingInfo}` : '');
+  set('rh-ws', uw.rehab?.wholesalerEstimate ? fmt(uw.rehab.wholesalerEstimate) : 'Not provided');
+  set('rh-ur', fmt(uw.rehab?.urbanEstimate));
   const rc = uw.rehab?.confidence || 'MEDIUM';
-  $('rh-conf').innerHTML = `<span class="conf conf-${rc}">${rc}</span>`;
+  { const _e_rh_conf = $('rh-conf'); if (_e_rh_conf) _e_rh_conf.innerHTML = `<span class="conf conf-${rc}">${rc}</span>`; }
 
   // FINANCIALS TAB
   const f = uw.financials || {};
-  $('fi-ask').textContent = fmt(f.askingPrice || curDeal?.askingPrice);
-  $('fi-arv').textContent = fmt(uw.arv?.urbanARV);
-  $('fi-reh').textContent = fmt(uw.rehab?.urbanEstimate);
-  $('fi-mao').textContent = fmt(f.mao);
+  set('fi-ask', fmt(f.askingPrice || curDeal?.askingPrice));
+  set('fi-arv', fmt(uw.arv?.urbanARV));
+  set('fi-reh', fmt(uw.rehab?.urbanEstimate));
+  set('fi-mao', fmt(f.mao));
   const oum = f.overUnderMAO;
-  $('fi-oum').textContent = oum != null ? `${oum>0?'+':''}${fmt(oum)} ${oum>0?'over':'under'} MAO` : '—';
-  $('fi-oum').className = `fv ${oum>0?'r':'g'}`;
-  $('fi-loan').textContent = fmt(f.hardMoney?.loanAmount);
-  $('fi-mo').textContent = fmt(f.hardMoney?.monthlyPayment);
-  $('fi-hold').textContent = f.holdMonths ? `${f.holdMonths} months` : '—';
-  $('fi-int').textContent = fmt(f.hardMoney?.totalInterest);
-  $('fi-pts').textContent = fmt(f.hardMoney?.originationPoints);
-  $('fi-pp').textContent = fmt(f.askingPrice || curDeal?.askingPrice);
-  $('fi-rh2').textContent = fmt(uw.rehab?.urbanEstimate);
-  $('fi-fin').textContent = fmt((f.hardMoney?.totalInterest||0) + (f.hardMoney?.originationPoints||0));
-  $('fi-hc').textContent = fmt(f.holdingCosts?.total);
-  $('fi-sc').textContent = fmt(f.sellingCosts?.total);
-  $('fi-tot').textContent = fmt(f.totalCost);
+  set('fi-oum', oum != null ? `${oum>0?'+':''}${fmt(oum)} ${oum>0?'over':'under'} MAO` : '—');
+  cls('fi-oum', `fv ${oum>0?'r':'g'}`);
+  set('fi-loan', fmt(f.hardMoney?.loanAmount));
+  set('fi-mo', fmt(f.hardMoney?.monthlyPayment));
+  set('fi-hold', f.holdMonths ? `${f.holdMonths} months` : '—');
+  set('fi-int', fmt(f.hardMoney?.totalInterest));
+  set('fi-pts', fmt(f.hardMoney?.originationPoints));
+  set('fi-pp', fmt(f.askingPrice || curDeal?.askingPrice));
+  set('fi-rh2', fmt(uw.rehab?.urbanEstimate));
+  set('fi-fin', fmt((f.hardMoney?.totalInterest||0) + (f.hardMoney?.originationPoints||0)));
+  set('fi-hc', fmt(f.holdingCosts?.total));
+  set('fi-sc', fmt(f.sellingCosts?.total));
+  set('fi-tot', fmt(f.totalCost));
   const pa = f.netProfitAtAsking;
-  $('fi-pa').textContent = fmt(pa);
-  $('fi-pa').className = `fv ${pa>=40000?'g':pa>=0?'':'r'}`;
-  $('fi-pm').textContent = fmt(f.netProfitAtMAO);
-  $('fi-roi').textContent = f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—';
-  $('fi-min').textContent = f.meetsMinimumProfit ? '✅ YES' : '❌ NO';
-  $('fi-min').className = `fv ${f.meetsMinimumProfit?'g':'r'}`;
+  set('fi-pa', fmt(pa));
+  cls('fi-pa', `fv ${pa>=40000?'g':pa>=0?'':'r'}`);
+  set('fi-pm', fmt(f.netProfitAtMAO));
+  set('fi-roi', f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—');
+  set('fi-min', f.meetsMinimumProfit ? '✅ YES' : '❌ NO');
+  cls('fi-min', `fv ${f.meetsMinimumProfit?'g':'r'}`);
 
   // RENTAL TAB
   const rn = uw.rental || {};
-  $('rn-rent').textContent = rn.marketRent ? fmt(rn.marketRent)+'/mo' : '—';
-  $('rn-gy').textContent = pct(rn.grossYield);
-  $('rn-ny').textContent = pct(rn.netYield);
+  set('rn-rent', rn.marketRent ? fmt(rn.marketRent)+'/mo' : '—');
+  set('rn-gy', pct(rn.grossYield));
+  set('rn-ny', pct(rn.netYield));
   const cf = rn.cashFlow;
-  $('rn-cf').textContent = cf != null ? fmt(cf)+'/mo' : '—';
-  $('rn-cf').className = `mv ${cf>=0?'g':'r'}`;
-  $('rn-cap').textContent = pct(rn.capRate);
-  $('rn-notes').textContent = rn.notes || '';
-  $('rn-worth').textContent = rn.worthConsidering ? '✅ Worth considering as rental' : '❌ Flip is stronger exit';
-  $('rn-worth').className = `mv ${rn.worthConsidering?'g':'mu'}`;
+  set('rn-cf', cf != null ? fmt(cf)+'/mo' : '—');
+  cls('rn-cf', `mv ${cf>=0?'g':'r'}`);
+  set('rn-cap', pct(rn.capRate));
+  set('rn-notes', rn.notes || '');
+  set('rn-worth', rn.worthConsidering ? '✅ Worth considering as rental' : '❌ Flip is stronger exit');
+  cls('rn-worth', `mv ${rn.worthConsidering?'g':'mu'}`);
 
   // NEW CONSTRUCTION TAB
   const nc = uw.newConstruction || {};
-  $('nc-lot').textContent = fmt(nc.lotValue);
-  $('nc-build').textContent = fmt(nc.estimatedBuildCost);
-  $('nc-arv').textContent = fmt(nc.estimatedNewARV);
-  $('nc-notes').textContent = nc.notes || '';
+  set('nc-lot', fmt(nc.lotValue));
+  set('nc-build', fmt(nc.estimatedBuildCost));
+  set('nc-arv', fmt(nc.estimatedNewARV));
+  set('nc-notes', nc.notes || '');
 
   // FLAGS TAB
   const flagEl = $('flags-list');
@@ -1161,13 +1161,13 @@ function renderUW(uw) {
   const exEl = $('exit-analysis');
   if (ex) {
     if (exEl) exEl.style.display = '';
-    $('ex-dom').textContent  = ex.estimatedDOM ? ex.estimatedDOM + ' days' : '—';
-    $('ex-lsr').textContent  = ex.listToSaleRatio ? (ex.listToSaleRatio * 100).toFixed(0) + '% of list' : '—';
-    $('ex-rsp').textContent  = ex.realisticSalePrice ? fmt(ex.realisticSalePrice) + (ex.realisticSalePriceNote ? ' (' + ex.realisticSalePriceNote + ')' : '') : '—';
+    set('ex-dom', ex.estimatedDOM ? ex.estimatedDOM + ' days' : '—');
+    set('ex-lsr', ex.listToSaleRatio ? (ex.listToSaleRatio * 100).toFixed(0) + '% of list' : '—');
+    set('ex-rsp', ex.realisticSalePrice ? fmt(ex.realisticSalePrice) + (ex.realisticSalePriceNote ? ' (' + ex.realisticSalePriceNote + ')' : '') : '—');
     const adj = ex.adjustedProfit;
-    $('ex-adj').textContent  = adj != null ? (adj >= 0 ? '+' : '') + fmt(adj) : '—';
-    $('ex-adj').className    = `fv ${adj >= 40000 ? 'g' : adj >= 0 ? '' : 'r'}`;
-    $('ex-buyer').textContent = ex.buyerProfile || '—';
+    set('ex-adj', adj != null ? (adj >= 0 ? '+' : '') + fmt(adj) : '—');
+    cls('ex-adj', `fv ${adj >= 40000 ? 'g' : adj >= 0 ? '' : 'r'}`);
+    set('ex-buyer', ex.buyerProfile || '—');
   } else {
     exEl.style.display = 'none';
   }
