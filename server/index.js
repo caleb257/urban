@@ -2253,18 +2253,32 @@ app.listen(PORT, async () => {
   // ── DATABASE INIT ──────────────────────────────────────────────────────────
   await DB.initDB().catch(e => console.warn('DB init:', e.message));
   if (DB.isAvailable()) {
-    // Load underwrites from Postgres (overwrites JSON file data)
+    // Merge Postgres + JSON: JSON already loaded above, DB wins on conflicts
     const fromDB = await DB.getAllUnderwrites().catch(() => ({}));
-    if (Object.keys(fromDB).length > 0) {
-      Object.assign(underwrites, fromDB);
-      console.log('✅ Underwrites loaded from Postgres: ' + Object.keys(underwrites).length);
-    } else if (Object.keys(underwrites).length > 0) {
-      // Migrate JSON → Postgres
-      console.log('📦 Migrating ' + Object.keys(underwrites).length + ' underwrites to Postgres...');
-      for (const [uid, uw] of Object.entries(underwrites)) {
-        await DB.saveUnderwrite(uid, uw).catch(() => {});
+    const dbCount = Object.keys(fromDB).length;
+    if (dbCount > 0) {
+      // Merge: DB overwrites JSON for same UIDs, JSON fills gaps DB doesn't have
+      const before = Object.keys(underwrites).length;
+      Object.assign(underwrites, fromDB); // DB wins on conflict
+      console.log('✅ Postgres: ' + dbCount + ' deals | JSON: ' + before + ' | Total: ' + Object.keys(underwrites).length);
+      // Migrate JSON-only deals into Postgres
+      const jsonOnly = Object.keys(underwrites).filter(uid => !fromDB[uid]);
+      if (jsonOnly.length > 0) {
+        console.log('📦 Migrating ' + jsonOnly.length + ' JSON-only deals to Postgres...');
+        for (const uid of jsonOnly) {
+          await DB.saveUnderwrite(uid, underwrites[uid]).catch(() => {});
+        }
       }
-      console.log('✅ Migration complete');
+    } else {
+      // Postgres empty or unreachable — migrate JSON → Postgres
+      const count = Object.keys(underwrites).length;
+      if (count > 0) {
+        console.log('📦 Migrating ' + count + ' JSON deals to Postgres...');
+        for (const [uid, uw] of Object.entries(underwrites)) {
+          await DB.saveUnderwrite(uid, uw).catch(() => {});
+        }
+        console.log('✅ Migration complete');
+      }
     }
   }
 
