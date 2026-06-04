@@ -817,7 +817,7 @@ async function selectDeal(d) {
     const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, { headers: { 'x-urban-token': TOKEN } });
     if (r.ok) {
       curUW = await r.json();
-      try { renderUW(curUW); } catch(re) { console.warn('renderUW err:', re.message); showPending(curUW); }
+      try { renderUW(curUW); } catch(re) { console.warn('renderUW err:', re.message, re.stack?.split('\n')[1]); showPending(curUW); }
     } else {
       const p = (d.underwriteStatus && d.underwriteStatus !== 'PENDING')
         ? { verdict: d.underwriteStatus, score: d.underwriteScore, verdictReason: 'Loading — hit Re-run for full data.' }
