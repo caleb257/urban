@@ -503,14 +503,21 @@ $('login-btn').addEventListener('click', doLogin);
 })();
 
 async function doLogin() {
-  TOKEN = $('pw').value.trim();
-  const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
-  if (r.ok) {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'flex';
-    doLoadStats();
-    doLoadDeals();
-  } else {
+  const pwEl = document.getElementById('pw');
+  TOKEN = (pwEl ? pwEl.value : '').trim();
+  if (!TOKEN) return;
+  try {
+    const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
+    if (r.ok) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      doLoadStats();
+      doLoadDeals();
+    } else {
+      document.getElementById('login-err').style.display = 'block';
+      TOKEN = '';
+    }
+  } catch(e) {
     document.getElementById('login-err').style.display = 'block';
     TOKEN = '';
   }
@@ -1009,9 +1016,10 @@ function renderUW(uw) {
   $('cc-risk').className = `mv ${highFlags > 0 ? 'r' : 'g'}`;
   $('cc-scope').textContent = uw.rehab?.scopeLevel || '—';
   const recEl = $('ov-rec');
-  recEl.textContent = uw.recommendation || '';
-  recEl.style.color = uw.recommendation ? '' : 'var(--muted)';
-  if (!uw.recommendation) recEl.textContent = 'No recommendation yet — underwrite this deal to generate one.';
+  if (recEl) {
+    recEl.textContent = uw.recommendation || 'No recommendation yet — underwrite this deal to generate one.';
+    recEl.style.color = uw.recommendation ? '' : 'var(--muted)';
+  }
   const offEl = $('ov-off');
   if (offEl) {
     offEl.textContent = uw.offerStrategy || '';
@@ -1128,8 +1136,8 @@ function renderUW(uw) {
   const ladder = uw.negotiationLadder;
   const ladderEl = $('neg-ladder');
   if (ladder?.length) {
-    ladderEl.style.display = '';
-    $('neg-rows').innerHTML = ladder.map(r => {
+    if (ladderEl) ladderEl.style.display = '';
+    { const _nr = $('neg-rows'); if (_nr) _nr.innerHTML = ladder.map(r => {
       const pc = r.meetsMin ? 'neg-ok' : r.profit >= 0 ? 'neg-no' : 'neg-bad';
       const lc = r.label === 'Asking' ? 'background:rgba(255,160,32,.15);color:var(--review)' :
                  r.label === 'MAO'    ? 'background:rgba(60,200,130,.15);color:var(--buy)' :
@@ -1148,7 +1156,7 @@ function renderUW(uw) {
   // EXIT ANALYSIS
   const ex = uw.exitAnalysis;
   const exEl = $('exit-analysis');
-  if (ex) {
+  if (ex && exEl) {
     exEl.style.display = '';
     $('ex-dom').textContent  = ex.estimatedDOM ? ex.estimatedDOM + ' days' : '—';
     $('ex-lsr').textContent  = ex.listToSaleRatio ? (ex.listToSaleRatio * 100).toFixed(0) + '% of list' : '—';
