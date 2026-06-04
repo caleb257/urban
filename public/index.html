@@ -959,12 +959,13 @@ async function doUnderwrite(force, deep) {
 }
 
 // ── RENDER UNDERWRITE ──────────────────────────────────────────────────────────
+// ── GLOBAL SAFE DOM HELPERS ──────────────────────────────────────────────────
+const set = (id, val, prop = 'textContent') => { const el = document.getElementById(id); if (el) el[prop] = val; };
+const cls = (id, c) => { const el = document.getElementById(id); if (el) el.className = c; };
+const show = (id, visible, displayVal) => { const el = document.getElementById(id); if (el) el.style.display = visible ? (displayVal || '') : 'none'; };
+
 function renderUW(uw) {
   if (!uw) return;
-  // Safe element setter — never crashes on missing elements
-  const set = (id, val, prop = 'textContent') => { const el = $(id); if (el) el[prop] = val; };
-  const cls = (id, c) => { const el = $(id); if (el) el.className = c; };
-  const show = (id, visible, displayVal) => { const el = $(id); if (el) el.style.display = visible ? (displayVal || '') : 'none'; };
   show('pending-card', false);
   show('loading-state', false);
   show('uw-content', true);
