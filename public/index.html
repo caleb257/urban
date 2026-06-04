@@ -1137,21 +1137,24 @@ function renderUW(uw) {
   const ladderEl = $('neg-ladder');
   if (ladder?.length) {
     if (ladderEl) ladderEl.style.display = '';
-    { const _nr = $('neg-rows'); if (_nr) _nr.innerHTML = ladder.map(r => {
-      const pc = r.meetsMin ? 'neg-ok' : r.profit >= 0 ? 'neg-no' : 'neg-bad';
-      const lc = r.label === 'Asking' ? 'background:rgba(255,160,32,.15);color:var(--review)' :
-                 r.label === 'MAO'    ? 'background:rgba(60,200,130,.15);color:var(--buy)' :
-                 r.label === 'Stretch'? 'background:rgba(60,120,255,.12);color:#7799ff' : '';
-      return `<div class="neg-row">
-        <span class="neg-price">$${r.price.toLocaleString()}</span>
-        <span class="neg-label" style="${lc}">${r.label}</span>
-        <span class="neg-profit ${pc}">${r.profit >= 0 ? '+' : ''}$${r.profit.toLocaleString()}</span>
-        ${r.roi !== undefined ? `<span class="neg-roi">${r.roi}%</span>` : ''}
-      </div>`;
-    }).join('');
-  } else {
+    const _nr = $('neg-rows');
+    if (_nr) {
+      _nr.innerHTML = ladder.map(r => {
+        const pc = r.meetsMin ? 'neg-ok' : r.profit >= 0 ? 'neg-no' : 'neg-bad';
+        const lc = r.label === 'Asking' ? 'background:rgba(255,160,32,.15);color:var(--review)' :
+                   r.label === 'MAO'    ? 'background:rgba(60,200,130,.15);color:var(--buy)' :
+                   r.label === 'Stretch'? 'background:rgba(60,120,255,.12);color:#7799ff' : '';
+        return `<div class="neg-row">
+          <span class="neg-label" style="${lc}">${r.label}</span>
+          <span class="neg-price">$${r.price.toLocaleString()}</span>
+          <span class="neg-profit ${pc}">${r.profit >= 0 ? '+' : ''}$${r.profit.toLocaleString()}</span>
+          ${r.roi !== undefined ? `<span class="neg-roi">${r.roi}%</span>` : ''}
+        </div>`;
+      }).join('');
+    }
+  } else if (ladderEl) {
     ladderEl.style.display = 'none';
-  }
+  }}
 
   // EXIT ANALYSIS
   const ex = uw.exitAnalysis;
