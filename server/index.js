@@ -2174,8 +2174,9 @@ async function restoreBrainFromSheet() {
 
         // Silently re-underwrite bare stubs in background (no arv/financials saved yet)
         // Runs 1 at a time, cheap, restores full data so UI never shows "not yet underwritten"
+        // Any deal with a verdict but no full analysis data needs re-underwriting
         const bareStubs = Object.values(underwrites).filter(uw =>
-          uw.restoredFromSheet && !uw.arv?.urbanARV && !uw.financials?.mao
+          uw.verdict && uw.verdict !== 'PENDING' && !uw.arv?.urbanARV && !uw.financials?.mao
         );
         if (bareStubs.length > 0) {
           console.log('🔄 Re-underwriting ' + bareStubs.length + ' bare stubs in background...');
