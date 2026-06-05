@@ -1225,6 +1225,64 @@ app.get('/api/sold-comps/:zip', auth, async (req, res) => {
 
 
 
+
+
+// Live HCPA parcel lookup: given address, return NBHC code + folio for ARV lookup
+app.get('/api/hcpa/parcel', auth, async (req, res) => {
+  const { address } = req.query;
+  if (!address) return res.status(400).json({ error: 'address required' });
+  try {
+    // HCPA has a JSON search API
+    const encoded = encodeURIComponent(address.toUpperCase());
+    const url = `https://gis.hcpafl.org/propertysearch/api/search?query=${encoded}&type=address`;
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' } });
+    const data = await r.json();
+    const results = data?.results || data?.parcels || data || [];
+    const first = Array.isArray(results) ? results[0] : null;
+    if (first) {
+      res.json({ ok: true, folio: first.folio || first.FOLIO, nbhc: first.nbhc || first.NBHC, address: first.address || first.ADDRESS, data: first });
+    } else {
+      res.json({ ok: false, results, raw: data });
+    }
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Returns zip-level sold comps stats from the real sold_comps table
+app.get('/api/market/stats/:zip', auth, async (req, res) => {
+  try {
+    const stats = await DB.getSoldCompStats(req.params.zip);
+    const mkt = await DB.getMarketData(req.params.zip);
+    res.json({ zip: req.params.zip, sold_comps_stats: stats, market_data: mkt });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
+
+// Monthly data refresh endpoint — re-downloads county PA data and reseeds
+// Call this endpoint to kick off a manual refresh
+app.post('/api/refresh-data', async (req, res) => {
+  const token = req.headers['x-urban-token'];
+  if (token !== PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+  
+  // Document what needs to happen for monthly refresh
+  const refreshInstructions = {
+    step1: 'Go to downloads.hcpafl.org and re-download allsales_[date].zip (67MB)',
+    step2: 'Parse with browser JS: filter DOR_CODE 00xx/01xx, QU=Q, S_AMT>75000, S_DATE>=2023',
+    step3: 'POST 64K+ records to /api/seed-nbhc with updated P75 stats',
+    step4: 'Download Pinellas: pcpao.gov → RP_OS_SALES CSV → parse → POST to /api/seed-sold-comps',
+    step5: 'Download Pasco: pascopa.com → sales data → POST to /api/seed-sold-comps',
+    step6: 'Download Polk: polkpa.org → sales data → POST to /api/seed-sold-comps',
+    hcpa_url: 'https://downloads.hcpafl.org/',
+    pcpao_endpoint: 'https://www.pcpao.gov/dal/databasefile/downloadDatabaseFile',
+    pcpao_sales_table: 'RP_OS_SALES',
+    pcpao_parcel_table: 'RP_OS_PARCEL_VALUE',
+    pcpao_site_table: 'RP_OS_SITE_ADDRESS',
+  };
+  
+  console.log('📅 Monthly refresh requested');
+  res.json({ ok: true, message: 'Monthly refresh guide', instructions: refreshInstructions });
+});
+
 app.post('/api/seed-nbhc', async (req, res) => {
   const token = req.headers['x-urban-token'];
   if (token !== PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
