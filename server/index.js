@@ -309,6 +309,30 @@ async function fetchComps(address, city, state, zip, deal = {}) {
       return _c;
     }
   }
+  // No address-specific cache — check zip-level market data (free, pre-seeded)
+  if (!deal._forceRefreshComps) {
+    const zipKey = zip || (city || '').toLowerCase().trim();
+    if (zipKey) {
+      const mktData = await DB.getMarketData(zipKey).catch(() => null);
+      if (mktData && mktData.median_sold) {
+        console.log('📊 Market data hit for zip', zipKey, '— $' + mktData.median_sold + ' median, $' + mktData.avg_ppsf + '/sqft');
+        const synth = [];
+        synth._meta = {
+          arvEstimate: mktData.median_sold,
+          source: 'market_db',
+          zip: zipKey,
+          city: mktData.city,
+          county: mktData.county,
+          median_dom: mktData.median_dom,
+          avg_ppsf: mktData.avg_ppsf
+        };
+        // Save to address cache so we hit it on next call too
+        DB.saveComps(_ck, { comps: [], _meta: synth._meta }).catch(() => {});
+        return synth;
+      }
+    }
+  }
+
   const comps = [];
   comps._meta = { arvEstimate: null };
   try {
