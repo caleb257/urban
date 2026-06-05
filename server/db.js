@@ -52,17 +52,33 @@ async function initCompCache() {
         fetched_at  TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS market_data (
-        zip_code    TEXT PRIMARY KEY,
-        city        TEXT,
-        county      TEXT,
-        state       TEXT DEFAULT 'FL',
-        median_sold INTEGER,
-        avg_ppsf    INTEGER,
-        median_dom  INTEGER,
-        sold_count  INTEGER,
-        comps       JSONB,
-        fetched_at  TIMESTAMPTZ DEFAULT NOW()
+        zip_code         TEXT PRIMARY KEY,
+        city             TEXT,
+        county           TEXT,
+        state            TEXT DEFAULT 'FL',
+        median_sold      INTEGER,
+        avg_ppsf         INTEGER,
+        median_dom       INTEGER,
+        sold_count       INTEGER,
+        trend_pct        NUMERIC(5,1),
+        flip_margin_pct  NUMERIC(5,1),
+        rehab_light      INTEGER,
+        rehab_medium     INTEGER,
+        rehab_heavy      INTEGER,
+        prop_tax_rate    NUMERIC(6,4),
+        insurance_mo     INTEGER,
+        comps            JSONB,
+        notes            TEXT,
+        fetched_at       TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE market_data ADD COLUMN IF NOT EXISTS trend_pct NUMERIC(5,1);
+      ALTER TABLE market_data ADD COLUMN IF NOT EXISTS flip_margin_pct NUMERIC(5,1);
+      ALTER TABLE market_data ADD COLUMN IF NOT EXISTS rehab_light INTEGER;
+      ALTER TABLE market_data ADD COLUMN IF NOT EXISTS rehab_medium INTEGER;
+      ALTER TABLE market_data ADD COLUMN IF NOT EXISTS rehab_heavy INTEGER;
+      ALTER TABLE market_data ADD COLUMN IF NOT EXISTS prop_tax_rate NUMERIC(6,4);
+      ALTER TABLE market_data ADD COLUMN IF NOT EXISTS insurance_mo INTEGER;
+      ALTER TABLE market_data ADD COLUMN IF NOT EXISTS notes TEXT;
       CREATE INDEX IF NOT EXISTS idx_market_county ON market_data(county);
       CREATE INDEX IF NOT EXISTS idx_market_city   ON market_data(city);
     `);

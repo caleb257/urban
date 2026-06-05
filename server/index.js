@@ -674,9 +674,19 @@ const relevantLessons = getRelevantLessons(deal);
 
   // Pre-compute ALL template values to avoid IIFE scope issues
   const _mn = urbanBrain.marketNotes[deal.county || deal.city];
-  const marketContextStr = _mn && _mn.deals >= 2
-    ? `${_mn.deals} deals analyzed | Avg ARV: $${(_mn.avgARV||0).toLocaleString()} | ${_mn.avgARV && _mn.avgSqft ? 'Avg $/sqft: $'+Math.round(_mn.avgARV/_mn.avgSqft)+' | ' : ''}HOT/BUY rate: ${Math.round((_mn.hotDeals||0)/_mn.deals*100)}%`
-    : 'Limited data — use comp-based judgment.';
+  // Pull real market data from DB (pre-seeded 390+ FL zip codes)
+  const _mktDB = deal.zip ? await DB.getMarketData(deal.zip).catch(() => null) : null;
+  let marketContextStr = '';
+  if (_mktDB && _mktDB.median_sold) {
+    marketContextStr = `[Market DB ${deal.zip}] Median: $${_mktDB.median_sold.toLocaleString()} | $${_mktDB.avg_ppsf || '?'}/sqft | DOM: ${_mktDB.median_dom || '?'} days`;
+    if (_mktDB.trend_pct) marketContextStr += ` | YoY: ${_mktDB.trend_pct > 0 ? '+' : ''}${_mktDB.trend_pct}%`;
+    if (_mktDB.flip_margin_pct) marketContextStr += ` | Typical flip margin: ${_mktDB.flip_margin_pct}%`;
+  }
+  if (_mn && _mn.deals >= 2) {
+    const brainCtx = `${_mn.deals} Coralstone deals | Avg ARV: $${(_mn.avgARV||0).toLocaleString()} | HOT rate: ${Math.round((_mn.hotDeals||0)/_mn.deals*100)}%`;
+    marketContextStr = marketContextStr ? marketContextStr + ' || ' + brainCtx : brainCtx;
+  }
+  if (!marketContextStr) marketContextStr = 'Limited data — use comp-based judgment.';
 
   // Pre-compute neighborhood intel string
   const _city = (deal.city||'').toLowerCase().trim();
