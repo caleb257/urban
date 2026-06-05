@@ -709,6 +709,7 @@ const relevantLessons = getRelevantLessons(deal);
     if (_mktDB.prop_tax_rate) marketContextStr += ` | Tax: ${(_mktDB.prop_tax_rate * 100).toFixed(2)}%/yr`;
     if (_mktDB.insurance_mo) marketContextStr += ` | Insurance: ~$${_mktDB.insurance_mo}/mo`;
     if (_mktDB.rehab_medium) marketContextStr += ` | Rehab: $${_mktDB.rehab_light}/$${_mktDB.rehab_medium}/$${_mktDB.rehab_heavy} light/med/heavy per sqft`;
+    if (_mktDB.notes) marketContextStr += ` || NEIGHBORHOOD: ${_mktDB.notes}`;
   }
   if (_mn && _mn.deals >= 2) {
     const brainCtx = `${_mn.deals} Coralstone deals | Avg ARV: $${(_mn.avgARV||0).toLocaleString()} | HOT rate: ${Math.round((_mn.hotDeals||0)/_mn.deals*100)}%`;
