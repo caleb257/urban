@@ -309,10 +309,36 @@ async function fetchComps(address, city, state, zip, deal = {}) {
       return _c;
     }
   }
-  // No address-specific cache — check zip-level market data (free, pre-seeded)
+  // No address-specific cache — check actual sold_comps table first (real MLS-grade data)
   if (!deal._forceRefreshComps) {
     const zipKey = zip || (city || '').toLowerCase().trim();
     if (zipKey) {
+      const sqft = deal.sqft ? parseInt(deal.sqft) : null;
+      const beds = deal.beds ? parseInt(deal.beds) : null;
+      const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 18);
+      const realComps = await DB.getSoldComps(zipKey, { beds, sqft, limit: 15, minDate: sixMonthsAgo.toISOString().slice(0,10) }).catch(() => []);
+      if (realComps.length >= 3) {
+        console.log('🏠 Real sold comps hit for zip', zipKey, '—', realComps.length, 'actual sales');
+        const prices = realComps.map(c => c.sold_price).sort((a,b)=>a-b);
+        const arvEst = prices[Math.floor(prices.length / 2)];
+        const avgPpsf = realComps.filter(c=>c.ppsf).reduce((s,c)=>s+parseFloat(c.ppsf),0) / realComps.filter(c=>c.ppsf).length;
+        const formatted = realComps.map(c => ({
+          address: c.address, city: c.city, sqft: c.sqft, beds: c.beds, baths: c.baths,
+          year_built: c.year_built, sold_price: c.sold_price, ppsf: c.ppsf,
+          sold_date: c.sold_date, dom: c.dom, pool: c.pool, style: c.style,
+          subdivision: c.subdivision
+        }));
+        formatted._meta = {
+          arvEstimate: arvEst,
+          source: 'sold_comps_db',
+          zip: zipKey,
+          count: realComps.length,
+          avg_ppsf: Math.round(avgPpsf) || null
+        };
+        DB.saveComps(_ck, { comps: formatted, _meta: formatted._meta }).catch(() => {});
+        return formatted;
+      }
+      // Fall back to zip-level aggregate market data
       const mktData = await DB.getMarketData(zipKey).catch(() => null);
       if (mktData && mktData.median_sold) {
         console.log('📊 Market data hit for zip', zipKey, '— $' + mktData.median_sold + ' median, $' + mktData.avg_ppsf + '/sqft');
@@ -326,7 +352,6 @@ async function fetchComps(address, city, state, zip, deal = {}) {
           median_dom: mktData.median_dom,
           avg_ppsf: mktData.avg_ppsf
         };
-        // Save to address cache so we hit it on next call too
         DB.saveComps(_ck, { comps: [], _meta: synth._meta }).catch(() => {});
         return synth;
       }
@@ -1165,6 +1190,31 @@ app.post('/api/review-chat', auth, async (req, res) => {
 });
 
 // Agent feedback from Adam — Urban learns from outcomes
+
+
+app.post('/api/seed-sold-comps', async (req, res) => {
+  const token = req.headers['x-urban-token'];
+  if (token !== PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+  const { comps } = req.body;
+  if (!Array.isArray(comps)) return res.status(400).json({ error: 'comps array required' });
+  try {
+    const saved = await DB.saveSoldComps(comps);
+    console.log('🏠 Seeded', saved, 'sold comps');
+    res.json({ ok: true, saved, received: comps.length });
+  } catch(e) {
+    console.error('seed-sold-comps error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/sold-comps/:zip', auth, async (req, res) => {
+  try {
+    const comps = await DB.getSoldComps(req.params.zip, { limit: 25 });
+    const stats = await DB.getSoldCompStats(req.params.zip);
+    res.json({ zip: req.params.zip, count: comps.length, stats, comps });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/agent-feedback', async (req, res) => {
   const token = req.headers['x-urban-token'];
   if (token !== PASSWORD) return res.status(401).json({ error: 'Unauthorized' });

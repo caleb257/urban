@@ -81,6 +81,33 @@ async function initCompCache() {
       ALTER TABLE market_data ADD COLUMN IF NOT EXISTS notes TEXT;
       CREATE INDEX IF NOT EXISTS idx_market_county ON market_data(county);
       CREATE INDEX IF NOT EXISTS idx_market_city   ON market_data(city);
+      CREATE TABLE IF NOT EXISTS sold_comps (
+        id            SERIAL PRIMARY KEY,
+        zip           TEXT NOT NULL,
+        address       TEXT,
+        city          TEXT,
+        county        TEXT,
+        sqft          INTEGER,
+        beds          SMALLINT,
+        baths         NUMERIC(3,1),
+        year_built    SMALLINT,
+        sold_price    INTEGER NOT NULL,
+        sold_date     DATE,
+        ppsf          NUMERIC(8,2),
+        dom           SMALLINT,
+        style         TEXT,
+        pool          BOOLEAN,
+        garage        BOOLEAN,
+        subdivision   TEXT,
+        notes         TEXT,
+        source        TEXT DEFAULT 'redfin',
+        fetched_at    TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_sc_zip      ON sold_comps(zip);
+      CREATE INDEX IF NOT EXISTS idx_sc_sqft     ON sold_comps(sqft);
+      CREATE INDEX IF NOT EXISTS idx_sc_sold     ON sold_comps(sold_price);
+      CREATE INDEX IF NOT EXISTS idx_sc_date     ON sold_comps(sold_date);
+      CREATE INDEX IF NOT EXISTS idx_sc_beds     ON sold_comps(beds);
     `);
     console.log('✅ comp_cache + market_data tables ready');
   } catch(e) { console.warn('cache/market init:', e.message); }
@@ -196,10 +223,69 @@ async function getMarketStats() {
   return { total_zips: 0, by_county: res.rows };
 }
 
+
+async function saveSoldComps(comps) {
+  if (!pool || !ready || !comps?.length) return 0;
+  let saved = 0;
+  for (const c of comps) {
+    if (!c.zip || !c.sold_price) continue;
+    try {
+      await pool.query(
+        `INSERT INTO sold_comps
+          (zip, address, city, county, sqft, beds, baths, year_built,
+           sold_price, sold_date, ppsf, dom, style, pool, garage, subdivision, notes, source, fetched_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,NOW())
+         ON CONFLICT DO NOTHING`,
+        [c.zip, c.address||null, c.city||null, c.county||null,
+         c.sqft||null, c.beds||null, c.baths||null, c.year_built||null,
+         c.sold_price, c.sold_date||null,
+         c.ppsf || (c.sqft ? Math.round(c.sold_price/c.sqft) : null),
+         c.dom||null, c.style||'SFR', c.pool||false, c.garage||false,
+         c.subdivision||null, c.notes||null, c.source||'redfin']
+      );
+      saved++;
+    } catch(e) { /* dupe or bad data, skip */ }
+  }
+  return saved;
+}
+
+async function getSoldComps(zip, opts = {}) {
+  if (!pool || !ready) return [];
+  try {
+    const { beds, sqft, limit = 12, minDate } = opts;
+    let q = 'SELECT * FROM sold_comps WHERE zip = $1';
+    const params = [zip];
+    if (beds) { params.push(beds - 1, beds + 1); q += ` AND beds BETWEEN $${params.length-1} AND $${params.length}`; }
+    if (sqft) { const lo = Math.round(sqft * 0.7), hi = Math.round(sqft * 1.35); params.push(lo, hi); q += ` AND sqft BETWEEN $${params.length-1} AND $${params.length}`; }
+    if (minDate) { params.push(minDate); q += ` AND sold_date >= $${params.length}`; }
+    q += ' ORDER BY sold_date DESC NULLS LAST, sold_price DESC';
+    params.push(limit); q += ` LIMIT $${params.length}`;
+    const { rows } = await pool.query(q, params);
+    return rows;
+  } catch(e) { return []; }
+}
+
+async function getSoldCompStats(zip) {
+  if (!pool || !ready) return null;
+  try {
+    const { rows } = await pool.query(
+      `SELECT COUNT(*) as cnt,
+              PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY sold_price) as median_sold,
+              ROUND(AVG(ppsf)::numeric, 0) as avg_ppsf,
+              ROUND(AVG(dom)::numeric, 0) as avg_dom,
+              MAX(sold_date) as latest_sale
+       FROM sold_comps WHERE zip = $1 AND sold_date >= NOW() - INTERVAL '18 months'`,
+      [zip]
+    );
+    return rows[0]?.cnt > 0 ? rows[0] : null;
+  } catch(e) { return null; }
+}
+
 module.exports = {
   initDB, isAvailable,
   initCompCache, getCachedComps, saveComps,
   saveUnderwrite, getUnderwrite, getAllUnderwrites,
   saveBrainToDB, loadBrainFromDB,
-  saveMarketData, getMarketData, getMarketStats
+  saveMarketData, getMarketData, getMarketStats,
+  saveSoldComps, getSoldComps, getSoldCompStats
 };
