@@ -1074,7 +1074,7 @@ app.post('/api/review-chat', auth, async (req, res) => {
       .map(([email, ws]) => `${ws.name||email}: ${ws.deals} deals, avg ARV inflation ${ws.avgARVInflation}%`)
       .join('\n');
 
-    const model = allChats.length > 15 ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5-20251001';
+    const model = 'claude-haiku-4-5-20251001'; // Always Haiku for review — cheap, sufficient
 
     const r = await getAnthropic().messages.create({
       model, max_tokens: 1000,
@@ -1310,7 +1310,7 @@ app.post('/api/agent-query', auth, async (req, res) => {
     ].filter(Boolean).join('\n');
 
     const r = await getAnthropic().messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5-20251001', // Haiku sufficient for verdict regen
       max_tokens: 800,
       system: systemPrompt,
       messages: [{ role: 'user', content: question }]
@@ -1679,8 +1679,8 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
 
     // Chat uses Sonnet — this is human conversation, quality matters more than cost here
     const r2 = await getAnthropic().messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
+      model: 'claude-haiku-4-5-20251001', // Switched to Haiku — saves 3x on every chat message
+      max_tokens: 1000,
       system: systemPrompt,
       messages: historyForAPI
     });
@@ -2227,7 +2227,7 @@ app.listen(PORT, async () => {
 
   // Auto-run chat review on startup (if more than 12h since last review) — cheap Haiku
   const lastReview = urbanBrain.lastReviewAt ? new Date(urbanBrain.lastReviewAt) : null;
-  const hoursSince = lastReview ? (Date.now() - lastReview) / 3600000 : 999;
+  const hoursSince = lastReview ? (Date.now() - lastReview) / 3600000 : 0; // 0 = never auto-review on first startup
   if (hoursSince > 168) { // 7-day min
     console.log('📚 Scheduling auto chat review...');
     setTimeout(async () => {
