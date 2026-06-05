@@ -1168,9 +1168,7 @@ function renderUW(uw) {
     set('ex-adj', adj != null ? (adj >= 0 ? '+' : '') + fmt(adj) : '—');
     cls('ex-adj', `fv ${adj >= 40000 ? 'g' : adj >= 0 ? '' : 'r'}`);
     set('ex-buyer', ex.buyerProfile || '—');
-  } else {
-    exEl.style.display = 'none';
-  }
+  } else { if (exEl) exEl.style.display = 'none'; }
 
   // CHAT HISTORY
   renderChat(uw.chatHistory || []);
