@@ -701,6 +701,8 @@ const relevantLessons = getRelevantLessons(deal);
   const _mn = urbanBrain.marketNotes[deal.county || deal.city];
   // Pull real market data from DB (pre-seeded 390+ FL zip codes)
   const _mktDB = deal.zip ? await DB.getMarketData(deal.zip).catch(() => null) : null;
+  // Pull NBHC-level ARV stats (P75 = renovated standard) from HCPA county data
+  const _nbhcArv = deal.nbhc ? await DB.getNbhcArv(deal.nbhc).catch(() => null) : null;
   let marketContextStr = '';
   if (_mktDB && _mktDB.median_sold) {
     marketContextStr = `[Market DB ${deal.zip}] Median: $${_mktDB.median_sold.toLocaleString()} | $${_mktDB.avg_ppsf || '?'}/sqft | DOM: ${_mktDB.median_dom || '?'} days`;
@@ -710,6 +712,11 @@ const relevantLessons = getRelevantLessons(deal);
     if (_mktDB.insurance_mo) marketContextStr += ` | Insurance: ~$${_mktDB.insurance_mo}/mo`;
     if (_mktDB.rehab_medium) marketContextStr += ` | Rehab: $${_mktDB.rehab_light}/$${_mktDB.rehab_medium}/$${_mktDB.rehab_heavy} light/med/heavy per sqft`;
     if (_mktDB.notes) marketContextStr += ` || NEIGHBORHOOD: ${_mktDB.notes}`;
+  }
+  // Wire NBHC-level ARV data (P75 = renovated standard from 64K real HCPA transactions)
+  if (_nbhcArv && _nbhcArv.p75_sold) {
+    const arvCtx = `[HCPA REAL COMPS NBHC${deal.nbhc}] Renovated ARV (P75): $${_nbhcArv.p75_sold.toLocaleString()} | Median all: $${_nbhcArv.median_sold?.toLocaleString()} | ${_nbhcArv.count} real sales 2023-2026`;
+    marketContextStr = marketContextStr ? marketContextStr + ' || ' + arvCtx : arvCtx;
   }
   if (_mn && _mn.deals >= 2) {
     const brainCtx = `${_mn.deals} Coralstone deals | Avg ARV: $${(_mn.avgARV||0).toLocaleString()} | HOT rate: ${Math.round((_mn.hotDeals||0)/_mn.deals*100)}%`;
@@ -1213,6 +1220,20 @@ app.get('/api/sold-comps/:zip', auth, async (req, res) => {
     const comps = await DB.getSoldComps(req.params.zip, { limit: 25 });
     const stats = await DB.getSoldCompStats(req.params.zip);
     res.json({ zip: req.params.zip, count: comps.length, stats, comps });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
+
+app.post('/api/seed-nbhc', async (req, res) => {
+  const token = req.headers['x-urban-token'];
+  if (token !== PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+  const { records } = req.body;
+  if (!Array.isArray(records)) return res.status(400).json({ error: 'records array required' });
+  try {
+    const saved = await DB.saveNbhcStats(records);
+    console.log('📊 Seeded', saved, 'NBHC neighborhood stats');
+    res.json({ ok: true, saved, received: records.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 

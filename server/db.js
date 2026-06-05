@@ -108,6 +108,18 @@ async function initCompCache() {
       CREATE INDEX IF NOT EXISTS idx_sc_sold     ON sold_comps(sold_price);
       CREATE INDEX IF NOT EXISTS idx_sc_date     ON sold_comps(sold_date);
       CREATE INDEX IF NOT EXISTS idx_sc_beds     ON sold_comps(beds);
+      CREATE TABLE IF NOT EXISTS nbhc_arv_stats (
+        nbhc          TEXT PRIMARY KEY,
+        county        TEXT DEFAULT 'Hillsborough',
+        count         INTEGER,
+        median_sold   INTEGER,
+        p25_sold      INTEGER,
+        p75_sold      INTEGER,
+        p90_sold      INTEGER,
+        source        TEXT,
+        updated_at    TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_nbhc_county ON nbhc_arv_stats(county);
     `);
     console.log('✅ comp_cache + market_data tables ready');
   } catch(e) { console.warn('cache/market init:', e.message); }
@@ -281,11 +293,44 @@ async function getSoldCompStats(zip) {
   } catch(e) { return null; }
 }
 
+
+async function saveNbhcStats(records) {
+  if (!pool || !ready || !records?.length) return 0;
+  let saved = 0;
+  for (const r of records) {
+    if (!r.nbhc || !r.median_sold) continue;
+    try {
+      await pool.query(
+        `INSERT INTO nbhc_arv_stats (nbhc, county, count, median_sold, p25_sold, p75_sold, p90_sold, source, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+         ON CONFLICT (nbhc) DO UPDATE SET
+           county=EXCLUDED.county, count=EXCLUDED.count,
+           median_sold=EXCLUDED.median_sold, p25_sold=EXCLUDED.p25_sold,
+           p75_sold=EXCLUDED.p75_sold, p90_sold=EXCLUDED.p90_sold,
+           source=EXCLUDED.source, updated_at=NOW()`,
+        [r.nbhc, r.county||'Hillsborough', r.count||0,
+         r.median_sold, r.p25_sold||null, r.p75_sold||null, r.p90_sold||null, r.source||'hcpa']
+      );
+      saved++;
+    } catch(e) { /* skip */ }
+  }
+  return saved;
+}
+
+async function getNbhcArv(nbhc) {
+  if (!pool || !ready) return null;
+  try {
+    const { rows } = await pool.query('SELECT * FROM nbhc_arv_stats WHERE nbhc = $1', [nbhc]);
+    return rows[0] || null;
+  } catch(e) { return null; }
+}
+
 module.exports = {
   initDB, isAvailable,
   initCompCache, getCachedComps, saveComps,
   saveUnderwrite, getUnderwrite, getAllUnderwrites,
   saveBrainToDB, loadBrainFromDB,
   saveMarketData, getMarketData, getMarketStats,
-  saveSoldComps, getSoldComps, getSoldCompStats
+  saveSoldComps, getSoldComps, getSoldCompStats,
+  saveNbhcStats, getNbhcArv
 };
