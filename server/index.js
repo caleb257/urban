@@ -681,6 +681,9 @@ const relevantLessons = getRelevantLessons(deal);
     marketContextStr = `[Market DB ${deal.zip}] Median: $${_mktDB.median_sold.toLocaleString()} | $${_mktDB.avg_ppsf || '?'}/sqft | DOM: ${_mktDB.median_dom || '?'} days`;
     if (_mktDB.trend_pct) marketContextStr += ` | YoY: ${_mktDB.trend_pct > 0 ? '+' : ''}${_mktDB.trend_pct}%`;
     if (_mktDB.flip_margin_pct) marketContextStr += ` | Typical flip margin: ${_mktDB.flip_margin_pct}%`;
+    if (_mktDB.prop_tax_rate) marketContextStr += ` | Tax: ${(_mktDB.prop_tax_rate * 100).toFixed(2)}%/yr`;
+    if (_mktDB.insurance_mo) marketContextStr += ` | Insurance: ~$${_mktDB.insurance_mo}/mo`;
+    if (_mktDB.rehab_medium) marketContextStr += ` | Rehab: $${_mktDB.rehab_light}/$${_mktDB.rehab_medium}/$${_mktDB.rehab_heavy} light/med/heavy per sqft`;
   }
   if (_mn && _mn.deals >= 2) {
     const brainCtx = `${_mn.deals} Coralstone deals | Avg ARV: $${(_mn.avgARV||0).toLocaleString()} | HOT rate: ${Math.round((_mn.hotDeals||0)/_mn.deals*100)}%`;
