@@ -299,6 +299,16 @@ async function getDealsFromSheet() {
 
 // ── COMP ENGINE ───────────────────────────────────────────────────────────────
 async function fetchComps(address, city, state, zip, deal = {}) {
+  const _ck = (address + '|' + (zip || city || '')).toLowerCase().trim();
+  if (!deal._forceRefreshComps) {
+    const _cached = await DB.getCachedComps(_ck).catch(() => null);
+    if (_cached?.comps?.length) {
+      const _c = _cached.comps;
+      _c._meta = _cached._meta || { arvEstimate: null };
+      console.log('💾 Cached comps:', address, '(' + _c.length + ')');
+      return _c;
+    }
+  }
   const comps = [];
   comps._meta = { arvEstimate: null };
   try {
@@ -312,26 +322,12 @@ async function fetchComps(address, city, state, zip, deal = {}) {
         'anthropic-beta': 'web-search-2025-03-05'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001', // Haiku for comps — fast and cheap
-        max_tokens: 2000,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 800,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `You are a real estate comp researcher for Tampa Bay FL fix-and-flip investors. Do TWO web searches:
-
-1. Search Zillow for recently SOLD homes near "${address}, ${city}, ${state} ${zip}" — find 3-5 homes sold in the last 6 months within 1 mile. Target similar size: ${deal.beds||3}bd/${deal.baths||2}ba, ~${deal.sqft||1200}sqft. Look for SOLD prices only, not list prices.
-
-2. Search for the Zestimate for "${address}, ${city}, ${state} ${zip}" on Zillow. Also check Redfin estimate if available.
-
-Tampa Bay price context: SFRs typically range $150K-$600K depending on area. Hillsborough avg ~$380K, Pasco avg ~$290K, Pinellas avg ~$420K.
-
-After searching, return ONLY a valid JSON array (no markdown, no backticks, no explanation) with all comps you found:
-[
-  {"address":"123 Oak Ave","city":"${city}","sqft":1350,"beds":3,"baths":2,"salePrice":248000,"saleDate":"2025-03","distanceMiles":0.4,"source":"zillow_sold"},
-  {"address":"${address}","city":"${city}","sqft":null,"beds":null,"baths":null,"salePrice":265000,"saleDate":"2025-05","distanceMiles":0,"source":"zestimate"}
-]
-
-Include ONLY entries where you found real data. If you found no comps, return an empty array: []`
+          content: `Search for 3-5 recently SOLD homes (last 6 months, within 1 mile) near "${address}, ${city}, ${state} ${zip}" on Zillow/Redfin. Similar: ${deal.beds||3}bd ~${deal.sqft||1200}sqft. Return ONLY a JSON array, no markdown:\n[{"address":"str","city":"str","sqft":1350,"beds":3,"baths":2,"salePrice":248000,"saleDate":"2025-03","distanceMiles":0.4}]\nReturn [] if no comps found.`
         }]
       })
     });
@@ -406,44 +402,9 @@ Include ONLY entries where you found real data. If you found no comps, return an
     console.log('Comp engine error:', e.message);
   }
 
+  if (comps.length > 0) DB.saveComps(_ck, { comps: [...comps], _meta: comps._meta||{} }).catch(()=>{});
   return comps;
 }
-
-// ── BRAIN CONTEXT ─────────────────────────────────────────────────────────────
-function getBrainContext(wholesalerEmail, county) {
-  // Lessons: last 40, plus a summary of older ones so nothing is lost
-  const allLessons = urbanBrain.lessons || [];
-  const recentLessons = allLessons.slice(-40).map(l => `- ${l}`).join('\n');
-  const olderCount = Math.max(0, allLessons.length - 40);
-  const lessonSummary = olderCount > 0
-    ? `[+ ${olderCount} earlier lessons stored — key themes: corrections on ARV inflation, wholesaler patterns, market-specific rehab costs]\n`
-    : '';
-  const lessons = lessonSummary + (recentLessons || 'No lessons yet');
-
-  // Wholesaler intel — rich context
-  const wNotes = urbanBrain.wholesalerNotes[wholesalerEmail] || 'First time seeing this wholesaler';
-  const ws = urbanBrain.wholesalerStats[wholesalerEmail];
-  let wStats = 'No prior deals from this wholesaler';
-  if (ws) {
-    const topVerdict = ws.verdicts && Object.entries(ws.verdicts).sort((a,b)=>b[1]-a[1])[0];
-    const inflationFlag = ws.verifiedInflator ? ' ⚠️ VERIFIED ARV INFLATOR' : ws.inflationWarning ? ' ⚠️ ARV inflation warning' : '';
-    wStats = `${ws.deals} prior deals${inflationFlag} | avg ARV inflation: ${ws.avgARVInflation}% | most common verdict: ${topVerdict ? topVerdict[0] : 'mixed'} | corrections: ${ws.corrections || 0}`;
-  }
-
-  // Market context — price/sqft + what works in this market
-  const mn = urbanBrain.marketNotes[county];
-  let marketCtx = `${county || 'unknown county'}: limited data`;
-  if (mn && mn.deals > 1) {
-    const ppsqft = mn.avgARV && mn.avgSqft ? Math.round(mn.avgARV / mn.avgSqft) : null;
-    const hotRate = mn.deals > 0 ? Math.round((mn.hotDeals || 0) / mn.deals * 100) : 0;
-    marketCtx = `${county}: ${mn.deals} deals analyzed | avg Urban ARV $${mn.avgARV?.toLocaleString()} | ${ppsqft ? `avg $/sqft $${ppsqft}` : ''} | ${hotRate}% score HOT/BUY`;
-  }
-
-  return { lessons, wholesalerNotes: wNotes, wholesalerStats: wStats, marketContext: marketCtx };
-}
-
-// ── DEEP COMP ENGINE (Haiku searches + Sonnet analysis) ─────────────────────
-// Cost: 2 Haiku searches ~$0.003 total. Sonnet only used for the analysis step.
 async function fetchDeepComps(address, city, state, zip, beds, baths, sqft, propType, deal = {}) {
   const comps = [];
   comps._meta = { arvEstimate: null, dataQuality: 'DEEP' };
@@ -634,7 +595,11 @@ async function regenerateVerdict(uw) {
 
 async function underwriteDeal(deal, comps, forceRefresh = false, deep = false) {
   const uid = deal.uid || `${deal.address}-${deal.dateReceived}`;
-  if (underwrites[uid] && !forceRefresh) return underwrites[uid];
+  const _ex = underwrites[uid];
+  if (_ex && !forceRefresh) {
+    if (_ex.arv?.urbanARV && _ex.financials?.mao) return _ex; // Full data in Postgres — free instant return
+    if (_ex.verdict && !deep) return _ex; // Has verdict stub — show it, don't re-underwrite
+  }
 
   // ── SMART LESSON INJECTION: match by county + property type + wholesaler ──
 function getRelevantLessons(deal, maxLessons = 15) {
@@ -895,7 +860,7 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
     : `You are Urban — fix-and-flip underwriter for Coralstone Capital Group, Tampa Bay FL. You know Tampa Bay neighborhoods cold: prices, trends, buyer demand, contractor costs, red flags. You have underwritten ${urbanBrain.totalUnderwritten||0} Tampa Bay deals. You are direct and use real numbers — not vague ranges. Respond with ONLY valid JSON — no markdown, no backticks, nothing before or after the JSON object.`;
 
   const res = await getAnthropic().messages.create({
-    model, max_tokens: deep ? 8192 : 6000,  // 6000 ensures recommendation+offerStrategy never truncate
+    model, max_tokens: deep ? 3500 : 2000,
     system,
     messages: [{ role: 'user', content: prompt }]
   });
@@ -2172,36 +2137,7 @@ async function restoreBrainFromSheet() {
         console.log('✅ Verdict index restored: ' + restored + ' deals (will not re-underwrite)');
         persistVerdictIndexToSheet().catch(() => {});
 
-        // Silently re-underwrite bare stubs in background (no arv/financials saved yet)
-        // Runs 1 at a time, cheap, restores full data so UI never shows "not yet underwritten"
-        // Any deal with a verdict but no full analysis data needs re-underwriting
-        const bareStubs = Object.values(underwrites).filter(uw =>
-          uw.verdict && uw.verdict !== 'PENDING' && !uw.arv?.urbanARV && !uw.financials?.mao
-        );
-        if (bareStubs.length > 0) {
-          console.log('🔄 Re-underwriting ' + bareStubs.length + ' bare stubs in background...');
-          (async () => {
-            const deals = await getDealsFromSheet().catch(() => []);
-            let done = 0;
-            for (const stub of bareStubs) {
-              try {
-                const deal = deals.find(d =>
-                  (d.uid && d.uid === stub.uid) ||
-                  (d.address && stub.deal?.address && d.address.toLowerCase() === stub.deal.address.toLowerCase())
-                );
-                if (!deal) continue;
-                const comps = await fetchComps(deal.address, deal.city, deal.state, deal.zip, deal);
-                await underwriteDeal(deal, comps, true, false); // forceRefresh=true
-                done++;
-                console.log('✅ Re-underwritten: ' + deal.address + ' (' + done + '/' + bareStubs.length + ')');
-                await new Promise(r => setTimeout(r, 2000)); // 2s between each — don't hammer API
-              } catch(e) {
-                console.log('⚠️ Re-underwrite skip ' + (stub.deal?.address||stub.uid) + ': ' + e.message);
-              }
-            }
-            console.log('✅ Background re-underwrite complete: ' + done + ' deals restored');
-          })().catch(e => console.log('Background re-underwrite error:', e.message));
-        }
+
       }
     } catch(e) {
       // Verdict index columns may not exist yet — that's fine
@@ -2253,6 +2189,7 @@ app.listen(PORT, async () => {
 
   // ── DATABASE INIT ──────────────────────────────────────────────────────────
   await DB.initDB().catch(e => console.warn('DB init:', e.message));
+  await DB.initCompCache().catch(() => {});
   if (DB.isAvailable()) {
     // Merge Postgres + JSON: JSON already loaded above, DB wins on conflicts
     const fromDB = await DB.getAllUnderwrites().catch(() => ({}));
@@ -2291,7 +2228,7 @@ app.listen(PORT, async () => {
   // Auto-run chat review on startup (if more than 12h since last review) — cheap Haiku
   const lastReview = urbanBrain.lastReviewAt ? new Date(urbanBrain.lastReviewAt) : null;
   const hoursSince = lastReview ? (Date.now() - lastReview) / 3600000 : 999;
-  if (hoursSince > 12) {
+  if (hoursSince > 168) { // 7-day min
     console.log('📚 Scheduling auto chat review...');
     setTimeout(async () => {
       try {
@@ -2329,15 +2266,4 @@ app.listen(PORT, async () => {
         }
       } catch(e) { console.log('Auto-review err:', e.message); }
     }, 30000); // 30s after startup
-  }
-
-  // Schedule review every 24h
-  setInterval(async () => {
-    try {
-      // Trigger via internal fetch (reuses the route logic cleanly)
-      await fetch('http://localhost:' + PORT + '/api/review-chat', {
-        method: 'POST', headers: { 'x-urban-token': PASSWORD }
-      });
-    } catch(e) { console.log('Scheduled review err:', e.message); }
-  }, 24 * 60 * 60 * 1000);
-});
+  }});
