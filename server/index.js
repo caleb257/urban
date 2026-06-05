@@ -1964,6 +1964,34 @@ app.get('/api/market-intel', auth, (req, res) => {
   res.json({ markets: summary, wholesalers: wsRankings, lessonsCount: (urbanBrain.lessons||[]).length });
 });
 
+// ── MARKET DATA SEED (batch insert market comps by zip) ──────────────────────
+app.post('/api/market-seed', auth, async (req, res) => {
+  const { records } = req.body || {};
+  if (!records || !Array.isArray(records)) return res.status(400).json({ error: 'records array required' });
+  let saved = 0, errors = 0;
+  for (const r of records) {
+    if (!r.zip_code) { errors++; continue; }
+    try {
+      await DB.saveMarketData(r);
+      saved++;
+    } catch(e) { errors++; console.warn('market-seed err:', e.message); }
+  }
+  res.json({ saved, errors, total: records.length });
+});
+
+// ── GET MARKET DATA (lookup by zip) ──────────────────────────────────────────
+app.get('/api/market/:zip', auth, async (req, res) => {
+  const data = await DB.getMarketData(req.params.zip).catch(() => null);
+  if (!data) return res.json({ zip: req.params.zip, found: false });
+  res.json({ ...data, found: true });
+});
+
+// ── LIST ALL MARKET DATA (for admin) ─────────────────────────────────────────
+app.get('/api/market-stats', auth, async (req, res) => {
+  const stats = await DB.getMarketStats().catch(() => ({}));
+  res.json(stats);
+});
+
 // Stats
 app.get('/api/stats', auth, (req, res) => {
   // Include restored stubs for verdict counts, full objects for financials

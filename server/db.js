@@ -132,9 +132,43 @@ async function loadBrainFromDB() {
 
 function isAvailable() { return ready; }
 
+// ── MARKET DATA ───────────────────────────────────────────────────────────────
+async function saveMarketData(r) {
+  if (!pool || !ready) return;
+  await pool.query(
+    `INSERT INTO market_data (zip_code,city,county,state,median_sold,avg_ppsf,median_dom,sold_count,comps,fetched_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
+     ON CONFLICT (zip_code) DO UPDATE SET
+       city=COALESCE(EXCLUDED.city,market_data.city),
+       county=COALESCE(EXCLUDED.county,market_data.county),
+       median_sold=COALESCE(EXCLUDED.median_sold,market_data.median_sold),
+       avg_ppsf=COALESCE(EXCLUDED.avg_ppsf,market_data.avg_ppsf),
+       median_dom=COALESCE(EXCLUDED.median_dom,market_data.median_dom),
+       sold_count=COALESCE(EXCLUDED.sold_count,market_data.sold_count),
+       comps=COALESCE(EXCLUDED.comps,market_data.comps),
+       fetched_at=NOW()`,
+    [r.zip_code, r.city||null, r.county||null, r.state||'FL',
+     r.median_sold||null, r.avg_ppsf||null, r.median_dom||null,
+     r.sold_count||null, r.comps ? JSON.stringify(r.comps) : null]
+  );
+}
+
+async function getMarketData(zip) {
+  if (!pool || !ready) return null;
+  const res = await pool.query('SELECT * FROM market_data WHERE zip_code=$1', [zip]);
+  return res.rows[0] || null;
+}
+
+async function getMarketStats() {
+  if (!pool || !ready) return {};
+  const res = await pool.query('SELECT county, COUNT(*) as zips, AVG(median_sold) as avg_median FROM market_data GROUP BY county ORDER BY count DESC');
+  return { total_zips: 0, by_county: res.rows };
+}
+
 module.exports = {
   initDB, isAvailable,
   initCompCache, getCachedComps, saveComps,
   saveUnderwrite, getUnderwrite, getAllUnderwrites,
-  saveBrainToDB, loadBrainFromDB
+  saveBrainToDB, loadBrainFromDB,
+  saveMarketData, getMarketData, getMarketStats
 };
