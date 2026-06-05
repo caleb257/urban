@@ -51,8 +51,23 @@ async function initCompCache() {
         comps       JSONB NOT NULL,
         fetched_at  TIMESTAMPTZ DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS market_data (
+        zip_code    TEXT PRIMARY KEY,
+        city        TEXT,
+        county      TEXT,
+        state       TEXT DEFAULT 'FL',
+        median_sold INTEGER,
+        avg_ppsf    INTEGER,
+        median_dom  INTEGER,
+        sold_count  INTEGER,
+        comps       JSONB,
+        fetched_at  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_market_county ON market_data(county);
+      CREATE INDEX IF NOT EXISTS idx_market_city   ON market_data(city);
     `);
-  } catch(e) { console.warn('comp_cache init:', e.message); }
+    console.log('✅ comp_cache + market_data tables ready');
+  } catch(e) { console.warn('cache/market init:', e.message); }
 }
 
 async function getCachedComps(addressKey) {
