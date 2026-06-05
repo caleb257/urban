@@ -1,23 +1,18 @@
 'use strict';
 // ── DATABASE LAYER (PostgreSQL) ───────────────────────────────────────────────
 // Uses Railway Postgres via DATABASE_URL env var
-// Falls back to in-memory JSON if unavailable — zero crash risk
+// Falls back to JSON-only mode if unavailable — zero crash risk
 
 let pool = null;
 let ready = false;
 
 async function initDB() {
   const url = process.env.DATABASE_URL;
-  if (!url) {
-    console.log('ℹ️  No DATABASE_URL — running in JSON-only mode');
-    return false;
-  }
+  if (!url) { console.log('ℹ️  No DATABASE_URL — JSON-only mode'); return false; }
   try {
     const { Pool } = require('pg');
     pool = new Pool({ connectionString: url, ssl: { rejectUnauthorized: false } });
-    // Test connection
     await pool.query('SELECT 1');
-    // Create tables
     await pool.query(`
       CREATE TABLE IF NOT EXISTS underwrites (
         uid        TEXT PRIMARY KEY,
@@ -37,17 +32,52 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_uw_updated_at ON underwrites(updated_at DESC);
     `);
     ready = true;
-    console.log('✅ PostgreSQL connected and tables ready');
+    console.log('✅ PostgreSQL connected');
     return true;
   } catch(e) {
-    console.warn('⚠️  PostgreSQL init failed: ' + e.message.slice(0,80) + ' — using JSON mode');
-    pool = null;
-    ready = false;
-    return false;
+    console.warn('⚠️  PostgreSQL unavailable:', e.message.slice(0,80));
+    pool = null; ready = false; return false;
   }
 }
 
-// ── UNDERWRITES ───────────────────────────────────────────────────────────────
+// ── COMP CACHE ─────────────────────────────────────────────────────────────────
+// Store comps by address key. Never fetch the same address twice (30-day cache).
+async function initCompCache() {
+  if (!pool || !ready) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS comp_cache (
+        address_key TEXT PRIMARY KEY,
+        comps       JSONB NOT NULL,
+        fetched_at  TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+  } catch(e) { console.warn('comp_cache init:', e.message); }
+}
+
+async function getCachedComps(addressKey) {
+  if (!pool || !ready) return null;
+  try {
+    const r = await pool.query(
+      "SELECT comps FROM comp_cache WHERE address_key=$1 AND fetched_at > NOW() - INTERVAL '30 days'",
+      [addressKey]
+    );
+    return r.rows[0] ? r.rows[0].comps : null;
+  } catch { return null; }
+}
+
+async function saveComps(addressKey, comps) {
+  if (!pool || !ready) return;
+  try {
+    await pool.query(
+      `INSERT INTO comp_cache (address_key, comps, fetched_at) VALUES ($1, $2, NOW())
+       ON CONFLICT (address_key) DO UPDATE SET comps=EXCLUDED.comps, fetched_at=NOW()`,
+      [addressKey, JSON.stringify(comps)]
+    );
+  } catch(e) { console.error('saveComps:', e.message); }
+}
+
+// ── UNDERWRITES ────────────────────────────────────────────────────────────────
 async function saveUnderwrite(uid, uw) {
   if (!pool || !ready) return;
   try {
@@ -80,7 +110,7 @@ async function getAllUnderwrites() {
   } catch(e) { console.error('DB getAllUnderwrites:', e.message); return {}; }
 }
 
-// ── BRAIN ─────────────────────────────────────────────────────────────────────
+// ── BRAIN ──────────────────────────────────────────────────────────────────────
 async function saveBrainToDB(brain) {
   if (!pool || !ready) return;
   try {
@@ -102,4 +132,9 @@ async function loadBrainFromDB() {
 
 function isAvailable() { return ready; }
 
-module.exports = { initDB, isAvailable, saveUnderwrite, getUnderwrite, getAllUnderwrites, saveBrainToDB, loadBrainFromDB };
+module.exports = {
+  initDB, isAvailable,
+  initCompCache, getCachedComps, saveComps,
+  saveUnderwrite, getUnderwrite, getAllUnderwrites,
+  saveBrainToDB, loadBrainFromDB
+};
