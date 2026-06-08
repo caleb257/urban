@@ -670,6 +670,40 @@ async function regenerateVerdict(uw) {
   return uw;
 }
 
+
+// ── BRAIN CONTEXT BUILDER ────────────────────────────────────────────────────
+function getBrainContext(wsEmail, county) {
+  const ws = wsEmail ? (urbanBrain.wholesalers || {})[wsEmail.toLowerCase()] : null;
+  const mn = county ? (urbanBrain.marketNotes || {})[county] : null;
+
+  // Wholesaler intelligence
+  let wholesalerNotes = 'No wholesaler history on file.';
+  let wholesalerStats = '';
+  if (ws) {
+    const deals = ws.deals || 0;
+    const avgInflation = ws.avgInflation != null ? ws.avgInflation.toFixed(1) : null;
+    wholesalerNotes = `${ws.name || wsEmail}: ${deals} prior deal${deals !== 1 ? 's' : ''}. ${ws.notes || ''}`.trim();
+    if (avgInflation) {
+      wholesalerStats = avgInflation > 10
+        ? `VERIFIED ARV INFLATOR: avg ${avgInflation}% above Urban ARV across ${deals} deals.`
+        : avgInflation > 5
+        ? `ARV inflation warning: avg +${avgInflation}% above Urban ARV.`
+        : `ARV accuracy: avg ${avgInflation}% variance across ${deals} deals.`;
+    } else {
+      wholesalerStats = deals > 0 ? `${deals} prior deals, no ARV variance tracked yet.` : 'First deal from this wholesaler.';
+    }
+  }
+
+  // Market context
+  let marketContext = 'No market history for this county yet.';
+  if (mn && mn.deals >= 1) {
+    const hotPct = Math.round(((mn.hotDeals || 0) / mn.deals) * 100);
+    marketContext = `${mn.deals} Coralstone deals | Avg ARV: $${(mn.avgARV || 0).toLocaleString()} | HOT rate: ${hotPct}% | ${mn.notes || ''}`.trim();
+  }
+
+  return { wholesalerNotes, wholesalerStats, marketContext };
+}
+
 async function underwriteDeal(deal, comps, forceRefresh = false, deep = false) {
   const uid = deal.uid || `${deal.address}-${deal.dateReceived}`;
   const _ex = underwrites[uid];
