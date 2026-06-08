@@ -1019,7 +1019,7 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
     : `You are Urban — fix-and-flip underwriter for Coralstone Capital Group, Tampa Bay FL. You know Tampa Bay neighborhoods cold: prices, trends, buyer demand, contractor costs, red flags. You have underwritten ${urbanBrain.totalUnderwritten||0} Tampa Bay deals. You are direct and use real numbers — not vague ranges. Respond with ONLY valid JSON — no markdown, no backticks, nothing before or after the JSON object.`;
 
   const res = await getAnthropic().messages.create({
-    model, max_tokens: deep ? 3500 : 2000,
+    model, max_tokens: deep ? 6000 : 4000,
     system,
     messages: [{ role: 'user', content: prompt }]
   });
@@ -1029,12 +1029,24 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
   const f = rawText.indexOf('{'), l = rawText.lastIndexOf('}');
   if (f === -1 || l === -1) throw new Error(`No JSON object in response. Raw: ${rawText.slice(0,200)}`);
   let underwrite;
+  // Recovery if JSON was truncated by token limit — close unclosed braces
+  let jsonStr = rawText.slice(f, l + 1);
+  if (!jsonStr.trimEnd().endsWith('}')) {
+    console.warn('JSON truncated at token limit — recovering');
+    jsonStr = jsonStr.trimEnd().replace(/,\s*$/, '');
+    let depth = 0, inStr = false;
+    for (let ci = 0; ci < jsonStr.length; ci++) {
+      const ch = jsonStr[ci];
+      if (ch === '"' && jsonStr[ci-1] !== '\\') inStr = !inStr;
+      if (!inStr) { if (ch === '{') depth++; else if (ch === '}') depth--; }
+    }
+    while (depth > 0) { jsonStr += '}'; depth--; }
+  }
   try {
-    underwrite = JSON.parse(rawText.slice(f, l + 1));
+    underwrite = JSON.parse(jsonStr);
   } catch(jsonErr) {
     console.error('JSON parse error. Attempting cleanup...');
-    // Try removing control characters and reparsing
-    const cleaned = rawText.slice(f, l + 1)
+    const cleaned = jsonStr
       .replace(/[ -]/g, ' ')
       .replace(/,\s*}/g, '}')
       .replace(/,\s*]/g, ']');
