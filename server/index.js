@@ -347,8 +347,17 @@ async function fetchComps(address, city, state, zip, deal = {}) {
           sold_date: c.sold_date, dom: c.dom, pool: c.pool, style: c.style,
           subdivision: c.subdivision
         }));
+        // Compute P75 = renovated/top-of-market ARV standard
+        const sortedPrices = [...prices];
+        const p60 = sortedPrices[Math.floor(sortedPrices.length * 0.60)] || arvEst;
+        const p75 = sortedPrices[Math.floor(sortedPrices.length * 0.75)] || arvEst;
+        const p90 = sortedPrices[Math.floor(sortedPrices.length * 0.90)] || arvEst;
+
         formatted._meta = {
-          arvEstimate: arvEst,
+          arvEstimate: arvEst,        // median — as-is/mid-market
+          p60Estimate: p60,           // P60 — lightly renovated standard
+          p75Estimate: p75,           // P75 — renovated standard (USE THIS for ARV)
+          p90Estimate: p90,           // P90 — top of market (luxury finish)
           source: 'sold_comps_db',
           zip: zipKey,
           count: realComps.length,
@@ -709,9 +718,21 @@ const relevantLessons = getRelevantLessons(deal);
   const hoaFee = parseFloat(deal.hoaFee) || 0;
 
   const meta = comps._meta || {};
-  const arvLine = meta.arvEstimate
-    ? `WEB DATA ARV: $${meta.arvEstimate.toLocaleString()} (avg of ${comps.length} comps/estimates found)`
-    : 'No comp data retrieved — estimate from market knowledge and deal data';
+  // Build ARV context line — use P75 as the renovated ARV standard
+  let arvLine = 'No comp data retrieved — estimate from market knowledge and deal data';
+  if (meta.source === 'sold_comps_db' && meta.count >= 3) {
+    // Real county recorder data — P75 = renovated/fully-updated ARV standard
+    arvLine = `REAL COUNTY COMPS (${meta.count} actual sales, ${meta.zip}): ` +
+      `Median (as-is market): $${(meta.arvEstimate||0).toLocaleString()} | ` +
+      `P60 (light reno): $${(meta.p60Estimate||0).toLocaleString()} | ` +
+      `P75 (RENOVATED ARV — USE THIS): $${(meta.p75Estimate||0).toLocaleString()} | ` +
+      `P90 (top of market): $${(meta.p90Estimate||0).toLocaleString()} | ` +
+      `Avg $/sqft: $${meta.avg_ppsf || '?'}/sf. ` +
+      `SOURCE: ${meta.source} — real arm's-length qualified sales, not Zestimate. ` +
+      `Use P75 as your primary ARV anchor for a fully renovated flip. P60 if light cosmetic only.`;
+  } else if (meta.arvEstimate) {
+    arvLine = `WEB COMP DATA: $${meta.arvEstimate.toLocaleString()} (${comps.length} comps found, ${meta.source || 'web'})`;
+  }
   // Format comps with full property details so Claude can comp by sqft/beds/baths/pool/ppsf
   const formatComp = (c) => {
     const price = (c.salePrice || c.sold_price || 0).toLocaleString();
@@ -1673,22 +1694,44 @@ app.get('/api/underwrite/:uid', auth, (req, res) => {
 
 // Underwrite by uid (manual trigger from UI)
 app.post('/api/underwrite/:uid', auth, async (req, res) => {
+  // SSE headers first — always — so client gets a stream not HTML
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
+  const send = msg => { try { res.write(`data: ${JSON.stringify(msg)}\n\n`); } catch {} };
+
   try {
     const { uid } = req.params;
-    const { forceRefresh, deep } = req.body;
+    const { forceRefresh, deep, dealData } = req.body;
 
-    const deals = await getDealsFromSheet();
-    const deal = deals.find(d => (d.uid || `${d.address}-${d.dateReceived}`) === uid);
-    if (!deal) return res.status(404).json({ error: 'Deal not found' });
+    // 1. Try sheet lookup first
+    let deal = null;
+    try {
+      const deals = await getDealsFromSheet();
+      deal = deals.find(d => (d.uid || `${d.address}-${d.dateReceived}`) === uid);
+    } catch(sheetErr) {
+      console.warn('Sheet lookup failed:', sheetErr.message);
+    }
 
-    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
-    const send = msg => res.write(`data: ${JSON.stringify(msg)}\n\n`);
+    // 2. Fall back to dealData from request body (sent by UI with full curDeal data)
+    if (!deal && dealData && dealData.address) {
+      deal = dealData;
+    }
 
-    send({ status: deep ? '🔍 Deep analysis: running 3 parallel comp searches (Zillow + Redfin + county records)...' : 'Fetching comps...' });
+    if (!deal) {
+      send({ error: 'Deal not found — sheet unavailable and no deal data in body' });
+      res.end(); return;
+    }
+
+    // Normalize common field names (sheet uses camelCase, some clients use snake_case)
+    deal.year_built = deal.year_built || deal.yearBuilt;
+    deal.pool = deal.pool || deal.pool === 'Yes' || deal.pool === true;
+
+    send({ status: deep ? '🔍 Deep analysis: running parallel comp searches...' : '⚡ Fetching comps...' });
+
     const comps = deep
       ? await fetchDeepComps(deal.address, deal.city, deal.state, deal.zip, deal.beds, deal.baths, deal.sqft, deal.propertyType)
       : await fetchComps(deal.address, deal.city, deal.state, deal.zip, deal);
-    send({ status: `Got ${comps.length} comps — ${deep ? 'running Sonnet deep analysis' : 'Urban is analyzing'}...` });
+
+    send({ status: `📊 Got ${comps.length} comps — running ARV analysis...` });
 
     const uw = await underwriteDeal(deal, comps, forceRefresh || false, deep || false);
     send({ done: true, underwrite: uw });

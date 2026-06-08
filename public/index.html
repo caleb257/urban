@@ -347,7 +347,7 @@ a{color:var(--accent)}
           </div>
           <div class="card" style="margin-bottom:14px">
             <div class="ct">Comparable Sales</div>
-            <table class="comps-t"><thead><tr><th>Address</th><th>Bd/Ba</th><th>Sqft</th><th>Sale Price</th><th>Date</th><th>Dist</th></tr></thead>
+            <table class="comps-t"><thead><tr><th>Address</th><th>Beds/Baths</th><th>Sqft</th><th>Yr</th><th>Sale Price</th><th>$/sf</th><th>Date</th><th>Src</th></tr></thead>
             <tbody id="comps-body"></tbody></table>
           </div>
           <div class="card">
@@ -925,13 +925,23 @@ async function doUnderwrite(force, deep) {
   $('load-msg').textContent = deep ? '🔬 Deep underwriting with Sonnet 4...' : '⚡ Fetching comps and underwriting...';
 
   try {
+    // Always send full deal data as fallback so server doesn't need sheet lookup
     const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, {
       method: 'POST',
       headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ forceRefresh: force, deep })
+      body: JSON.stringify({ forceRefresh: force, deep, dealData: curDeal })
     });
+
+    if (!r.ok && !r.headers.get('content-type')?.includes('event-stream')) {
+      show('loading-state', false);
+      const errText = await r.text().catch(() => 'Unknown error');
+      console.error('Underwrite HTTP error:', r.status, errText.slice(0, 200));
+      alert('Underwrite failed (HTTP ' + r.status + '). Check console.');
+      return;
+    }
+
     const reader = r.body.getReader(), dec = new TextDecoder();
-    let buf = '';
+    let buf = '', uwReceived = false;
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -942,25 +952,33 @@ async function doUnderwrite(force, deep) {
         try {
           const data = JSON.parse(line.slice(6));
           if (data.status) $('load-msg').textContent = data.status;
-          if (data.done) {
+          if (data.done && data.underwrite) {
+            uwReceived = true;
             curUW = data.underwrite;
             show('loading-state', false);
-            renderUW(curUW);
+            try { renderUW(curUW); } catch(re) { console.error('renderUW err:', re); }
             doLoadStats();
-            // Update deal status in list without re-triggering auto-underwrite
             const idx = deals.findIndex(x => x.address === curDeal.address);
             if (idx >= 0) { deals[idx].underwriteStatus = curUW.verdict; deals[idx].underwriteScore = curUW.score; }
             renderList();
           }
           if (data.error) {
             show('loading-state', false);
-            alert('Error: ' + data.error);
+            console.error('Underwrite error from server:', data.error);
+            $('load-msg').textContent = '❌ ' + data.error;
+            setTimeout(() => show('loading-state', false), 3000);
           }
-        } catch {}
+        } catch(pe) { /* ignore malformed SSE lines */ }
       }
+    }
+    // If stream ended without a done event, show error
+    if (!uwReceived) {
+      show('loading-state', false);
+      $('load-msg').textContent = '⚠️ No result received — try Re-run';
     }
   } catch(e) {
     show('loading-state', false);
+    console.error('doUnderwrite exception:', e);
     alert('Error: ' + e.message);
   }
 }
@@ -1042,8 +1060,23 @@ function renderUW(uw) {
   if (compsTb) compsTb.innerHTML = '';
   if (compsTb) {
     (uw.comps||[]).forEach(c => {
+      // Handle both Redfin API fields (salePrice/saleDate) and DB fields (sold_price/sold_date)
+      const price = c.salePrice || c.sold_price || 0;
+      const date  = (c.saleDate || c.sold_date || '').slice(0,10);
+      const ppsf  = c.ppsf ? Math.round(parseFloat(c.ppsf)) : (price && c.sqft ? Math.round(price/c.sqft) : null);
+      const pool  = c.pool === true ? '🏊' : '';
+      const yr    = c.year_built || '';
+      const src   = (c.source||'').includes('HCPA') ? '🏛️' : (c.source||'').includes('PCPAO') ? '🏛️' : '🔴';
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${c.address||'—'}</td><td>${c.beds||'?'}/${c.baths||'?'}</td><td>${c.sqft?parseInt(c.sqft).toLocaleString():'—'}</td><td class="p">${fmt(c.salePrice)}</td><td>${c.saleDate||'—'}</td><td>${c.distanceMiles||'?'}mi</td>`;
+      tr.innerHTML = `
+        <td style="font-size:11px">${pool} ${c.address||'—'}</td>
+        <td>${c.beds||'?'}bd / ${c.baths||'?'}ba</td>
+        <td>${c.sqft ? parseInt(c.sqft).toLocaleString() : '—'}</td>
+        <td>${yr || '—'}</td>
+        <td class="p" style="color:var(--gold);font-weight:600">${fmt(price)}</td>
+        <td style="color:var(--muted)">${ppsf ? '$'+ppsf+'/sf' : '—'}</td>
+        <td style="color:var(--muted);font-size:11px">${date}</td>
+        <td title="${c.source||''}">${src}</td>`;
       compsTb.appendChild(tr);
     });
     if (!uw.comps?.length) compsTb.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No comps — Urban estimated from market knowledge</td></tr>';
