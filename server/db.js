@@ -115,6 +115,8 @@ async function initCompCache() {
       -- Add nbhc column if upgrading existing DB
       ALTER TABLE sold_comps ADD COLUMN IF NOT EXISTS nbhc TEXT;
       CREATE INDEX IF NOT EXISTS idx_sc_zip_beds ON sold_comps(zip, beds, sqft);
+      -- Unique constraint to prevent duplicate comps from reseeding
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_sc_unique ON sold_comps(zip, address, sold_date, sold_price) WHERE address IS NOT NULL;
       CREATE TABLE IF NOT EXISTS nbhc_arv_stats (
         nbhc          TEXT PRIMARY KEY,
         county        TEXT DEFAULT 'Hillsborough',
@@ -274,7 +276,7 @@ async function getSoldComps(zip, opts = {}) {
   if (!pool || !ready) return [];
   try {
     const { beds, sqft, baths, pool: hasPool, yearBuilt, nbhc, renovated, limit = 15, minDate } = opts;
-    let q = 'SELECT * FROM sold_comps WHERE zip = $1';
+    let q = 'SELECT DISTINCT ON (address, sold_price) * FROM sold_comps WHERE zip = $1';
     const params = [zip];
 
     // Beds: ±1 unless tight match requested
