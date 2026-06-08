@@ -323,7 +323,19 @@ async function fetchComps(address, city, state, zip, deal = {}) {
       const sqft = deal.sqft ? parseInt(deal.sqft) : null;
       const beds = deal.beds ? parseInt(deal.beds) : null;
       const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 18);
-      const realComps = await DB.getSoldComps(zipKey, { beds, sqft, limit: 15, minDate: sixMonthsAgo.toISOString().slice(0,10) }).catch(() => []);
+      // Build comp query from deal details — match what the property actually has
+    const compOpts = {
+      beds:      beds,
+      sqft:      sqft,
+      baths:     deal.baths      ? parseFloat(deal.baths)         : null,
+      pool:      deal.pool !== undefined ? !!deal.pool             : undefined,
+      yearBuilt: deal.year_built ? parseInt(deal.year_built)      : null,
+      nbhc:      deal.nbhc       || null,   // Hillsborough neighborhood code
+      renovated: deal.renovated  || false,  // true = P60+ comps only (renovated market)
+      limit:     20,
+      minDate:   sixMonthsAgo.toISOString().slice(0, 10)
+    };
+    const realComps = await DB.getSoldComps(zipKey, compOpts).catch(() => []);
       if (realComps.length >= 3) {
         console.log('🏠 Real sold comps hit for zip', zipKey, '—', realComps.length, 'actual sales');
         const prices = realComps.map(c => c.sold_price).sort((a,b)=>a-b);
@@ -700,8 +712,23 @@ const relevantLessons = getRelevantLessons(deal);
   const arvLine = meta.arvEstimate
     ? `WEB DATA ARV: $${meta.arvEstimate.toLocaleString()} (avg of ${comps.length} comps/estimates found)`
     : 'No comp data retrieved — estimate from market knowledge and deal data';
+  // Format comps with full property details so Claude can comp by sqft/beds/baths/pool/ppsf
+  const formatComp = (c) => {
+    const price = (c.salePrice || c.sold_price || 0).toLocaleString();
+    const sqft  = c.sqft  ? `${c.sqft}sf`         : '';
+    const beds  = c.beds  ? `${c.beds}bd`          : '';
+    const baths = c.baths ? `${c.baths}ba`         : '';
+    const yr    = c.year_built ? `${c.year_built}` : '';
+    const pool  = c.pool  ? '🏊pool'               : '';
+    const ppsf  = c.ppsf  ? `$${Math.round(parseFloat(c.ppsf))}/sf` : '';
+    const date  = c.saleDate || c.sold_date || '';
+    const addr  = c.address || '(unknown)';
+    const src   = c.source ? `[${c.source}]` : '';
+    const attrs = [sqft, beds, baths, yr, pool, ppsf].filter(Boolean).join(' · ');
+    return `- ${addr}: $${price}${attrs ? ` (${attrs})` : ''} sold ${date} ${src}`.trim();
+  };
   const compsText = comps.length > 0
-    ? arvLine + '\n' + comps.map(c => `- ${c.address}: $${c.salePrice?.toLocaleString()} sold ${c.saleDate} (${c.source})`).join('\n')
+    ? arvLine + '\n' + comps.map(formatComp).join('\n')
     : arvLine;
 
   // Pre-compute ALL template values to avoid IIFE scope issues

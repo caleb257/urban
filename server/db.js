@@ -100,6 +100,7 @@ async function initCompCache() {
         garage        BOOLEAN,
         subdivision   TEXT,
         notes         TEXT,
+        nbhc          TEXT,
         source        TEXT DEFAULT 'redfin',
         fetched_at    TIMESTAMPTZ DEFAULT NOW()
       );
@@ -108,6 +109,12 @@ async function initCompCache() {
       CREATE INDEX IF NOT EXISTS idx_sc_sold     ON sold_comps(sold_price);
       CREATE INDEX IF NOT EXISTS idx_sc_date     ON sold_comps(sold_date);
       CREATE INDEX IF NOT EXISTS idx_sc_beds     ON sold_comps(beds);
+      CREATE INDEX IF NOT EXISTS idx_sc_pool     ON sold_comps(pool);
+      CREATE INDEX IF NOT EXISTS idx_sc_nbhc     ON sold_comps(nbhc);
+      CREATE INDEX IF NOT EXISTS idx_sc_year     ON sold_comps(year_built);
+      -- Add nbhc column if upgrading existing DB
+      ALTER TABLE sold_comps ADD COLUMN IF NOT EXISTS nbhc TEXT;
+      CREATE INDEX IF NOT EXISTS idx_sc_zip_beds ON sold_comps(zip, beds, sqft);
       CREATE TABLE IF NOT EXISTS nbhc_arv_stats (
         nbhc          TEXT PRIMARY KEY,
         county        TEXT DEFAULT 'Hillsborough',
@@ -245,15 +252,17 @@ async function saveSoldComps(comps) {
       await pool.query(
         `INSERT INTO sold_comps
           (zip, address, city, county, sqft, beds, baths, year_built,
-           sold_price, sold_date, ppsf, dom, style, pool, garage, subdivision, notes, source, fetched_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,NOW())
+           sold_price, sold_date, ppsf, dom, style, pool, garage, subdivision, nbhc, notes, source, fetched_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW())
          ON CONFLICT DO NOTHING`,
         [c.zip, c.address||null, c.city||null, c.county||null,
          c.sqft||null, c.beds||null, c.baths||null, c.year_built||null,
          c.sold_price, c.sold_date||null,
          c.ppsf || (c.sqft ? Math.round(c.sold_price/c.sqft) : null),
-         c.dom||null, c.style||'SFR', c.pool||false, c.garage||false,
-         c.subdivision||null, c.notes||null, c.source||'redfin']
+         c.dom||null, c.style||'SFR',
+         c.pool != null ? !!c.pool : null,
+         c.garage||false,
+         c.subdivision||null, c.nbhc||null, c.notes||null, c.source||'redfin']
       );
       saved++;
     } catch(e) { /* dupe or bad data, skip */ }
@@ -264,17 +273,69 @@ async function saveSoldComps(comps) {
 async function getSoldComps(zip, opts = {}) {
   if (!pool || !ready) return [];
   try {
-    const { beds, sqft, limit = 12, minDate } = opts;
+    const { beds, sqft, baths, pool: hasPool, yearBuilt, nbhc, renovated, limit = 15, minDate } = opts;
     let q = 'SELECT * FROM sold_comps WHERE zip = $1';
     const params = [zip];
-    if (beds) { params.push(beds - 1, beds + 1); q += ` AND beds BETWEEN $${params.length-1} AND $${params.length}`; }
-    if (sqft) { const lo = Math.round(sqft * 0.7), hi = Math.round(sqft * 1.35); params.push(lo, hi); q += ` AND sqft BETWEEN $${params.length-1} AND $${params.length}`; }
+
+    // Beds: ±1 unless tight match requested
+    if (beds) {
+      params.push(beds - 1, beds + 1);
+      q += ` AND beds BETWEEN $${params.length-1} AND $${params.length}`;
+    }
+
+    // Sqft: ±30% band — tighten to ±20% if also filtering pool/baths
+    if (sqft) {
+      const tight = (hasPool !== undefined || baths) ? 0.20 : 0.30;
+      const lo = Math.round(sqft * (1 - tight));
+      const hi = Math.round(sqft * (1 + tight + 0.05));
+      params.push(lo, hi);
+      q += ` AND sqft BETWEEN $${params.length-1} AND $${params.length}`;
+    }
+
+    // Baths: exact or ±0.5
+    if (baths) {
+      params.push(baths - 0.5, baths + 0.5);
+      q += ` AND baths BETWEEN $${params.length-1} AND $${params.length}`;
+    }
+
+    // Pool match — only filter when explicitly set (true or false)
+    if (hasPool === true) {
+      q += ' AND pool = TRUE';
+    } else if (hasPool === false) {
+      q += ' AND (pool = FALSE OR pool IS NULL)';
+    }
+
+    // Year built range ±15 years
+    if (yearBuilt) {
+      params.push(yearBuilt - 15, yearBuilt + 15);
+      q += ` AND year_built BETWEEN $${params.length-1} AND $${params.length}`;
+    }
+
+    // NBHC neighborhood filter (Hillsborough only) — tightest possible match
+    if (nbhc) {
+      params.push(nbhc);
+      q += ` AND nbhc = $${params.length}`;
+    }
+
+    // Renovated / top-of-market: pull only P75+ comps for the zip
+    // This gives you the renovated comp set without relying on manual flags
+    if (renovated) {
+      q += ` AND sold_price >= (
+        SELECT PERCENTILE_CONT(0.60) WITHIN GROUP (ORDER BY sold_price)
+        FROM sold_comps WHERE zip = $1
+        AND sold_date >= NOW() - INTERVAL '18 months'
+      )`;
+    }
+
     if (minDate) { params.push(minDate); q += ` AND sold_date >= $${params.length}`; }
+
+    // Sort: most recent first, then highest price (renovated floats up)
     q += ' ORDER BY sold_date DESC NULLS LAST, sold_price DESC';
     params.push(limit); q += ` LIMIT $${params.length}`;
+
     const { rows } = await pool.query(q, params);
     return rows;
-  } catch(e) { return []; }
+  } catch(e) { console.error('getSoldComps err:', e.message); return []; }
 }
 
 async function getSoldCompStats(zip) {
