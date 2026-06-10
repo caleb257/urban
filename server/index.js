@@ -1153,13 +1153,22 @@ OUTPUT: ONLY valid JSON, no markdown, no extra text.`;
       break; // success
     } catch(apiErr) {
       lastErr = apiErr;
-      const is429 = apiErr.status === 429 || (apiErr.message||'').includes('rate_limit') || (apiErr.message||'').includes('429');
+      const is429 = apiErr.status === 429 || 
+                    (apiErr.message||'').includes('rate_limit') || 
+                    (apiErr.message||'').includes('429') ||
+                    apiErr.error?.type === 'rate_limit_error';
       if (is429 && attempt < 3) {
-        const wait = [10000, 25000, 60000][attempt]; // 10s, 25s, 60s
-        console.log(`⏳ Rate limited — waiting ${wait/1000}s (attempt ${attempt+1}/3)...`);
+        // Read retry-after header if available, otherwise exponential backoff
+        const retryAfter = parseInt(apiErr.headers?.get?.('retry-after') || 
+                                    apiErr.response?.headers?.['retry-after'] || '0') * 1000;
+        const wait = retryAfter > 0 ? Math.min(retryAfter + 1000, 90000) 
+                                    : [15000, 30000, 60000][attempt];
+        console.log(`⏳ Rate limited (attempt ${attempt+1}/3) — waiting ${Math.round(wait/1000)}s...`);
+        // Tell the user what's happening via SSE
+        try { send({ status: `⏳ Rate limited — retrying in ${Math.round(wait/1000)}s (attempt ${attempt+1}/3)...` }); } catch {}
         await new Promise(r => setTimeout(r, wait));
       } else {
-        throw apiErr; // non-429 or exhausted retries
+        throw apiErr;
       }
     }
   }
