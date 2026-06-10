@@ -802,6 +802,80 @@ async function regenerateVerdict(uw) {
 }
 
 
+// ── MEGAMIND CONTEXT INJECTOR ─────────────────────────────────────────────────
+// Assembles ALL harvested brain data relevant to this specific deal.
+// This is what makes Urban smarter with every single underwrite.
+function getMegamindContext(deal, comps) {
+  const zip    = deal.zip    || '';
+  const county = (deal.county || deal.city || '').toLowerCase();
+  const beds   = parseInt(deal.beds) || 0;
+  const sqft   = parseFloat(deal.sqft) || 0;
+  const yr     = parseInt(deal.yearBuilt) || 0;
+  const email  = (deal.contact1Email || '').toLowerCase();
+  const lines  = [];
+
+  const zi = (urbanBrain.zipIntel || {})[zip];
+  if (zi && zi.deals >= 2) {
+    lines.push(`[ZIP ${zip} | ${zi.deals} CCG DEALS] ARV avg $${(zi.avgARV||0).toLocaleString()} | $/sf $${zi.avgPpsf||'?'} | Rehab avg $${(zi.avgRehab||0).toLocaleString()} | Profit avg $${(zi.avgProfit||0).toLocaleString()} | HOT ${((zi.hotRate||0)*100).toFixed(0)}% | Score avg ${zi.avgScore||'?'}/10 | WholesalerInflation avg ${zi.avgARVInflation||0}%${zi.poolPremium ? ` | Pool premium $${zi.poolPremium.toLocaleString()}` : ''}`);
+    const topFlags = Object.entries(zi.riskFlagCounts||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([f,n])=>`${f}(${n}x)`).join(', ');
+    if (topFlags) lines.push(`  Top risk flags in ${zip}: ${topFlags}`);
+  }
+
+  const mn = (urbanBrain.marketNotes || {})[county];
+  if (mn && mn.deals >= 2) {
+    lines.push(`[${county.toUpperCase()} COUNTY | ${mn.deals} CCG DEALS] ARV avg $${(mn.avgARV||0).toLocaleString()} | HOT ${((mn.hotRate||0)*100).toFixed(0)}%`);
+  }
+
+  if (beds && sqft > 0) {
+    const sfBucket = sqft < 1000 ? 'sub1000' : sqft < 1200 ? '1000to1200' : sqft < 1500 ? '1200to1500' : sqft < 1800 ? '1500to1800' : sqft < 2200 ? '1800to2200' : '2200plus';
+    const typeKey  = `${beds}bd_${Math.round((parseFloat(deal.baths)||0)*2)/2}ba_${sfBucket}`;
+    const pt = (urbanBrain.propertyPatterns || {})[typeKey];
+    if (pt && pt.count >= 2) {
+      lines.push(`[PROP TYPE ${typeKey} | ${pt.count} CCG DEALS] ARV avg $${(pt.avgARV||0).toLocaleString()} | $/sf $${pt.avgPpsf||'?'} | HOT ${((pt.hotRate||0)*100).toFixed(0)}%`);
+    }
+  }
+
+  if (yr > 1900) {
+    const cohort = yr < 1960 ? 'pre1960' : yr < 1980 ? '1960to1979' : yr < 2000 ? '1980to1999' : '2000plus';
+    const yb = (urbanBrain.yearBuiltCohorts || {})[cohort];
+    if (yb && yb.count >= 2) {
+      lines.push(`[${cohort} COHORT | ${yb.count} CCG DEALS] $/sf avg $${yb.avgPpsf||'?'} | Rehab avg $${(yb.avgRehab||0).toLocaleString()} | Hard NO rate ${((yb.hardNoRate||0)*100).toFixed(0)}%`);
+    }
+  }
+
+  const RL = urbanBrain.rehabLineItems || {};
+  const rlKeys = Object.keys(RL).filter(k => RL[k].count >= 3);
+  if (rlKeys.length) {
+    lines.push(`[CCG REHAB ACTUALS] ${rlKeys.map(k=>`${k} avg $${RL[k].avg.toLocaleString()}(${RL[k].count}x)`).join(' | ')}`);
+  }
+
+  const ws = (urbanBrain.wholesalerStats || {})[email];
+  if (ws && ws.deals >= 1) {
+    const zipNote = zip && ws.byZip?.[zip] ? ` | In ${zip}: ${ws.byZip[zip].avgInflation}% inflation(${ws.byZip[zip].deals}x)` : '';
+    lines.push(`[WHOLESALER ${ws.name||email}] ${ws.deals} deals | ARV inflation avg ${ws.avgARVInflation}%${ws.inflationWarning?' ⚠️ INFLATOR':''} | Verdicts: ${JSON.stringify(ws.verdicts)} | HOT rate ${((ws.hotRate||0)*100).toFixed(0)}%${zipNote}`);
+  }
+
+  const HD = urbanBrain.hotDealDNA;
+  if (HD && HD.count >= 3) {
+    lines.push(`[HOT DEAL DNA | ${HD.count} CCG WINS] ARV avg $${(HD.avgARV||0).toLocaleString()} | Profit avg $${(HD.avgProfit||0).toLocaleString()} | Rehab avg $${(HD.avgRehab||0).toLocaleString()} | Ask/ARV ${((HD.avgAskToARV||0)*100).toFixed(0)}% | ${HD.avgBeds}bd/${HD.avgSqft}sf typical`);
+  }
+
+  const HN = urbanBrain.hardNoDNA;
+  if (HN && HN.count >= 3) {
+    const killers = Object.entries(HN.topRiskFlags||{}).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([f,n])=>`${f}(${n}x)`).join(', ');
+    lines.push(`[HARD NO DNA | ${HN.count} DEAD DEALS] Top killers: ${killers||'none yet'}`);
+  }
+
+  const RF = urbanBrain.riskFlagIntel || {};
+  const impactFlags = Object.entries(RF).filter(([,d])=>d.count>=2&&d.avgScoreWhenPresent<4).map(([f,d])=>`${f}→avg score ${d.avgScoreWhenPresent}(${d.count}x)`).slice(0,3);
+  if (impactFlags.length) lines.push(`[HIGH-IMPACT FLAGS] ${impactFlags.join(' | ')}`);
+
+  const FP = urbanBrain.financialPatterns || {};
+  if (FP.avgHoldingCosts) lines.push(`[CCG FINANCIAL ACTUALS] Hold costs avg $${(FP.avgHoldingCosts||0).toLocaleString()} | Sell costs avg $${(FP.avgSellingCosts||0).toLocaleString()} | HML costs avg $${(FP.avgHMLCosts||0).toLocaleString()}`);
+
+  return lines.length > 0 ? lines.join('\n') : 'No CCG data yet for this market.';
+}
+
 // ── BRAIN CONTEXT BUILDER ────────────────────────────────────────────────────
 function getBrainContext(wsEmail, county) {
   const ws = wsEmail ? (urbanBrain.wholesalers || {})[wsEmail.toLowerCase()] : null;
@@ -874,6 +948,7 @@ function getRelevantLessons(deal, maxLessons = 15) {
 }
 
 const brain = getBrainContext(deal.contact1Email, deal.county || deal.city);
+const megamindContext = getMegamindContext(deal, comps);  // All harvested data — hundreds of categories
 const relevantLessons = getRelevantLessons(deal);
   const sqft = parseFloat(deal.sqft) || 0;
   const askingPrice = parseFloat(deal.askingPrice) || 0;
@@ -1006,6 +1081,9 @@ CREDIBILITY NOTE: ${
 
 MARKET CONTEXT: ${brain.marketContext}
 LIFETIME: ${urbanBrain.totalUnderwritten || 0} deals | ${urbanBrain.hotDeals || 0} HOT | ${urbanBrain.passedDeals || 0} passed
+
+MEGAMIND INTELLIGENCE (harvested from ALL ${urbanBrain.totalUnderwritten||0} CCG underwrites):
+${megamindContext}
 
 DEAL:
 Address: ${deal.address}, ${deal.city}, ${deal.state} ${deal.zip} | County: ${deal.county}
@@ -1287,63 +1365,329 @@ OUTPUT: ONLY valid JSON, no markdown, no extra text.`;
   // Async persist verdict index to sheet — non-blocking
   persistVerdictIndexToSheet().catch(() => {});
 
-  // Learn from this underwrite
+  // ── MEGAMIND BRAIN HARVEST ───────────────────────────────────────────────────
+  // Every single data point from every underwrite goes here.
+  // Brain becomes smarter with every deal — hundreds of categories.
   try {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString();
+    const zip  = deal.zip  || '';
+    const county = (deal.county || deal.city || 'unknown').toLowerCase();
+    const email  = (deal.contact1Email || 'unknown').toLowerCase();
+    const arv    = underwrite.arv?.urbanARV            || 0;
+    const wARV   = underwrite.arv?.wholesalerARV       || 0;
+    const rehab  = underwrite.rehab?.urbanEstimate     || 0;
+    const ask    = parseFloat(deal.askingPrice)        || 0;
+    const sqft   = parseFloat(deal.sqft)               || 0;
+    const beds   = parseInt(deal.beds)                 || 0;
+    const baths  = parseFloat(deal.baths)              || 0;
+    const yr     = parseInt(deal.yearBuilt)            || 0;
+    const profit = underwrite.financials?.netProfitAtAsking || 0;
+    const mao    = underwrite.financials?.mao           || 0;
+    const scope  = underwrite.rehab?.scopeLevel         || 'UNKNOWN';
+    const ppsf   = (arv && sqft) ? Math.round(arv / sqft) : 0;
+    const verdict = underwrite.verdict || 'REVIEW';
+    const score   = underwrite.score   || 0;
+    const isHot   = ['HOT','BUY'].includes(verdict);
+    const isBad   = ['PASS','HARD NO'].includes(verdict);
+    const arvInflation = (wARV && arv && wARV > 0) ? ((wARV - arv) / arv * 100) : 0;
+
+    // ── 1. GLOBAL STATS ──────────────────────────────────────────────────────
     urbanBrain.totalUnderwritten = (urbanBrain.totalUnderwritten || 0) + 1;
-    if (underwrite.verdict === 'HOT') urbanBrain.hotDeals = (urbanBrain.hotDeals || 0) + 1;
-    if (['PASS','HARD NO'].includes(underwrite.verdict)) urbanBrain.passedDeals = (urbanBrain.passedDeals || 0) + 1;
+    if (isHot) urbanBrain.hotDeals  = (urbanBrain.hotDeals  || 0) + 1;
+    if (isBad) urbanBrain.passedDeals = (urbanBrain.passedDeals || 0) + 1;
 
-    const email = deal.contact1Email || 'unknown';
-    if (!urbanBrain.wholesalerStats[email]) {
-      urbanBrain.wholesalerStats[email] = { name: deal.contact1Name || '', company: deal.wholesalerCompany || '', deals: 0, avgARVInflation: 0, arvSamples: [], verdicts: {} };
+    // ── 2. ZIP INTELLIGENCE — every metric per zip ────────────────────────────
+    if (zip) {
+      const z = urbanBrain.zipIntel = urbanBrain.zipIntel || {};
+      if (!z[zip]) z[zip] = {
+        deals:0, hotDeals:0, hardNos:0, passes:0,
+        arvSamples:[], ppsfSamples:[], rehabSamples:[], profitSamples:[],
+        askSamples:[], domSamples:[], scoreSamples:[],
+        poolDeals:0, noPoolDeals:0, poolARVSamples:[], noPoolARVSamples:[],
+        scopeCounts:{}, riskFlagCounts:{}, verdictCounts:{},
+        wholesalerInflationSamples:[], avgARVInflation:0,
+        firstSeen: dateStr, lastSeen: dateStr
+      };
+      const zi = z[zip];
+      zi.deals++;
+      zi.lastSeen = dateStr;
+      zi.verdictCounts[verdict] = (zi.verdictCounts[verdict] || 0) + 1;
+      zi.scoreSamples.push(score); if (zi.scoreSamples.length > 50) zi.scoreSamples.shift();
+      if (isHot) zi.hotDeals++;
+      if (verdict === 'HARD NO') zi.hardNos++;
+      if (isBad) zi.passes++;
+      if (arv)    { zi.arvSamples.push(arv);    if (zi.arvSamples.length > 50) zi.arvSamples.shift(); }
+      if (ppsf)   { zi.ppsfSamples.push(ppsf);  if (zi.ppsfSamples.length > 50) zi.ppsfSamples.shift(); }
+      if (rehab)  { zi.rehabSamples.push(rehab); if (zi.rehabSamples.length > 50) zi.rehabSamples.shift(); }
+      if (profit) { zi.profitSamples.push(profit); if (zi.profitSamples.length > 50) zi.profitSamples.shift(); }
+      if (ask)    { zi.askSamples.push(ask);     if (zi.askSamples.length > 50) zi.askSamples.shift(); }
+      if (scope)  { zi.scopeCounts[scope] = (zi.scopeCounts[scope] || 0) + 1; }
+      if (arvInflation) {
+        zi.wholesalerInflationSamples.push(parseFloat(arvInflation.toFixed(1)));
+        if (zi.wholesalerInflationSamples.length > 30) zi.wholesalerInflationSamples.shift();
+        zi.avgARVInflation = parseFloat((zi.wholesalerInflationSamples.reduce((a,b)=>a+b,0)/zi.wholesalerInflationSamples.length).toFixed(1));
+      }
+      // Pool premium
+      const hasPool = (deal.pool || '').toLowerCase() === 'yes' || deal.pool === true;
+      if (hasPool && arv) {
+        zi.poolDeals++; zi.poolARVSamples.push(arv);
+        if (zi.poolARVSamples.length > 20) zi.poolARVSamples.shift();
+      } else if (arv) {
+        zi.noPoolDeals++; zi.noPoolARVSamples.push(arv);
+        if (zi.noPoolARVSamples.length > 20) zi.noPoolARVSamples.shift();
+      }
+      // Pool premium calculation
+      if (zi.poolARVSamples.length >= 3 && zi.noPoolARVSamples.length >= 3) {
+        const poolAvg = zi.poolARVSamples.reduce((a,b)=>a+b,0)/zi.poolARVSamples.length;
+        const noPoolAvg = zi.noPoolARVSamples.reduce((a,b)=>a+b,0)/zi.noPoolARVSamples.length;
+        zi.poolPremium = Math.round(poolAvg - noPoolAvg);
+      }
+      // Computed stats
+      if (zi.arvSamples.length)  zi.avgARV   = Math.round(zi.arvSamples.reduce((a,b)=>a+b,0)/zi.arvSamples.length);
+      if (zi.ppsfSamples.length) zi.avgPpsf  = Math.round(zi.ppsfSamples.reduce((a,b)=>a+b,0)/zi.ppsfSamples.length);
+      if (zi.rehabSamples.length) zi.avgRehab = Math.round(zi.rehabSamples.reduce((a,b)=>a+b,0)/zi.rehabSamples.length);
+      if (zi.profitSamples.length) zi.avgProfit = Math.round(zi.profitSamples.reduce((a,b)=>a+b,0)/zi.profitSamples.length);
+      if (zi.scoreSamples.length) zi.avgScore = parseFloat((zi.scoreSamples.reduce((a,b)=>a+b,0)/zi.scoreSamples.length).toFixed(1));
+      zi.hotRate  = zi.deals > 0 ? parseFloat((zi.hotDeals/zi.deals).toFixed(2)) : 0;
+      zi.hardNoRate = zi.deals > 0 ? parseFloat((zi.hardNos/zi.deals).toFixed(2)) : 0;
+      // Risk flags
+      (underwrite.riskFlags || []).forEach(f => {
+        zi.riskFlagCounts[f.flag] = (zi.riskFlagCounts[f.flag] || 0) + 1;
+      });
     }
-    const ws = urbanBrain.wholesalerStats[email];
+
+    // ── 3. COUNTY INTELLIGENCE ────────────────────────────────────────────────
+    if (county) {
+      const m = urbanBrain.marketNotes = urbanBrain.marketNotes || {};
+      if (!m[county]) m[county] = { deals:0, avgARV:0, arvSamples:[], hotDeals:0, notes:'' };
+      const mn = m[county];
+      mn.deals++;
+      if (isHot) mn.hotDeals = (mn.hotDeals || 0) + 1;
+      if (arv)  { mn.arvSamples.push(arv); if (mn.arvSamples.length > 50) mn.arvSamples.shift(); }
+      mn.avgARV   = mn.arvSamples.length ? Math.round(mn.arvSamples.reduce((a,b)=>a+b,0)/mn.arvSamples.length) : 0;
+      mn.hotRate  = mn.deals > 0 ? parseFloat((mn.hotDeals/mn.deals).toFixed(2)) : 0;
+    }
+
+    // ── 4. PROPERTY TYPE PATTERNS ─────────────────────────────────────────────
+    if (beds && sqft > 0) {
+      const sfBucket = sqft < 1000 ? 'sub1000' : sqft < 1200 ? '1000to1200' : sqft < 1500 ? '1200to1500' : sqft < 1800 ? '1500to1800' : sqft < 2200 ? '1800to2200' : '2200plus';
+      const typeKey  = `${beds}bd_${baths}ba_${sfBucket}`;
+      const PT = urbanBrain.propertyPatterns = urbanBrain.propertyPatterns || {};
+      if (!PT[typeKey]) PT[typeKey] = { count:0, arvSamples:[], ppsfSamples:[], rehabSamples:[], profitSamples:[], hotDeals:0, verdicts:{} };
+      const pt = PT[typeKey];
+      pt.count++;
+      pt.verdicts[verdict] = (pt.verdicts[verdict] || 0) + 1;
+      if (isHot) pt.hotDeals++;
+      if (arv)  { pt.arvSamples.push(arv);   if (pt.arvSamples.length > 30) pt.arvSamples.shift(); }
+      if (ppsf) { pt.ppsfSamples.push(ppsf); if (pt.ppsfSamples.length > 30) pt.ppsfSamples.shift(); }
+      if (rehab){ pt.rehabSamples.push(rehab);if (pt.rehabSamples.length > 30) pt.rehabSamples.shift(); }
+      if (profit){ pt.profitSamples.push(profit);if (pt.profitSamples.length > 30) pt.profitSamples.shift(); }
+      if (pt.arvSamples.length)   pt.avgARV   = Math.round(pt.arvSamples.reduce((a,b)=>a+b,0)/pt.arvSamples.length);
+      if (pt.ppsfSamples.length)  pt.avgPpsf  = Math.round(pt.ppsfSamples.reduce((a,b)=>a+b,0)/pt.ppsfSamples.length);
+      if (pt.rehabSamples.length) pt.avgRehab = Math.round(pt.rehabSamples.reduce((a,b)=>a+b,0)/pt.rehabSamples.length);
+      pt.hotRate = pt.count > 0 ? parseFloat((pt.hotDeals/pt.count).toFixed(2)) : 0;
+    }
+
+    // ── 5. YEAR BUILT COHORT DATA ─────────────────────────────────────────────
+    if (yr > 1900) {
+      const cohort = yr < 1960 ? 'pre1960' : yr < 1980 ? '1960to1979' : yr < 2000 ? '1980to1999' : '2000plus';
+      const YB = urbanBrain.yearBuiltCohorts = urbanBrain.yearBuiltCohorts || {};
+      if (!YB[cohort]) YB[cohort] = { count:0, ppsfSamples:[], rehabSamples:[], hardNoRate:0, hardNos:0 };
+      const yb = YB[cohort];
+      yb.count++;
+      if (verdict === 'HARD NO') yb.hardNos++;
+      if (ppsf)  { yb.ppsfSamples.push(ppsf);   if (yb.ppsfSamples.length > 30) yb.ppsfSamples.shift(); }
+      if (rehab) { yb.rehabSamples.push(rehab);  if (yb.rehabSamples.length > 30) yb.rehabSamples.shift(); }
+      if (yb.ppsfSamples.length)  yb.avgPpsf  = Math.round(yb.ppsfSamples.reduce((a,b)=>a+b,0)/yb.ppsfSamples.length);
+      if (yb.rehabSamples.length) yb.avgRehab = Math.round(yb.rehabSamples.reduce((a,b)=>a+b,0)/yb.rehabSamples.length);
+      yb.hardNoRate = yb.count > 0 ? parseFloat((yb.hardNos/yb.count).toFixed(2)) : 0;
+    }
+
+    // ── 6. REHAB SCOPE PATTERNS ───────────────────────────────────────────────
+    if (scope && scope !== 'UNKNOWN') {
+      const RS = urbanBrain.rehabPatterns = urbanBrain.rehabPatterns || {};
+      if (!RS[scope]) RS[scope] = { count:0, rehabSamples:[], profitSamples:[], hotDeals:0 };
+      const rs = RS[scope];
+      rs.count++;
+      if (isHot) rs.hotDeals++;
+      if (rehab)  { rs.rehabSamples.push(rehab);  if (rs.rehabSamples.length > 30) rs.rehabSamples.shift(); }
+      if (profit) { rs.profitSamples.push(profit); if (rs.profitSamples.length > 30) rs.profitSamples.shift(); }
+      if (rs.rehabSamples.length)  rs.avgRehab  = Math.round(rs.rehabSamples.reduce((a,b)=>a+b,0)/rs.rehabSamples.length);
+      if (rs.profitSamples.length) rs.avgProfit = Math.round(rs.profitSamples.reduce((a,b)=>a+b,0)/rs.profitSamples.length);
+      rs.hotRate = rs.count > 0 ? parseFloat((rs.hotDeals/rs.count).toFixed(2)) : 0;
+    }
+
+    // ── 7. REHAB LINE ITEM HARVEST ────────────────────────────────────────────
+    const lineItems = underwrite.rehab?.lineItems || {};
+    if (Object.keys(lineItems).length) {
+      const RL = urbanBrain.rehabLineItems = urbanBrain.rehabLineItems || {};
+      for (const [item, cost] of Object.entries(lineItems)) {
+        if (!cost || cost === 0) continue;
+        if (!RL[item]) RL[item] = { count:0, samples:[], avg:0 };
+        RL[item].count++;
+        RL[item].samples.push(parseInt(cost));
+        if (RL[item].samples.length > 50) RL[item].samples.shift();
+        RL[item].avg = Math.round(RL[item].samples.reduce((a,b)=>a+b,0)/RL[item].samples.length);
+      }
+    }
+
+    // ── 8. RISK FLAG INTELLIGENCE ─────────────────────────────────────────────
+    const RF = urbanBrain.riskFlagIntel = urbanBrain.riskFlagIntel || {};
+    (underwrite.riskFlags || []).forEach(f => {
+      const key = (f.flag || f.severity + '_flag').toUpperCase().replace(/\s+/g,'_');
+      if (!RF[key]) RF[key] = { count:0, severity: f.severity, avgScoreWhenPresent:0, scoreSamples:[], counties:[] };
+      RF[key].count++;
+      RF[key].scoreSamples.push(score);
+      if (RF[key].scoreSamples.length > 20) RF[key].scoreSamples.shift();
+      RF[key].avgScoreWhenPresent = parseFloat((RF[key].scoreSamples.reduce((a,b)=>a+b,0)/RF[key].scoreSamples.length).toFixed(1));
+      if (county && !RF[key].counties.includes(county)) RF[key].counties.push(county);
+    });
+
+    // ── 9. WHOLESALER INTELLIGENCE ────────────────────────────────────────────
+    const WS = urbanBrain.wholesalerStats = urbanBrain.wholesalerStats || {};
+    if (!WS[email]) WS[email] = {
+      name: deal.contact1Name || '', company: deal.wholesalerCompany || '',
+      deals:0, arvSamples:[], avgARVInflation:0,
+      verdicts:{}, hotDeals:0, byZip:{}, byCounty:{},
+      inflationWarning:false, verifiedInflator: false
+    };
+    const ws = WS[email];
     ws.deals++;
-    ws.verdicts[underwrite.verdict] = (ws.verdicts[underwrite.verdict] || 0) + 1;
-    if (underwrite.arv?.wholesalerARV && underwrite.arv?.urbanARV && underwrite.arv.wholesalerARV > 0) {
-      const inf = ((underwrite.arv.wholesalerARV - underwrite.arv.urbanARV) / underwrite.arv.urbanARV * 100).toFixed(1);
-      ws.arvSamples.push(parseFloat(inf));
+    ws.verdicts[verdict] = (ws.verdicts[verdict] || 0) + 1;
+    if (isHot) ws.hotDeals++;
+    // ARV inflation tracking
+    if (wARV && arv && wARV > 0) {
+      const inf = parseFloat(((wARV - arv) / arv * 100).toFixed(1));
+      ws.arvSamples.push(inf);
       if (ws.arvSamples.length > 20) ws.arvSamples.shift();
-      ws.avgARVInflation = (ws.arvSamples.reduce((a,b)=>a+b,0)/ws.arvSamples.length).toFixed(1);
+      ws.avgARVInflation = parseFloat((ws.arvSamples.reduce((a,b)=>a+b,0)/ws.arvSamples.length).toFixed(1));
+      // Per-zip inflation tracking
+      if (zip) {
+        ws.byZip = ws.byZip || {};
+        if (!ws.byZip[zip]) ws.byZip[zip] = { deals:0, inflationSamples:[], avgInflation:0 };
+        ws.byZip[zip].deals++;
+        ws.byZip[zip].inflationSamples.push(inf);
+        if (ws.byZip[zip].inflationSamples.length > 10) ws.byZip[zip].inflationSamples.shift();
+        ws.byZip[zip].avgInflation = parseFloat((ws.byZip[zip].inflationSamples.reduce((a,b)=>a+b,0)/ws.byZip[zip].inflationSamples.length).toFixed(1));
+      }
     }
-    // ARV inflation flag — requires manual verification by Caleb/Grant
-    // Auto-flags when: 3+ deals AND avg inflation > 15%
-    // Once manually verified (ws.verifiedInflator = true), flag is permanent
-    if (!ws.verifiedInflator && ws.arvSamples.length >= 3 && parseFloat(ws.avgARVInflation) > 15) {
+    // Auto-flag inflators (>15% avg over 3+ deals)
+    if (!ws.verifiedInflator && ws.arvSamples.length >= 3 && ws.avgARVInflation > 15) {
       ws.inflationWarning = true;
-      console.log(`⚠️ ARV INFLATION WARNING: ${ws.name || email} avg ${ws.avgARVInflation}% over ${ws.arvSamples.length} deals — NEEDS MANUAL VERIFICATION`);
-    } else if (!ws.verifiedInflator && parseFloat(ws.avgARVInflation) <= 15) {
-      ws.inflationWarning = false; // auto-clear if improves
+    } else if (!ws.verifiedInflator && ws.avgARVInflation <= 15) {
+      ws.inflationWarning = false;
     }
-    urbanBrain.wholesalerNotes[email] = `${ws.name} (${ws.company}) | ${ws.deals} deals | avg ARV inflation: ${ws.avgARVInflation}%${ws.verifiedInflator ? ' | ⚠️ VERIFIED INFLATOR' : ws.inflationWarning ? ' | ⚠️ INFLATION WARNING (unverified)' : ''} | verdicts: ${JSON.stringify(ws.verdicts)}`;
+    ws.hotRate = ws.deals > 0 ? parseFloat((ws.hotDeals/ws.deals).toFixed(2)) : 0;
+    // Build human-readable note
+    urbanBrain.wholesalerNotes = urbanBrain.wholesalerNotes || {};
+    urbanBrain.wholesalerNotes[email] = `${ws.name} (${ws.company}) | ${ws.deals} deals | avg ARV inflation: ${ws.avgARVInflation}%${ws.verifiedInflator ? ' | ⚠️ VERIFIED INFLATOR' : ws.inflationWarning ? ' | ⚠️ INFLATION WARNING' : ''} | verdicts: ${JSON.stringify(ws.verdicts)} | hot rate: ${(ws.hotRate*100).toFixed(0)}%`;
 
-    const lesson = `${underwrite.verdict} (${underwrite.score}/10) | ${deal.address}, ${deal.city} | ` +
-      `Ask $${parseInt(deal.askingPrice||0).toLocaleString()} | ARV $${(underwrite.arv?.urbanARV||0).toLocaleString()} | ` +
-      `Rehab $${(underwrite.rehab?.urbanEstimate||0).toLocaleString()} | Profit $${(underwrite.financials?.netProfitAtAsking||0).toLocaleString()} | ` +
-      `${underwrite.verdictReason}` +
-      (underwrite.recommendation ? ` | REC: ${underwrite.recommendation.slice(0,120)}` : '');
-    urbanBrain.lessons.push('[' + new Date().toLocaleDateString() + '] ' + lesson);
-    if (urbanBrain.lessons.length > 150) urbanBrain.lessons.shift();
+    // ── 10. HOT DEAL DNA ──────────────────────────────────────────────────────
+    if (isHot && arv && profit > 0) {
+      const HD = urbanBrain.hotDealDNA = urbanBrain.hotDealDNA || {
+        count:0, arvSamples:[], ppsfSamples:[], profitSamples:[], rehabSamples:[],
+        askToARVSamples:[], bedsSamples:[], sqftSamples:[], topZips:{}, topCounties:{}
+      };
+      HD.count++;
+      if (arv)    { HD.arvSamples.push(arv);    if (HD.arvSamples.length > 50) HD.arvSamples.shift(); }
+      if (ppsf)   { HD.ppsfSamples.push(ppsf);  if (HD.ppsfSamples.length > 50) HD.ppsfSamples.shift(); }
+      if (profit) { HD.profitSamples.push(profit); if (HD.profitSamples.length > 50) HD.profitSamples.shift(); }
+      if (rehab)  { HD.rehabSamples.push(rehab); if (HD.rehabSamples.length > 50) HD.rehabSamples.shift(); }
+      if (ask && arv) HD.askToARVSamples.push(parseFloat((ask/arv).toFixed(3)));
+      if (beds)   HD.bedsSamples.push(beds);
+      if (sqft)   HD.sqftSamples.push(sqft);
+      if (zip)    HD.topZips[zip] = (HD.topZips[zip] || 0) + 1;
+      if (county) HD.topCounties[county] = (HD.topCounties[county] || 0) + 1;
+      HD.avgARV         = HD.arvSamples.length ? Math.round(HD.arvSamples.reduce((a,b)=>a+b,0)/HD.arvSamples.length) : 0;
+      HD.avgPpsf        = HD.ppsfSamples.length ? Math.round(HD.ppsfSamples.reduce((a,b)=>a+b,0)/HD.ppsfSamples.length) : 0;
+      HD.avgProfit      = HD.profitSamples.length ? Math.round(HD.profitSamples.reduce((a,b)=>a+b,0)/HD.profitSamples.length) : 0;
+      HD.avgRehab       = HD.rehabSamples.length ? Math.round(HD.rehabSamples.reduce((a,b)=>a+b,0)/HD.rehabSamples.length) : 0;
+      HD.avgAskToARV    = HD.askToARVSamples.length ? parseFloat((HD.askToARVSamples.reduce((a,b)=>a+b,0)/HD.askToARVSamples.length).toFixed(3)) : 0;
+      HD.avgBeds        = HD.bedsSamples.length ? parseFloat((HD.bedsSamples.reduce((a,b)=>a+b,0)/HD.bedsSamples.length).toFixed(1)) : 0;
+      HD.avgSqft        = HD.sqftSamples.length ? Math.round(HD.sqftSamples.reduce((a,b)=>a+b,0)/HD.sqftSamples.length) : 0;
+    }
 
-    // Save brain immediately so lessons survive any crash or redeploy
+    // ── 11. HARD NO DNA (what kills deals) ───────────────────────────────────
+    if (verdict === 'HARD NO') {
+      const HN = urbanBrain.hardNoDNA = urbanBrain.hardNoDNA || { count:0, topRiskFlags:{}, topZips:{}, topCounties:{}, avgScore:0, scoreSamples:[] };
+      HN.count++;
+      HN.scoreSamples.push(score);
+      if (HN.scoreSamples.length > 30) HN.scoreSamples.shift();
+      HN.avgScore = parseFloat((HN.scoreSamples.reduce((a,b)=>a+b,0)/HN.scoreSamples.length).toFixed(1));
+      if (zip) HN.topZips[zip] = (HN.topZips[zip] || 0) + 1;
+      if (county) HN.topCounties[county] = (HN.topCounties[county] || 0) + 1;
+      (underwrite.riskFlags || []).filter(f => f.severity === 'HIGH').forEach(f => {
+        HN.topRiskFlags[f.flag] = (HN.topRiskFlags[f.flag] || 0) + 1;
+      });
+    }
+
+    // ── 12. COMP QUALITY TRACKING ─────────────────────────────────────────────
+    if (comps && comps.length > 0) {
+      const CQ = urbanBrain.compQuality = urbanBrain.compQuality || {};
+      const src = comps[0]?.source || 'unknown';
+      const srcKey = src.includes('HCPA') ? 'HCPA' : src.includes('REDFIN_LIVE') ? 'REDFIN_LIVE' : src.includes('REDFIN') ? 'REDFIN_DB' : 'other';
+      if (!CQ[srcKey]) CQ[srcKey] = { uses:0, avgCompsReturned:0, countSamples:[] };
+      CQ[srcKey].uses++;
+      CQ[srcKey].countSamples.push(comps.length);
+      if (CQ[srcKey].countSamples.length > 20) CQ[srcKey].countSamples.shift();
+      CQ[srcKey].avgCompsReturned = parseFloat((CQ[srcKey].countSamples.reduce((a,b)=>a+b,0)/CQ[srcKey].countSamples.length).toFixed(1));
+      if (zip) {
+        CQ[srcKey].zipsServed = CQ[srcKey].zipsServed || {};
+        CQ[srcKey].zipsServed[zip] = (CQ[srcKey].zipsServed[zip] || 0) + 1;
+      }
+    }
+
+    // ── 13. FINANCIAL PATTERN TRACKING ───────────────────────────────────────
+    const FP = urbanBrain.financialPatterns = urbanBrain.financialPatterns || {
+      holdingCostSamples:[], sellingCostSamples:[], hmlCostSamples:[], maoToAskGapSamples:[],
+      avgHoldingCosts:0, avgSellingCosts:0, avgHMLCosts:0
+    };
+    const hc = underwrite.financials?.holdingCosts?.total;
+    const sc = underwrite.financials?.sellingCosts?.total;
+    const hml = (underwrite.financials?.hardMoney?.totalInterest || 0) + (underwrite.financials?.hardMoney?.originationPoints || 0);
+    if (hc)  { FP.holdingCostSamples.push(hc);  if (FP.holdingCostSamples.length > 30) FP.holdingCostSamples.shift(); FP.avgHoldingCosts = Math.round(FP.holdingCostSamples.reduce((a,b)=>a+b,0)/FP.holdingCostSamples.length); }
+    if (sc)  { FP.sellingCostSamples.push(sc);  if (FP.sellingCostSamples.length > 30) FP.sellingCostSamples.shift(); FP.avgSellingCosts = Math.round(FP.sellingCostSamples.reduce((a,b)=>a+b,0)/FP.sellingCostSamples.length); }
+    if (hml) { FP.hmlCostSamples.push(hml);     if (FP.hmlCostSamples.length > 30) FP.hmlCostSamples.shift(); FP.avgHMLCosts = Math.round(FP.hmlCostSamples.reduce((a,b)=>a+b,0)/FP.hmlCostSamples.length); }
+    if (mao && ask) FP.maoToAskGapSamples.push(Math.round(ask - mao));
+
+    // ── 14. DETAILED LESSON (rich, multi-field) ────────────────────────────────
+    const lesson = [
+      `${verdict} (${score}/10)`,
+      `${deal.address}, ${deal.city} ${zip}`,
+      ask  ? `Ask $${ask.toLocaleString()}`  : null,
+      arv  ? `ARV $${arv.toLocaleString()}`  : null,
+      wARV ? `WholesalerARV $${wARV.toLocaleString()} (${arvInflation > 0 ? '+' : ''}${arvInflation.toFixed(0)}%)` : null,
+      rehab ? `Rehab $${rehab.toLocaleString()} (${scope})` : null,
+      profit ? `Profit $${profit.toLocaleString()}` : null,
+      ppsf ? `$${ppsf}/sf` : null,
+      sqft ? `${sqft}sf` : null,
+      beds ? `${beds}bd/${baths}ba` : null,
+      yr ? `Built ${yr}` : null,
+      comps?.length ? `${comps.length} comps (${comps[0]?.source || '?'})` : null,
+      underwrite.arv?.arvConfidence ? `ARV conf: ${underwrite.arv.arvConfidence}` : null,
+      underwrite.verdictReason ? underwrite.verdictReason.slice(0, 100) : null,
+    ].filter(Boolean).join(' | ');
+    
+    urbanBrain.lessons = urbanBrain.lessons || [];
+    urbanBrain.lessons.push(`[${dateStr}] ${lesson}`);
+    if (urbanBrain.lessons.length > 200) urbanBrain.lessons.shift();
+
+    // ── 15. META ──────────────────────────────────────────────────────────────
+    urbanBrain.lastUpdated = now.toISOString();
+    urbanBrain.totalCategories = Object.keys(urbanBrain).length;
+    const zipCount = Object.keys(urbanBrain.zipIntel || {}).length;
+    const wsCount  = Object.keys(urbanBrain.wholesalerStats || {}).length;
+    const ptCount  = Object.keys(urbanBrain.propertyPatterns || {}).length;
+    const rfCount  = Object.keys(urbanBrain.riskFlagIntel || {}).length;
+    const rlCount  = Object.keys(urbanBrain.rehabLineItems || {}).length;
+    console.log(`🧠 Megamind harvested: ${verdict}|${score}/10 | zips:${zipCount} wholesalers:${wsCount} propTypes:${ptCount} riskFlags:${rfCount} lineItems:${rlCount}`);
+
+    // Save immediately — full brain to disk, Postgres, and Sheets
     saveBrain().catch(() => {});
-
-    const ck = deal.county || deal.city;
-    if (!urbanBrain.marketNotes[ck]) urbanBrain.marketNotes[ck] = { deals: 0, avgARV: 0, arvSamples: [] };
-    const mn = urbanBrain.marketNotes[ck];
-    mn.deals++;
-    if (underwrite.arv?.urbanARV) {
-      mn.arvSamples.push(underwrite.arv.urbanARV);
-      if (mn.arvSamples.length > 50) mn.arvSamples.shift();
-      mn.avgARV = Math.round(mn.arvSamples.reduce((a,b)=>a+b,0)/mn.arvSamples.length);
-    }
-
-    urbanBrain.lastUpdated = new Date().toISOString();
-    saveJSON(BRAIN_FILE, urbanBrain);
-    saveBrainToSheet().catch(e => console.log('Sheet brain save:', e.message));
     logUnderwriteToSheet(underwrite).catch(e => console.log('UW log:', e.message));
-    console.log(`🧠 Learned: ${underwrite.verdict} | ${ws.deals} deals from this wholesaler`);
-  } catch(e) { console.log('Brain update error:', e.message); }
+
+  } catch(brainErr) { console.error('Megamind harvest error:', brainErr.message); }
 
   return underwrite;
 }
