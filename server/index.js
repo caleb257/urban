@@ -307,127 +307,93 @@ async function getDealsFromSheet() {
 // ── COMP ENGINE ───────────────────────────────────────────────────────────────
 
 // ── LIVE REDFIN COMP FETCHER ─────────────────────────────────────────────────
-// Scrapes Redfin's recently-sold pages — free, no API key, works for any US zip.
-// Parses HTML to extract address, price, sqft, beds, baths, sold date.
+// Scrapes Redfin's recently-sold pages using cheerio for DOM parsing.
+// Free, no API key, works for any US zip. ~$0 cost per comp lookup.
 // Replaces the expensive web_search fallback ($0.01/call → $0/call).
+const cheerio = require('cheerio');
+
 async function fetchLiveRedfin(zip, beds, sqft, baths) {
   if (!zip) return [];
   try {
-    // Fetch pages 1, 2, and 3 in parallel for ~120 comps
+    const HEADERS = {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,*/*;q=0.9',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Cache-Control': 'no-cache',
+    };
+
+    // Fetch pages 1-3 in parallel (~120 raw listings)
     const urls = [
       `https://www.redfin.com/zipcode/${zip}/recently-sold`,
       `https://www.redfin.com/zipcode/${zip}/recently-sold?page=2`,
       `https://www.redfin.com/zipcode/${zip}/recently-sold?page=3`,
     ];
-
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Referer': 'https://www.redfin.com/',
-      'Cache-Control': 'no-cache'
-    };
-
     const htmlPages = await Promise.all(
-      urls.map(url => fetch(url, { headers }).then(r => r.ok ? r.text() : '').catch(() => ''))
+      urls.map(u => fetch(u, { headers: HEADERS }).then(r => r.ok ? r.text() : '').catch(() => ''))
     );
 
     const tBeds  = parseInt(beds)    || 0;
     const tSqft  = parseInt(sqft)    || 0;
-    const tBaths = parseFloat(baths) || 0;
     const seen   = new Set();
     const comps  = [];
+    const MONTHS = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
 
     for (const html of htmlPages) {
-      if (!html) continue;
+      if (!html || html.length < 500) continue;
+      const $ = cheerio.load(html);
 
-      // --- Strategy 1: Extract from __NEXT_DATA__ JSON blob ---
-      const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/s);
-      if (nextDataMatch) {
-        try {
-          const nextData = JSON.parse(nextDataMatch[1]);
-          // Redfin embeds listing data at various paths in __NEXT_DATA__
-          const homes =
-            nextData?.props?.pageProps?.homes ||
-            nextData?.props?.pageProps?.listings ||
-            nextData?.props?.initialState?.homes ||
-            [];
-          for (const h of homes) {
-            const price = h.price?.value || h.listingPrice || 0;
-            const hSqft = h.sqFt?.value  || h.sqft       || 0;
-            const hBeds = h.beds         || 0;
-            const hBaths= h.baths        || 0;
-            const addr  = h.streetLine?.value || h.address || '';
-            const date  = (h.soldDate || h.lastSoldDate || '').slice(0, 10);
-            if (!price || price < 75000 || !addr || seen.has(addr + price)) continue;
-            seen.add(addr + price);
-            // Filters
-            if (tBeds  > 0 && Math.abs(hBeds  - tBeds)  > 1)              continue;
-            if (tSqft  > 0 && hSqft > 0) {
-              const r = hSqft / tSqft;
-              if (r < 0.65 || r > 1.45)                                   continue;
-            }
-            comps.push({
-              address:    addr,
-              city:       (h.cityState?.value || '').split(',')[0].trim() || '',
-              sqft:       Math.round(hSqft),
-              beds:       hBeds,
-              baths:      hBaths,
-              year_built: h.yearBuilt?.value || null,
-              sold_price: price,
-              sold_date:  date || null,
-              ppsf:       hSqft > 0 ? Math.round(price / hSqft) : null,
-              dom:        h.dom?.value || null,
-              pool:       null,
-              source:     'REDFIN_LIVE'
-            });
-          }
-          if (comps.length >= 5) continue; // got data from JSON, skip regex fallback
-        } catch {}
-      }
+      // Each listing card contains a link to the property + stats
+      $('a[href*="/home/"]').each((_, el) => {
+        const $el   = $(el);
+        const href  = $el.attr('href') || '';
+        // Only process links that look like property listings
+        if (!/\/[A-Z]{2}\/[^/]+\/[^/]+-\d{5}\/home\//.test(href)) return;
 
-      // --- Strategy 2: Regex extraction from anchor/card text ---
-      // Match listing links: /FL/City/Address/home/ID
-      const linkRe = /href="(\/[A-Z]{2}\/[^/]+\/([^/]+)\/home\/[0-9]+)"/g;
-      let m;
-      while ((m = linkRe.exec(html)) !== null) {
-        const href = m[1];
-        const addrSlug = m[2];
-        if (seen.has(addrSlug)) continue;
+        // Walk up to the card container (varies by page layout)
+        const $card = $el.closest('[class*="HomeCard"], [class*="homeCard"], [class*="listing"]')
+                   || $el.closest('li')
+                   || $el.parent();
+        const text  = $card.text().replace(/\s+/g, ' ').trim();
 
-        // Grab ~800 chars of surrounding HTML for this listing card
-        const cardStart = Math.max(0, m.index - 400);
-        const cardEnd   = Math.min(html.length, m.index + 400);
-        const card      = html.slice(cardStart, cardEnd).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        // Extract price
+        const priceM = text.match(/\$([\d,]+)/);
+        const price  = priceM ? parseInt(priceM[1].replace(/,/g,'')) : 0;
+        if (!price || price < 75000 || price > 5000000) return;
 
-        const priceM = card.match(/\$([\d,]+)/);
-        const price  = priceM ? parseInt(priceM[1].replace(/,/g, '')) : 0;
-        if (!price || price < 75000 || price > 5000000) continue;
+        // Dedup on address slug
+        const slugM = href.match(/\/[A-Z]{2}\/[^/]+\/([^/]+)\/home\//);
+        const slug  = slugM ? slugM[1] : href;
+        if (seen.has(slug + price)) return;
+        seen.add(slug + price);
 
-        const sfM    = card.match(/([\d,]+)\s*Sq\.?\s*Ft/i);
-        const hSqft  = sfM ? parseInt(sfM[1].replace(/,/g, '')) : 0;
-        const bdM    = card.match(/(\d+)\s*(?:Bd|Bed)/i);
-        const hBeds  = bdM ? parseInt(bdM[1]) : 0;
-        const baM    = card.match(/([\d.]+)\s*(?:Ba|Bath)/i);
-        const hBaths = baM ? parseFloat(baM[1]) : 0;
+        // Extract stats
+        const sfM    = text.match(/([\d,]+)\s*Sq\.?\s*Ft/i);
+        const hSqft  = sfM  ? parseInt(sfM[1].replace(/,/g,''))  : 0;
+        const bdM    = text.match(/(\d+)\s*(?:Bd|Bed)/i);
+        const hBeds  = bdM  ? parseInt(bdM[1])                   : 0;
+        const baM    = text.match(/([\d.]+)\s*(?:Ba|Bath)/i);
+        const hBaths = baM  ? parseFloat(baM[1])                 : 0;
 
-        const MONTHS = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
-        const dM = card.match(/SOLD\s+(\w+)\s+(\d+),?\s+(\d{4})/i);
+        // Sold date
+        const dM = text.match(/SOLD\s+(\w+)\s+(\d+),?\s+(\d{4})/i);
         let sold_date = null;
         if (dM) {
-          const mo = MONTHS[dM[1].toUpperCase().slice(0, 3)];
-          if (mo) sold_date = `${dM[3]}-${mo}-${dM[2].padStart(2, '0')}`;
+          const mo = MONTHS[dM[1].toLowerCase().slice(0,3)];
+          if (mo) sold_date = `${dM[3]}-${mo}-${dM[2].padStart(2,'0')}`;
         }
 
-        // Filters
-        if (tBeds > 0 && hBeds > 0 && Math.abs(hBeds - tBeds) > 1) continue;
+        // Filters: beds ±1, sqft ±30%
+        if (tBeds > 0 && hBeds > 0 && Math.abs(hBeds - tBeds) > 1)    return;
         if (tSqft > 0 && hSqft > 0) {
           const r = hSqft / tSqft;
-          if (r < 0.65 || r > 1.45)                                     continue;
+          if (r < 0.65 || r > 1.40) return;
         }
 
-        const addr = decodeURIComponent(addrSlug).replace(/-/g, ' ').replace(/\s+\d{5}$/, '').toUpperCase();
-        seen.add(addrSlug);
+        // Clean address from slug
+        const addr = decodeURIComponent(slug)
+          .replace(/-/g,' ')
+          .replace(/\s+\d{5}$/,'')
+          .toUpperCase();
 
         comps.push({
           address:    addr,
@@ -440,19 +406,83 @@ async function fetchLiveRedfin(zip, beds, sqft, baths) {
           sold_date:  sold_date,
           ppsf:       hSqft > 0 ? Math.round(price / hSqft) : null,
           dom:        null,
-          pool:       /\bpool\b/i.test(card) ? true : null,
+          pool:       /\bpool\b/i.test(text) ? true : null,
           source:     'REDFIN_LIVE'
         });
-      }
+      });
     }
 
-    // Sort newest first
-    comps.sort((a, b) => (b.sold_date || '').localeCompare(a.sold_date || ''));
+    // Sort newest first, return top 15
+    comps.sort((a,b) => (b.sold_date||'').localeCompare(a.sold_date||''));
     const result = comps.slice(0, 15);
-    console.log(`🔴 Redfin LIVE: ${result.length} comps for zip ${zip} (${beds}bd ~${sqft}sf)`);
+    console.log(`🔴 Redfin LIVE: ${result.length} comps for zip ${zip} (${beds||'?'}bd ~${sqft||'?'}sf)`);
     return result;
+
   } catch(e) {
     console.warn('Redfin live fetch error:', e.message);
+    return [];
+  }
+}
+
+
+// ── HILLSBOROUGH COUNTY GIS SOLD COMPS ───────────────────────────────────────
+// Free government REST API — never blocks server-side requests.
+// Returns real arm's-length sales from HCPA/Property Appraiser data.
+async function fetchHillsboroughGIS(zip, beds, sqft) {
+  try {
+    // HCPA ArcGIS Feature Service - public REST endpoint
+    const where = `ZIPCD = '${zip}' AND SALMO >= 1 AND SAYR >= 2024`;
+    const url = `https://gis.hcpafl.org/arcgis/rest/services/Parcels/MapServer/0/query?` +
+      `where=${encodeURIComponent(where)}&outFields=SITEADDR,BEDRM,SQFT,SALPRC,SAYR,SALMO,NBHC&` +
+      `orderByFields=SAYR+DESC,SALMO+DESC&resultRecordCount=100&f=json`;
+
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!r.ok) return [];
+    const data = await r.json();
+    const features = data?.features || [];
+
+    const tBeds = parseInt(beds) || 0;
+    const tSqft = parseInt(sqft) || 0;
+
+    return features
+      .filter(f => {
+        const a = f.attributes || {};
+        const price = parseInt(a.SALPRC) || 0;
+        const hSqft = parseInt(a.SQFT)   || 0;
+        const hBeds = parseInt(a.BEDRM)  || 0;
+        if (price < 75000 || price > 5000000) return false;
+        if (tBeds > 0 && hBeds > 0 && Math.abs(hBeds - tBeds) > 1) return false;
+        if (tSqft > 0 && hSqft > 0) {
+          const r = hSqft / tSqft;
+          if (r < 0.65 || r > 1.40) return false;
+        }
+        return true;
+      })
+      .map(f => {
+        const a = f.attributes || {};
+        const price = parseInt(a.SALPRC) || 0;
+        const hSqft = parseInt(a.SQFT)   || 0;
+        const yr    = parseInt(a.SAYR)   || 2025;
+        const mo    = String(parseInt(a.SALMO) || 1).padStart(2,'0');
+        return {
+          address:    (a.SITEADDR || '').toUpperCase(),
+          city:       'TAMPA',
+          sqft:       hSqft,
+          beds:       parseInt(a.BEDRM) || 0,
+          baths:      0,
+          year_built: null,
+          nbhc:       a.NBHC || null,
+          sold_price: price,
+          sold_date:  `${yr}-${mo}-01`,
+          ppsf:       hSqft > 0 ? Math.round(price / hSqft) : null,
+          dom:        null,
+          pool:       null,
+          source:     'HCPA_GIS_LIVE'
+        };
+      })
+      .slice(0, 15);
+  } catch(e) {
+    console.warn('HCPA GIS fetch error:', e.message);
     return [];
   }
 }
@@ -539,8 +569,15 @@ async function fetchComps(address, city, state, zip, deal = {}) {
     }
   }
 
-  // ── LIVE REDFIN FALLBACK (free, no API key, replaces expensive web_search) ──
-  const liveComps = await fetchLiveRedfin(zip, deal.beds, deal.sqft, deal.baths);
+  // ── LIVE COMP FALLBACK CHAIN (free, zero API cost) ─────────────────────────
+  // 1. Try Redfin HTML scraper (works unless Redfin blocks datacenter IP)
+  let liveComps = await fetchLiveRedfin(zip, deal.beds, deal.sqft, deal.baths);
+
+  // 2. If Redfin failed AND deal is in Hillsborough, try county GIS REST API
+  if (liveComps.length < 3 && zip && (deal.county || '').toLowerCase().includes('hillsborough')) {
+    console.log('🏛️ Redfin gave 0 comps — trying HCPA GIS REST API...');
+    liveComps = await fetchHillsboroughGIS(zip, deal.beds, deal.sqft);
+  }
 
   if (liveComps.length >= 3) {
     const prices = liveComps.map(c => c.sold_price).filter(p => p > 0).sort((a,b)=>a-b);
@@ -549,13 +586,14 @@ async function fetchComps(address, city, state, zip, deal = {}) {
     const p75 = prices[Math.floor(prices.length * 0.75)] || arvEst;
     const p90 = prices[Math.floor(prices.length * 0.90)] || arvEst;
     const avgPpsf = liveComps.filter(c=>c.ppsf).reduce((s,c)=>s+c.ppsf,0) / (liveComps.filter(c=>c.ppsf).length||1);
+    const src = liveComps[0]?.source || 'LIVE';
 
     liveComps._meta = {
       arvEstimate: arvEst,
       p60Estimate: p60,
       p75Estimate: p75,
       p90Estimate: p90,
-      source: 'REDFIN_LIVE',
+      source: src,
       zip: zip,
       count: liveComps.length,
       avg_ppsf: Math.round(avgPpsf) || null
@@ -564,12 +602,12 @@ async function fetchComps(address, city, state, zip, deal = {}) {
     return liveComps;
   }
 
-  // Last resort: return empty array with market context from DB
+  // Last resort: return empty comps with market aggregate from DB
   const emptyComps = [];
   const mktFallback = await DB.getMarketData(zip || city).catch(() => null);
   emptyComps._meta = {
     arvEstimate: mktFallback?.median_sold || null,
-    source: 'no_comps',
+    source: 'market_aggregate_only',
     zip: zip
   };
   return emptyComps;
