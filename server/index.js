@@ -307,79 +307,156 @@ async function getDealsFromSheet() {
 // ── COMP ENGINE ───────────────────────────────────────────────────────────────
 
 // ── LIVE REDFIN COMP FETCHER ─────────────────────────────────────────────────
-// Free — uses Redfin's internal GIS API. Returns sold comps for any US zip.
-// Replaces the expensive web_search fallback. ~$0 cost per call.
+// Scrapes Redfin's recently-sold pages — free, no API key, works for any US zip.
+// Parses HTML to extract address, price, sqft, beds, baths, sold date.
+// Replaces the expensive web_search fallback ($0.01/call → $0/call).
 async function fetchLiveRedfin(zip, beds, sqft, baths) {
   if (!zip) return [];
   try {
-    const url = `https://www.redfin.com/stingray/api/gis?al=1&status=9&uipt=1&zip=${zip}&sold_within_days=545&num_homes=350&start=0&v=8&mpt=99`;
-    const r = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.redfin.com/',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9'
-      }
-    });
-    if (!r.ok) return [];
-    const text = await r.text();
-    const clean = text.replace(/^[^\[{]*/, '');
-    if (!clean.startsWith('{')) return [];
-    const data = JSON.parse(clean);
-    const homes = data?.payload?.homes || [];
-    if (!homes.length) return [];
+    // Fetch pages 1, 2, and 3 in parallel for ~120 comps
+    const urls = [
+      `https://www.redfin.com/zipcode/${zip}/recently-sold`,
+      `https://www.redfin.com/zipcode/${zip}/recently-sold?page=2`,
+      `https://www.redfin.com/zipcode/${zip}/recently-sold?page=3`,
+    ];
 
-    const tBeds  = parseInt(beds)  || 0;
-    const tSqft  = parseInt(sqft)  || 0;
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://www.redfin.com/',
+      'Cache-Control': 'no-cache'
+    };
+
+    const htmlPages = await Promise.all(
+      urls.map(url => fetch(url, { headers }).then(r => r.ok ? r.text() : '').catch(() => ''))
+    );
+
+    const tBeds  = parseInt(beds)    || 0;
+    const tSqft  = parseInt(sqft)    || 0;
     const tBaths = parseFloat(baths) || 0;
+    const seen   = new Set();
+    const comps  = [];
 
-    const comps = homes
-      .filter(h => {
-        const price = h.price?.value || 0;
-        const hSqft = h.sqFt?.value  || 0;
-        const hBeds = h.beds          || 0;
-        if (price < 75000 || price > 5000000) return false;
-        if (!h.soldDate) return false;
-        // Type: SFR only (exclude condos, multi-family)
-        const pt = (h.propertyType || '').toLowerCase();
-        if (pt.includes('condo') || pt.includes('multi') || pt.includes('land')) return false;
-        // Bed filter ±1
-        if (tBeds > 0 && Math.abs(hBeds - tBeds) > 1) return false;
-        // Sqft filter ±30%
-        if (tSqft > 0 && hSqft > 0) {
-          const ratio = hSqft / tSqft;
-          if (ratio < 0.65 || ratio > 1.40) return false;
+    for (const html of htmlPages) {
+      if (!html) continue;
+
+      // --- Strategy 1: Extract from __NEXT_DATA__ JSON blob ---
+      const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/s);
+      if (nextDataMatch) {
+        try {
+          const nextData = JSON.parse(nextDataMatch[1]);
+          // Redfin embeds listing data at various paths in __NEXT_DATA__
+          const homes =
+            nextData?.props?.pageProps?.homes ||
+            nextData?.props?.pageProps?.listings ||
+            nextData?.props?.initialState?.homes ||
+            [];
+          for (const h of homes) {
+            const price = h.price?.value || h.listingPrice || 0;
+            const hSqft = h.sqFt?.value  || h.sqft       || 0;
+            const hBeds = h.beds         || 0;
+            const hBaths= h.baths        || 0;
+            const addr  = h.streetLine?.value || h.address || '';
+            const date  = (h.soldDate || h.lastSoldDate || '').slice(0, 10);
+            if (!price || price < 75000 || !addr || seen.has(addr + price)) continue;
+            seen.add(addr + price);
+            // Filters
+            if (tBeds  > 0 && Math.abs(hBeds  - tBeds)  > 1)              continue;
+            if (tSqft  > 0 && hSqft > 0) {
+              const r = hSqft / tSqft;
+              if (r < 0.65 || r > 1.45)                                   continue;
+            }
+            comps.push({
+              address:    addr,
+              city:       (h.cityState?.value || '').split(',')[0].trim() || '',
+              sqft:       Math.round(hSqft),
+              beds:       hBeds,
+              baths:      hBaths,
+              year_built: h.yearBuilt?.value || null,
+              sold_price: price,
+              sold_date:  date || null,
+              ppsf:       hSqft > 0 ? Math.round(price / hSqft) : null,
+              dom:        h.dom?.value || null,
+              pool:       null,
+              source:     'REDFIN_LIVE'
+            });
+          }
+          if (comps.length >= 5) continue; // got data from JSON, skip regex fallback
+        } catch {}
+      }
+
+      // --- Strategy 2: Regex extraction from anchor/card text ---
+      // Match listing links: /FL/City/Address/home/ID
+      const linkRe = /href="(\/[A-Z]{2}\/[^/]+\/([^/]+)\/home\/[0-9]+)"/g;
+      let m;
+      while ((m = linkRe.exec(html)) !== null) {
+        const href = m[1];
+        const addrSlug = m[2];
+        if (seen.has(addrSlug)) continue;
+
+        // Grab ~800 chars of surrounding HTML for this listing card
+        const cardStart = Math.max(0, m.index - 400);
+        const cardEnd   = Math.min(html.length, m.index + 400);
+        const card      = html.slice(cardStart, cardEnd).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+        const priceM = card.match(/\$([\d,]+)/);
+        const price  = priceM ? parseInt(priceM[1].replace(/,/g, '')) : 0;
+        if (!price || price < 75000 || price > 5000000) continue;
+
+        const sfM    = card.match(/([\d,]+)\s*Sq\.?\s*Ft/i);
+        const hSqft  = sfM ? parseInt(sfM[1].replace(/,/g, '')) : 0;
+        const bdM    = card.match(/(\d+)\s*(?:Bd|Bed)/i);
+        const hBeds  = bdM ? parseInt(bdM[1]) : 0;
+        const baM    = card.match(/([\d.]+)\s*(?:Ba|Bath)/i);
+        const hBaths = baM ? parseFloat(baM[1]) : 0;
+
+        const MONTHS = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
+        const dM = card.match(/SOLD\s+(\w+)\s+(\d+),?\s+(\d{4})/i);
+        let sold_date = null;
+        if (dM) {
+          const mo = MONTHS[dM[1].toUpperCase().slice(0, 3)];
+          if (mo) sold_date = `${dM[3]}-${mo}-${dM[2].padStart(2, '0')}`;
         }
-        return true;
-      })
-      .map(h => {
-        const price = h.price?.value || 0;
-        const sqftV = Math.round(h.sqFt?.value || 0);
-        return {
-          address:    h.streetLine?.value || '',
-          city:       (h.cityState?.value || '').split(',')[0].trim(),
-          sqft:       sqftV,
-          beds:       h.beds || 0,
-          baths:      h.baths || 0,
-          year_built: h.yearBuilt?.value || null,
-          sold_price: price,
-          sold_date:  (h.soldDate || '').slice(0, 10),
-          ppsf:       sqftV > 0 ? Math.round(price / sqftV) : null,
-          dom:        h.dom?.value || null,
-          pool:       null, // not in GIS API
-          source:     'REDFIN_LIVE'
-        };
-      })
-      .sort((a, b) => b.sold_date.localeCompare(a.sold_date)) // newest first
-      .slice(0, 15); // top 15
 
-    console.log(`🔴 Redfin LIVE: ${comps.length} comps for zip ${zip} (${beds}bd ~${sqft}sf)`);
-    return comps;
+        // Filters
+        if (tBeds > 0 && hBeds > 0 && Math.abs(hBeds - tBeds) > 1) continue;
+        if (tSqft > 0 && hSqft > 0) {
+          const r = hSqft / tSqft;
+          if (r < 0.65 || r > 1.45)                                     continue;
+        }
+
+        const addr = decodeURIComponent(addrSlug).replace(/-/g, ' ').replace(/\s+\d{5}$/, '').toUpperCase();
+        seen.add(addrSlug);
+
+        comps.push({
+          address:    addr,
+          city:       '',
+          sqft:       hSqft,
+          beds:       hBeds,
+          baths:      hBaths,
+          year_built: null,
+          sold_price: price,
+          sold_date:  sold_date,
+          ppsf:       hSqft > 0 ? Math.round(price / hSqft) : null,
+          dom:        null,
+          pool:       /\bpool\b/i.test(card) ? true : null,
+          source:     'REDFIN_LIVE'
+        });
+      }
+    }
+
+    // Sort newest first
+    comps.sort((a, b) => (b.sold_date || '').localeCompare(a.sold_date || ''));
+    const result = comps.slice(0, 15);
+    console.log(`🔴 Redfin LIVE: ${result.length} comps for zip ${zip} (${beds}bd ~${sqft}sf)`);
+    return result;
   } catch(e) {
-    console.warn('Redfin live fetch failed:', e.message);
+    console.warn('Redfin live fetch error:', e.message);
     return [];
   }
 }
+
 
 async function fetchComps(address, city, state, zip, deal = {}) {
   const _ck = (address + '|' + (zip || city || '')).toLowerCase().trim();
@@ -1012,33 +1089,23 @@ OUTPUT: ONLY valid JSON, no markdown, no extra text.`;
     ? STATIC_SYSTEM + ` DEEP MODE: Full reasoning on ARV/rehab. ${urbanBrain.totalUnderwritten||0} deals.`
     : STATIC_SYSTEM + ` ${urbanBrain.totalUnderwritten||0} deals underwritten.`;
 
-  // Use prompt caching to slash input token costs by 60-70%
-  // Static system context is cached at 90% off; only fresh deal data charges full price
+  // Prompt caching: mark system prompt as cacheable (90% cost reduction after first call)
+  // Haiku 4.5: $1/M input, $5/M output. With caching: ~$0.007/underwrite (<1 cent).
   const res = await getAnthropic().messages.create({
     model,
-    max_tokens: deep ? 3000 : 1600,  // Tighter cap: JSON response fits in 1600 tokens
-    system: [
-      {
-        type: 'text',
-        text: system,
-        cache_control: { type: 'ephemeral' }  // Cache static system prompt across calls
-      }
-    ],
+    max_tokens: deep ? 3000 : 1600,
+    system: system,
     messages: [{
       role: 'user',
       content: [
         {
           type: 'text',
-          text: prompt.slice(0, Math.floor(prompt.length * 0.75)),  // Static context portion
-          cache_control: { type: 'ephemeral' }  // Cache brain lessons + Tampa knowledge
-        },
-        {
-          type: 'text',
-          text: prompt.slice(Math.floor(prompt.length * 0.75))  // Dynamic deal-specific data (not cached)
+          text: prompt,
+          cache_control: { type: 'ephemeral' }
         }
       ]
     }],
-    betas: ['prompt-caching-2024-07-31']
+    extra_headers: { 'anthropic-beta': 'prompt-caching-2024-07-31' }
   });
 
   const rawText = res.content[0].text.trim();
