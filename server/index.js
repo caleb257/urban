@@ -1129,22 +1129,41 @@ OUTPUT: ONLY valid JSON, no markdown, no extra text.`;
 
   // Prompt caching: mark system prompt as cacheable (90% cost reduction after first call)
   // Haiku 4.5: $1/M input, $5/M output. With caching: ~$0.007/underwrite (<1 cent).
-  const res = await getAnthropic().messages.create({
-    model,
-    max_tokens: deep ? 3000 : 1600,
-    system: system,
-    messages: [{
-      role: 'user',
-      content: [
-        {
-          type: 'text',
-          text: prompt,
-          cache_control: { type: 'ephemeral' }
-        }
-      ]
-    }],
-    extra_headers: { 'anthropic-beta': 'prompt-caching-2024-07-31' }
-  });
+  // Call Anthropic with retry on 429 rate limit
+  let res;
+  let lastErr;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      res = await getAnthropic().messages.create({
+        model,
+        max_tokens: deep ? 3000 : 1600,
+        system: system,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: prompt,
+              cache_control: { type: 'ephemeral' }
+            }
+          ]
+        }],
+        extra_headers: { 'anthropic-beta': 'prompt-caching-2024-07-31' }
+      });
+      break; // success
+    } catch(apiErr) {
+      lastErr = apiErr;
+      const is429 = apiErr.status === 429 || (apiErr.message||'').includes('rate_limit') || (apiErr.message||'').includes('429');
+      if (is429 && attempt < 3) {
+        const wait = [10000, 25000, 60000][attempt]; // 10s, 25s, 60s
+        console.log(`⏳ Rate limited — waiting ${wait/1000}s (attempt ${attempt+1}/3)...`);
+        await new Promise(r => setTimeout(r, wait));
+      } else {
+        throw apiErr; // non-429 or exhausted retries
+      }
+    }
+  }
+  if (!res) throw lastErr;
 
   const rawText = res.content[0].text.trim();
   console.log(`Raw underwrite response length: ${rawText.length}, preview: ${rawText.slice(0,100)}`);
@@ -1769,7 +1788,7 @@ app.post('/api/auto-underwrite-batch', auth, async (req, res) => {
     send({ total: pending.length, status: `Found ${pending.length} pending deals` });
     if (!pending.length) { res.end(); return; }
 
-    const CONCURRENCY = 3;
+    const CONCURRENCY = 1;  // Serialize — prevents rate limit bursts
     let idx = 0;
     let completed = 0;
     const results = [];
@@ -1793,6 +1812,7 @@ app.post('/api/auto-underwrite-batch', auth, async (req, res) => {
           results.push({ address: deal.address, verdict: uw.verdict, score: uw.score });
           send({ done: true, address: deal.address, verdict: uw.verdict, score: uw.score });
           completed++;
+          await new Promise(r => setTimeout(r, 4000)); // 4s between underwrites — stays under Haiku TPM limit
           console.log(`⚡ Batch: ${deal.address} → ${uw.verdict} (${completed}/${pending.length})`);
         } catch(e) {
           send({ error: e.message, address: deal.address });
