@@ -548,10 +548,20 @@ async function doLoadDeals(skipAuto = false) {
     const r = await fetch('/api/deals', { headers: { 'x-urban-token': TOKEN } });
     deals = await r.json();
     renderList();
-    // Only auto-underwrite on first load of this session — not on every refresh
-    if (!skipAuto && !autoUnderwriteRunning && !sessionStorage.getItem('uw_done')) {
-      sessionStorage.setItem('uw_done', '1');
+    // Auto-underwrite any pending deals now (first load or forced)
+    if (!skipAuto && !autoUnderwriteRunning) {
       autoUnderwritePending();
+    }
+    // Poll for new pending deals every 3 minutes while page is open
+    if (!window._uwPollStarted) {
+      window._uwPollStarted = true;
+      setInterval(() => {
+        const pending = deals.filter(d => !d.underwriteStatus || d.underwriteStatus === 'PENDING' || d.underwriteStatus === '');
+        if (pending.length > 0 && !autoUnderwriteRunning) {
+          console.log(`[Poll] ${pending.length} pending deals — auto-underwriting`);
+          autoUnderwritePending();
+        }
+      }, 3 * 60 * 1000); // every 3 minutes
     }
   } catch(e) { console.log('Load deals error:', e.message); }
   $('ref-btn').textContent = '↻ Pull from Derek\'s Sheet';
@@ -599,12 +609,14 @@ async function autoUnderwritePending() {
           if (data.finished) {
             console.log(`🏁 Batch complete: ${data.total} deals processed`);
             autoUnderwriteRunning = false;
+            doLoadDeals(true); // Refresh deal list with new verdicts (skip auto-underwrite)
           }
           if (data.error && !data.address) { autoUnderwriteRunning = false; }
         } catch {}
       }
     }
   } catch(e) {
+    autoUnderwriteRunning = false;
     console.log('Batch underwrite error:', e.message);
     autoUnderwriteRunning = false;
   }
@@ -1011,9 +1023,16 @@ function renderUW(uw) {
   set('ov-ask', fmt(curDeal?.askingPrice));
   set('ov-profit', fmt(profit));
   cls('ov-profit', `mv ${profit >= 40000 ? 'g' : profit >= 0 ? 'y' : 'r'}`);
-  set('ov-warv', fmt(uw.arv?.wholesalerARV));
+  const wsArvVal = uw.arv?.wholesalerARV;
+  set('ov-warv', wsArvVal && wsArvVal > 0 ? fmt(wsArvVal) : 'Not provided');
   const diff = (uw.arv?.wholesalerARV||0) - (uw.arv?.urbanARV||0);
-  set('ov-arvdiff', diff > 1000 ? `Inflated by ${fmt(diff)}` : diff < -1000 ? `Undervalued by ${fmt(Math.abs(diff))}` : 'Matches Urban');
+  const wsArv = uw.arv?.wholesalerARV || 0;
+  const arvDiffText = !wsArv
+    ? 'No wholesaler ARV provided'
+    : diff > 10000 ? `Wholesaler inflated by ${fmt(diff)}`
+    : diff < -10000 ? `Wholesaler undervalued — upside ${fmt(Math.abs(diff))}`
+    : 'Matches Urban';
+  set('ov-arvdiff', arvDiffText);
   cls('ov-arvdiff', `mv ${diff > 10000 ? 'r' : diff < -10000 ? 'g' : ''}`);
   const cred = uw.wholesalerCredibility?.assessment || 'UNKNOWN';
   set('ov-cred', cred);
@@ -1048,11 +1067,12 @@ function renderUW(uw) {
   // ARV TAB
   set('arv-ws', fmt(uw.arv?.wholesalerARV));
   set('arv-ur', fmt(uw.arv?.urbanARV));
-  set('arv-dn', diff > 1000
-    ? `Wholesaler is ${fmt(diff)} (${((diff/(uw.arv?.urbanARV||1))*100).toFixed(1)}%) ABOVE Urban's TRUE ARV`
-    : diff < -1000 ? `Wholesaler is ${fmt(Math.abs(diff))} BELOW Urban's ARV — possible upside`
-    : 'Urban agrees with wholesaler ARV');
-  const ac = uw.arv?.arvConfidence || 'MEDIUM';
+  const arvDnText = !wsArv
+    ? 'Wholesaler provided no ARV — Urban estimated independently from comps'
+    : diff > 1000 ? `Wholesaler is ${fmt(diff)} (${((diff/(uw.arv?.urbanARV||1))*100).toFixed(1)}%) ABOVE Urban TRUE ARV — INFLATED`
+    : diff < -1000 ? `Wholesaler is ${fmt(Math.abs(diff))} BELOW Urban's ARV — potential upside`
+    : `Wholesaler ARV matches Urban (${fmt(diff)} variance)`;
+  set('arv-dn', arvDnText);
   set('arv-conf', ac);
   cls('arv-conf', `conf conf-${ac}`);
   set('arv-notes', uw.arv?.arvNotes || '');
