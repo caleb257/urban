@@ -17,7 +17,17 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, '../public')));
+// Serve static files with no-cache for HTML to ensure fresh deploys always take effect
+app.use(express.static(path.join(__dirname, '../public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    }
+  }
+}));
+// Version endpoint for deploy verification
+app.get('/api/version', (req, res) => res.json({ commit: '7d7196a', built: new Date('2026-06-11T18:24:40.278275').toISOString(), ok: true }));
 
 // Lazy init Anthropic client
 let _anthropic = null;
