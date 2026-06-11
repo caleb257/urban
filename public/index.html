@@ -26,7 +26,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 #sidebar-header{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
 #sidebar-header h1{font-family:var(--display);font-size:38px;color:var(--accent);letter-spacing:4px}
 #sidebar-header p{color:var(--muted);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
-#stats-bar{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:12px 18px;border-bottom:1px solid var(--border)}
+#stats-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:12px 18px;border-bottom:1px solid var(--border)}
 .stat-chip{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 10px;text-align:center}
 .stat-chip .val{font-family:var(--display);font-size:22px;color:var(--accent)}
 .stat-chip .lbl{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
@@ -229,6 +229,8 @@ a{color:var(--accent)}
       <div class="stat-chip"><div class="val" id="st-avg">—</div><div class="lbl">Avg Score</div></div>
       <div class="stat-chip"><div class="val" id="st-hot">—</div><div class="lbl">🔥 Hot</div></div>
       <div class="stat-chip"><div class="val" id="st-lessons">—</div><div class="lbl">Lessons</div></div>
+      <div class="stat-chip"><div class="val" id="st-profit">—</div><div class="lbl">Avg Profit</div></div>
+      <div class="stat-chip"><div class="val" id="st-pct">—</div><div class="lbl">HOT %</div></div>
     </div>
     <div id="search-wrap">
       <input type="text" id="search-input" placeholder="Search address, city, wholesaler...">
@@ -350,6 +352,19 @@ a{color:var(--accent)}
             <table class="comps-t"><thead><tr><th>Address</th><th>Beds/Baths</th><th>Sqft</th><th>Yr</th><th>Sale Price</th><th>$/sf</th><th>Date</th><th>Src</th></tr></thead>
             <tbody id="comps-body"></tbody></table>
           </div>
+          <!-- EXIT ANALYSIS (populated by renderUW when exitAnalysis data exists) -->
+          <div id="exit-analysis" style="display:none" class="card">
+            <div class="ct">Exit Analysis</div>
+            <div class="grid g3">
+              <div class="m"><div class="ml">Estimated DOM</div><div class="mv" id="ex-dom">—</div></div>
+              <div class="m"><div class="ml">List-to-Sale Ratio</div><div class="mv" id="ex-lsr">—</div></div>
+              <div class="m"><div class="ml">Realistic Sale Price</div><div class="mv" id="ex-rsp">—</div></div>
+            </div>
+            <div class="grid g2" style="margin-top:10px">
+              <div class="m"><div class="ml">Adjusted Profit</div><div class="mv fv" id="ex-adj">—</div></div>
+              <div class="m"><div class="ml">Target Buyer</div><div class="mv" id="ex-buyer">—</div></div>
+            </div>
+          </div>
           <div class="card">
             <div class="ct">Override ARV</div>
             <div class="ov-row"><span class="ov-lbl">New ARV: $</span><input type="number" class="ov-input" id="ov-arv-in" placeholder="285000"><button class="ov-btn" id="btn-ov-arv">Apply & Recalc</button></div>
@@ -450,7 +465,13 @@ a{color:var(--accent)}
 
         <!-- FLAGS -->
         <div class="tc" id="t-flags">
-          <div class="flags" id="flags-list"></div>
+          <div class="flags" id="flags-list">
+            <div class="flags-empty" id="flags-empty" style="display:none;padding:40px;text-align:center;color:var(--muted);font-size:13px">
+              <div style="font-size:24px;margin-bottom:8px">🔍</div>
+              <div>No risk flags analyzed yet.</div>
+              <div style="margin-top:4px;font-size:11px">Hit ⚡ Underwrite for full risk analysis.</div>
+            </div>
+          </div>
         </div>
 
         <!-- PROPERTY — ALL DATA FROM SHEET -->
@@ -819,7 +840,8 @@ async function selectDeal(d) {
   show('main-empty', false);
   show('dv', true);
   $('dv-addr').textContent = d.address || 'Unknown';
-  $('dv-city').textContent = `${d.city}, ${d.state} ${d.zip} · ${d.county} County · ${d.propertyType}`;
+  const countyPart = d.county ? (d.county.toLowerCase().includes('county') ? d.county : d.county + ' County') : '';
+  $('dv-city').textContent = [`${d.city||''}, ${d.state||''} ${d.zip||''}`.trim().replace(/^,\s*/, ''), countyPart, d.propertyType || 'SFR'].filter(Boolean).join(' · ');
 
   // Always fill property tab with sheet data
   fillPropTab(d);
@@ -852,6 +874,7 @@ function showPending(partialUW) {
     $('dv-v').className = 'verdict-big v' + partialUW.verdict.replace(' ','');
     $('dv-sc').textContent = partialUW.score || '?';
     $('dv-vr').textContent = partialUW.verdictReason || 'Underwrite data restored from sheet';
+    partialUW._isPartial = true;
     show('pending-card', false);
     // Show partial content with what we have
     show('uw-content', true);
@@ -873,7 +896,7 @@ function showPending(partialUW) {
       const notice = document.createElement('div');
       notice.id = 'stale-uw-notice';
       notice.style.cssText = 'background:rgba(200,169,110,.08);border:1px solid rgba(200,169,110,.2);border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted)';
-      notice.textContent = 'Full analysis restored from sheet. Hit Re-Underwrite for fresh comps and complete data.';
+      notice.innerHTML = '📋 Verdict loaded from history. Hit <strong style="color:var(--gold)">⚡ Underwrite</strong> for fresh live comps, flags, and full analysis.';
       const uwContent = $('uw-content');
       if (uwContent?.firstChild) uwContent.insertBefore(notice, uwContent.firstChild);
     }
@@ -1075,7 +1098,7 @@ function renderUW(uw) {
   set('arv-dn', arvDnText);
   set('arv-conf', ac);
   cls('arv-conf', `conf conf-${ac}`);
-  set('arv-notes', uw.arv?.arvNotes || '');
+  set('arv-notes', uw.arv?.arvNotes || (uw._isPartial ? '⚡ Hit Underwrite for full ARV analysis with live comps and detailed reasoning.' : ''));
   const compsTb = $('comps-body');
   if (compsTb) compsTb.innerHTML = '';
   if (compsTb) {
@@ -1099,7 +1122,7 @@ function renderUW(uw) {
         <td title="${c.source||''}">${src}</td>`;
       compsTb.appendChild(tr);
     });
-    if (!uw.comps?.length) compsTb.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No comps — Urban estimated from market knowledge</td></tr>';
+    if (!uw.comps?.length) compsTb.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:16px">No comps — Urban estimated from market knowledge</td></tr>';
   }
 
   // REHAB TAB
@@ -1112,6 +1135,9 @@ function renderUW(uw) {
   const items = uw.rehab?.lineItems || {};
   let tot = 0;
   if (liEl) {
+    if (!Object.keys(items).length) {
+      liEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px 0">⚡ Hit Underwrite for full rehab line items.</div>';
+    }
     Object.entries(items).forEach(([k, vv]) => {
       if (!vv) return; tot += vv;
       liEl.innerHTML += `<div class="rr"><span class="rn">${k.replace(/_/g,' ')}</span><span class="rv">${fmt(vv)}</span></div>`;
@@ -1178,9 +1204,10 @@ function renderUW(uw) {
   // FLAGS TAB
   const flagEl = $('flags-list');
   flagEl.innerHTML = '';
-  (uw.riskFlags||[])
-    .sort((a,b) => ['HIGH','MEDIUM','LOW'].indexOf(a.severity)-['HIGH','MEDIUM','LOW'].indexOf(b.severity))
-    .forEach(f => {
+  const flagsEmpty = $('flags-empty');
+  const sortedFlags = (uw.riskFlags||[]).sort((a,b) => ['HIGH','MEDIUM','LOW'].indexOf(a.severity)-['HIGH','MEDIUM','LOW'].indexOf(b.severity));
+  if (flagsEmpty) flagsEmpty.style.display = sortedFlags.length === 0 ? '' : 'none';
+  sortedFlags.forEach(f => {
       flagEl.innerHTML += `<div class="flag flag-${f.severity}"><div class="fn">⚑ ${f.flag} · ${f.severity}</div><div class="fd">${f.detail}</div></div>`;
     });
   if (!uw.riskFlags?.length) flagEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No risk flags identified</div>';
