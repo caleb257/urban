@@ -18,17 +18,44 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '50mb' }));
-// Serve static files with no-cache for HTML to ensure fresh deploys always take effect
+// Serve static assets (non-HTML) with caching allowed
 app.use(express.static(path.join(__dirname, '../public'), {
+  index: false,  // Disable automatic index.html serving — we handle it explicitly
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
     }
   }
 }));
-// Version endpoint for deploy verification
-app.get('/api/version', (req, res) => res.json({ commit: '7d7196a', built: new Date('2026-06-11T18:24:40.278275').toISOString(), ok: true }));
+
+// Explicit HTML route — reads from disk on EVERY request, defeats all CDN caching
+const fs = require('fs');
+const INDEX_PATH = path.join(__dirname, '../public/index.html');
+app.get('/', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  res.setHeader('Vary', '*');
+  try {
+    const html = fs.readFileSync(INDEX_PATH, 'utf8');
+    res.type('html').send(html);
+  } catch(e) {
+    res.status(500).send('index.html not found');
+  }
+});
+
+// Version endpoint — shows deployed commit for verification
+const DEPLOY_VERSION = 'b6fb656';
+app.get('/api/version', auth, (req, res) => res.json({ 
+  commit: DEPLOY_VERSION, 
+  built: new Date().toISOString(), 
+  htmlSize: (() => { try { return fs.statSync(INDEX_PATH).size; } catch { return 0; } })(),
+  ok: true 
+}));
 
 // Lazy init Anthropic client
 let _anthropic = null;

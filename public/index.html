@@ -578,7 +578,12 @@ async function doLoadDeals(skipAuto = false) {
       window._uwPollStarted = true;
       window._consecutiveRateLimits = 0;
     window._uwPollInterval = setInterval(() => {
-        const pending = deals.filter(d => !d.underwriteStatus || d.underwriteStatus === 'PENDING' || d.underwriteStatus === '');
+        const now = Date.now();
+        const pending = deals.filter(d => {
+          if (d.underwriteStatus && d.underwriteStatus !== 'PENDING' && d.underwriteStatus !== '') return false;
+          if (d._rateLimited && (now - d._rateLimited) < 30 * 60 * 1000) return false; // Skip for 30 min after 429
+          return true;
+        });
         if (pending.length > 0 && !autoUnderwriteRunning) {
           if (window._consecutiveRateLimits >= 3) {
             console.log('[Poll] Repeated rate limits — pausing auto-underwrite for 30 min');
@@ -639,7 +644,16 @@ async function autoUnderwritePending() {
             autoUnderwriteRunning = false;
             doLoadDeals(true); // Refresh deal list with new verdicts (skip auto-underwrite)
           }
-          if (data.error && !data.address) { autoUnderwriteRunning = false; }
+          if (data.error) {
+            const isRL = (data.error||'').includes('rate_limit') || (data.error||'').includes('429');
+            if (isRL && data.address) {
+              // Mark deal as temporarily rate-limited so batch doesn't keep retrying
+              const dIdx = deals.findIndex(d => d.address === data.address);
+              if (dIdx >= 0) deals[dIdx]._rateLimited = Date.now();
+              window._consecutiveRateLimits = (window._consecutiveRateLimits || 0) + 1;
+            }
+            if (!data.address) autoUnderwriteRunning = false;
+          }
         } catch {}
       }
     }
