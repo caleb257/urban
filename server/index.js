@@ -48,6 +48,9 @@ app.get('/', (req, res) => {
 });
 
 // Version endpoint — shows deployed commit for verification
+
+// Public health endpoint — Railway healthcheck uses this (no auth required)
+app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now(), v: 'd6ef012' }));
 const DEPLOY_VERSION = 'b6fb656';
 app.get('/api/version', auth, (req, res) => res.json({ 
   commit: DEPLOY_VERSION, 
