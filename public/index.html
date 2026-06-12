@@ -327,7 +327,7 @@ a{color:var(--accent)}
             </div>
             <div class="card">
               <div class="ct">Criteria Check</div>
-              <div class="m"><div class="ml">$40k Min Profit</div><div class="mv" id="cc-profit"></div></div>
+              <div class="m"><div class="ml">Profit Min (10%)</div><div class="mv" id="cc-profit"></div></div>
               <div class="m"><div class="ml">In Market</div><div class="mv" id="cc-mkt"></div></div>
               <div class="m"><div class="ml">Flood Zone</div><div class="mv" id="cc-flood"></div></div>
               <div class="m"><div class="ml">High Risk Flags</div><div class="mv" id="cc-risk"></div></div>
@@ -1107,7 +1107,7 @@ function renderUW(uw) {
   set('ov-trend', uw.marketAnalysis?.trend || '—');
   set('ov-hold', uw.financials?.holdMonths ? `${uw.financials.holdMonths} months` : '—');
   const profMinPct = ask2 >= 1000000 ? '$100K' : Math.max(Math.round((ask2||0)*0.1/1000)*1000, 20000).toLocaleString();
-  set('cc-profit', uw.financials?.meetsMinimumProfit ? '✅ Yes (min 
+  set('cc-profit', uw.financials?.meetsMinimumProfit ? '✅ Yes (≥10%)' : '❌ No (need 10%)');
   cls('cc-profit', `mv ${uw.financials?.meetsMinimumProfit ? 'g' : 'r'}`);
   const inMkt = ['pasco','hillsborough','polk','pinellas','hernando'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
   set('cc-mkt', inMkt ? '✅ In Market' : '⚠️ Extended');
@@ -1595,7 +1595,6 @@ window.addEventListener('message', e => {
 </script>
 </body>
 </html>
-+profMinPct+')' : '❌ No (need 
   cls('cc-profit', `mv ${uw.financials?.meetsMinimumProfit ? 'g' : 'r'}`);
   const inMkt = ['pasco','hillsborough','polk','pinellas','hernando'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
   set('cc-mkt', inMkt ? '✅ In Market' : '⚠️ Extended');
@@ -2083,7 +2082,6 @@ window.addEventListener('message', e => {
 </script>
 </body>
 </html>
-+profMinPct+')');
   cls('cc-profit', `mv ${uw.financials?.meetsMinimumProfit ? 'g' : 'r'}`);
   const inMkt = ['pasco','hillsborough','polk','pinellas','hernando'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
   set('cc-mkt', inMkt ? '✅ In Market' : '⚠️ Extended');
