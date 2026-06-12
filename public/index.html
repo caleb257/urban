@@ -28,7 +28,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 #sidebar-header p{color:var(--muted);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
 #stats-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:12px 18px;border-bottom:1px solid var(--border)}
 .stat-chip{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 10px;text-align:center}
-.stat-chip .val{font-family:var(--display);font-size:22px;color:var(--accent)}
+.stat-chip .val{font-family:var(--display);font-size:19px;color:var(--accent)}
 .stat-chip .lbl{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
 #search-wrap{padding:10px 18px;border-bottom:1px solid var(--border)}
 #search-input{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:4px;font-family:var(--sans);font-size:13px;outline:none}
@@ -577,22 +577,26 @@ async function doLoadDeals(skipAuto = false) {
     if (!window._uwPollStarted) {
       window._uwPollStarted = true;
       window._consecutiveRateLimits = 0;
-    window._uwPollInterval = setInterval(() => {
+      window._rateLimitPauseUntil = 0;
+      window._uwPollInterval = setInterval(() => {
         const now = Date.now();
+        // If we're in a rate limit pause, wait it out
+        if (window._rateLimitPauseUntil > now) {
+          const minsLeft = Math.ceil((window._rateLimitPauseUntil - now) / 60000);
+          console.log(`[Poll] Rate limit pause — ${minsLeft} min remaining`);
+          return;
+        }
         const pending = deals.filter(d => {
           if (d.underwriteStatus && d.underwriteStatus !== 'PENDING' && d.underwriteStatus !== '') return false;
-          if (d._rateLimited && (now - d._rateLimited) < 30 * 60 * 1000) return false; // Skip for 30 min after 429
+          if (d._rateLimited && (now - d._rateLimited) < 45 * 60 * 1000) return false; // 45-min cooldown per deal
           return true;
         });
         if (pending.length > 0 && !autoUnderwriteRunning) {
-          if (window._consecutiveRateLimits >= 3) {
-            console.log('[Poll] Repeated rate limits — pausing auto-underwrite for 30 min');
-            return; // Stop hammering the API
-          }
-          console.log(`[Poll] ${pending.length} pending deals — auto-underwriting`);
+          console.log(`[Poll] ${pending.length} pending — auto-underwriting`);
           autoUnderwritePending();
         } else if (pending.length === 0) {
-          window._consecutiveRateLimits = 0; // Reset on success
+          window._consecutiveRateLimits = 0;
+          window._rateLimitPauseUntil = 0;
         }
       }, 3 * 60 * 1000); // every 3 minutes
     }
@@ -1022,10 +1026,15 @@ async function doUnderwrite(force, deep) {
             const isRL = data.error.includes('rate_limit') || data.error.includes('429');
             if (isRL) {
               window._consecutiveRateLimits = (window._consecutiveRateLimits || 0) + 1;
-              const msg = '⏳ Rate limited — Urban will retry when the API limit clears. Your deals are safe.';
-              $('load-msg').textContent = msg;
-              show('loading-state', true);
-              setTimeout(() => show('loading-state', false), 8000);
+              // Pause retries for 60 minutes after a rate limit hit
+              window._rateLimitPauseUntil = Date.now() + 60 * 60 * 1000;
+              const msg = '⏳ Anthropic API rate limited — Urban will auto-retry in ~1 hour. Your deals are safe and will underwrite automatically.';
+              if ($('load-msg')) $('load-msg').textContent = msg;
+              show('loading-state', false); // Hide loading, show pending state
+              show('pending-card', true);
+              $('pending-card').querySelector && ($('pending-card').querySelector('h3') || {}).textContent !== undefined &&
+                ($('pending-card').innerHTML = '<h3>⏳ RATE LIMITED</h3><p>Anthropic API limit hit. Urban will auto-retry in ~1 hour.</p><button class="btn primary" id="btn-uw-now">⚡ Try Now</button>');
+              document.getElementById('btn-uw-now')?.addEventListener('click', () => { window._rateLimitPauseUntil = 0; autoUnderwritePending(); });
             } else {
               show('loading-state', false);
               $('load-msg').textContent = '⚠️ ' + data.error + ' — try Re-run';

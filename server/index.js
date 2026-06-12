@@ -558,8 +558,9 @@ async function fetchComps(address, city, state, zip, deal = {}) {
     const realComps = await DB.getSoldComps(zipKey, compOpts).catch(() => []);
       if (realComps.length >= 3) {
         console.log('🏠 Real sold comps hit for zip', zipKey, '—', realComps.length, 'actual sales');
-        const prices = realComps.map(c => c.sold_price).sort((a,b)=>a-b);
-        const arvEst = prices[Math.floor(prices.length / 2)];
+        const prices = realComps.map(c => c.sold_price).filter(p => p > 0).sort((a,b)=>a-b);
+        const pct = (arr, p) => arr[Math.min(arr.length-1, Math.floor(arr.length * p))] || arr[Math.floor(arr.length/2)];
+        const arvEst = pct(prices, 0.50); // Median = base ARV (as-is)
         const avgPpsf = realComps.filter(c=>c.ppsf).reduce((s,c)=>s+parseFloat(c.ppsf),0) / realComps.filter(c=>c.ppsf).length;
         const formatted = realComps.map(c => ({
           address: c.address, city: c.city, sqft: c.sqft, beds: c.beds, baths: c.baths,
@@ -569,9 +570,16 @@ async function fetchComps(address, city, state, zip, deal = {}) {
         }));
         // Compute P75 = renovated/top-of-market ARV standard
         const sortedPrices = [...prices];
-        const p60 = sortedPrices[Math.floor(sortedPrices.length * 0.60)] || arvEst;
-        const p75 = sortedPrices[Math.floor(sortedPrices.length * 0.75)] || arvEst;
-        const p90 = sortedPrices[Math.floor(sortedPrices.length * 0.90)] || arvEst;
+        // Improved percentile with linear interpolation for more accurate estimates
+        const pctile = (arr, p) => {
+          if (!arr.length) return arvEst;
+          const i = (arr.length - 1) * p;
+          const lo = Math.floor(i), hi = Math.ceil(i);
+          return lo === hi ? arr[lo] : Math.round(arr[lo] + (arr[hi] - arr[lo]) * (i - lo));
+        };
+        const p60 = pctile(sortedPrices, 0.60);   // P60 — lightly renovated
+        const p75 = pctile(sortedPrices, 0.75);   // P75 — renovated (standard ARV)
+        const p90 = pctile(sortedPrices, 0.90);   // P90 — top of market
 
         formatted._meta = {
           arvEstimate: arvEst,        // median — as-is/mid-market
@@ -1232,10 +1240,11 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
   // STATIC_SYSTEM is cached — reused across all underwrites at 90% off after first call
   const STATIC_SYSTEM = `You are Urban, elite fix-and-flip underwriter for Coralstone Capital Group, Tampa Bay FL.
 
-CRITERIA: Hard money 9.5% IO 90%LTV | MAO=ARV*70%-Repairs | Min profit $40K | 6% agent+1.5% closing+2pts HML | 4-5mo hold.
-REPAIR BENCHMARKS (Tampa Bay 2025): Roof shingle 1500sf=$8-13K/2000sf=$10-16K | HVAC full=$6-10K/condenser=$3-5K | Kitchen gut=$15-30K/cosmetic=$5-12K | Bath primary=$8-18K/secondary=$5-10K | LVP=$3-6/sf | Repipe=$4-8K | Panel 200A=$2.5-5K | Int paint 1500sf=$3-6K | Impact windows=$10-25K whole home | Permits=$1.5-4K.
-HARD NO: profit<$40K, flood AE/VE, slab issue, knob-tube, <1000sf, mobile home.
-HOT: 3/2 SFR 1200-2000sf, $150-350K, Pasco/Hillsborough, light-medium rehab, wholesaler ARV<market.
+CRITERIA: Hard money 9.5% IO 90%LTV | MAO=ARV×70%-Repairs | Min profit $40K | 6% agent+1.5% closing+2pts HML | 4-5mo hold.
+ARV METHODOLOGY: Set urbanARV = P75 of sold comps (renovated-market standard). If comps provided, ARV MUST be comp-defensible — cite actual addresses and prices. NEVER anchor to wholesaler ARV. Report confidence: HIGH=5+ comps ±15% sqft ≤6mo, MEDIUM=3-4 comps or ±25% sqft, LOW=<3 comps.
+REPAIR BENCHMARKS (Florida 2025): Roof shingle 1500sf=$8-13K/2000sf=$10-16K | HVAC full=$6-10K/condenser=$3-5K | Kitchen gut=$15-30K/cosmetic=$5-12K | Bath full=$8-18K/half=$5-10K | LVP=$3-6/sf | Repipe=$4-8K | Panel 200A=$2.5-5K | Int paint=$3-6K | Impact windows=$10-25K | Permits=$1.5-4K | Foundation=$8-30K | Septic=$4-10K | Pool resurface=$6-15K.
+HARD NO: net profit<$40K, flood zone AE/VE, structural/slab, knob-tube, <1000sf, mobile/manufactured, title clouds, condemnation.
+HOT DEAL DNA: 3/2 SFR 1200-2000sf, $150-450K asking, anywhere in Florida, light-medium rehab, wholesaler ARV≤actual market, no hard-no flags, $50K+ profit potential.
 OUTPUT: ONLY valid JSON, no markdown, no extra text.`;
 
   const system = deep
@@ -3119,4 +3128,36 @@ app.listen(PORT, async () => {
       } catch(e) { console.log('Auto-review err:', e.message); }
     }, 30000); // 30s after startup
   }});
+
+
+// ── PITR BACKUP SYSTEM ─────────────────────────────────────────────────────────
+// Point-in-Time Recovery: exports full underwrite database to Google Sheets every 6h
+async function runPITRBackup() {
+  try {
+    const s = getSheets();
+    const allUws = Object.values(underwrites);
+    if (!allUws.length) return;
+    const BACKUP_TAB = 'PITR_Backup';
+    const now = new Date().toISOString();
+    const header = ['backed_up_at','uid','address','city','state','zip','verdict','score','arv','mao','rehab','profit','full_json'];
+    const rows = allUws.map(uw => [
+      now, uw.deal?.uid||'', uw.deal?.address||'', uw.deal?.city||'', uw.deal?.state||'', uw.deal?.zip||'',
+      uw.verdict||'', uw.score||'', uw.arv?.urbanARV||'', uw.financials?.mao||'',
+      uw.rehab?.urbanEstimate||'', uw.financials?.netProfitAtAsking||'',
+      JSON.stringify(uw).slice(0, 45000)
+    ]);
+    try { await s.spreadsheets.batchUpdate({ spreadsheetId: SHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: BACKUP_TAB } } }] }
+    }); } catch(e) { /* tab exists */ }
+    await s.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: BACKUP_TAB+'!A1',
+      valueInputOption: 'RAW', requestBody: { values: [header, ...rows] } });
+    console.log('✅ PITR backup: ' + allUws.length + ' underwrites saved');
+  } catch(e) { console.log('PITR backup error:', e.message); }
+}
+setInterval(runPITRBackup, 6 * 60 * 60 * 1000);
+setTimeout(runPITRBackup, 5 * 60 * 1000);
+app.post('/api/backup', auth, async (req, res) => {
+  try { await runPITRBackup(); res.json({ ok: true, count: Object.keys(underwrites).length }); }
+  catch(e) { res.status(500).json({ error: e.message }); }
+});
 // build Thu Jun 11 18:57:38 UTC 2026
