@@ -1,5 +1,6 @@
 [build]
 builder = "NIXPACKS"
+installCommand = "npm install"
 
 [deploy]
 startCommand = "node server/index.js"
