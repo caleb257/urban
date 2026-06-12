@@ -202,6 +202,14 @@ hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
 /* MISC */
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 a{color:var(--accent)}
+#sort-select:hover{border-color:var(--accent)}
+.neg-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
+.neg-row:last-child{border-bottom:none}
+.neg-label{font-size:10px;font-weight:700;padding:2px 9px;border-radius:3px;min-width:68px;text-align:center;letter-spacing:.5px}
+.neg-price{font-family:var(--mono);font-size:13px;color:var(--text);flex:1}
+.neg-profit{font-family:var(--mono);font-size:12px;font-weight:600;min-width:90px}
+.neg-roi{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.neg-ok{color:var(--buy)}.neg-no{color:var(--review)}.neg-bad{color:var(--hot)}
 </style>
 </head>
 <body>
@@ -232,8 +240,9 @@ a{color:var(--accent)}
       <div class="stat-chip"><div class="val" id="st-profit">—</div><div class="lbl">Avg Profit</div></div>
       <div class="stat-chip"><div class="val" id="st-pct">—</div><div class="lbl">BUY %</div></div>
     </div>
-    <div id="search-wrap">
-      <input type="text" id="search-input" placeholder="Search address, city, wholesaler...">
+    <div id="search-wrap" style="display:flex;gap:6px;align-items:center;padding:10px 18px">
+      <input type="text" id="search-input" placeholder="Search..." style="flex:1">
+      <select id="sort-select" title="Sort" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:6px 5px;border-radius:4px;font-size:11px;font-family:var(--sans);outline:none;cursor:pointer;width:72px"><option value="date-new">↓ New</option><option value="date-old">↑ Old</option><option value="score-high">↓ Score</option><option value="ask-low">↑ Price</option></select>
     </div>
     <div id="filter-bar">
       <div class="ftab on" data-f="ALL">All</div>
@@ -274,7 +283,7 @@ a{color:var(--accent)}
 
       <div id="pending-card">
         <h3>NOT YET UNDERWRITTEN</h3>
-        <p>Urban hasn't analyzed this deal yet.</p>
+        <p>Urban will auto-underwrite this deal in the background. Hit ⚡ to run it now.</p>
         <button class="btn primary" id="btn-uw-now">⚡ Underwrite Now</button>
       </div>
 
@@ -553,7 +562,7 @@ async function doLoadStats() {
     $('st-avg').textContent = s.avgScore ? s.avgScore.toFixed(1) : '—';
     $('st-hot').textContent = (s.verdicts?.HOT||0) + (s.verdicts?.BUY||0);
     $('st-lessons').textContent = s.lessonsLearned || 0;
-    if ($('st-profit')) $('st-profit').textContent = s.avgProfit ? '$'+Math.round(s.avgProfit/1000)+'K avg' : '—';
+    if ($('st-profit')) $('st-profit').textContent = s.avgProfit ? '$'+Math.round(s.avgProfit/1000)+'K' : '—';
     if ($('st-pct')) {
       const total = s.totalUnderwritten || 1;
       const good = (s.verdicts?.HOT||0) + (s.verdicts?.BUY||0);
@@ -718,6 +727,7 @@ $('ref-btn').addEventListener('click', () => {
   doLoadDeals(true); // true = skip auto-underwrite
 });
 $('search-input').addEventListener('input', renderList);
+document.getElementById('sort-select')?.addEventListener('change', renderList);
 // ── REVIEW CHATS (Urban learns from all conversations) ────────────────────────
 async function doReviewChat() {
   const btn = $('review-btn');
@@ -801,7 +811,7 @@ function renderList() {
   });
   list.innerHTML = '';
   if (!filtered.length) {
-    list.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:13px;text-align:center">No deals found</div>';
+    list.innerHTML = '<div style="padding:24px 18px;color:var(--muted);font-size:13px;text-align:center"><div style="font-size:22px;margin-bottom:8px">🔍</div>No deals match<br><span style="font-size:11px;opacity:.7">Try a different filter or search</span></div>';
     return;
   }
   filtered.forEach(d => {
@@ -828,9 +838,10 @@ function renderList() {
     const askPpsf = (d.askingPrice && d.sqft) ? Math.round(parseFloat(d.askingPrice)/parseFloat(d.sqft)) : 0;
     const ppsqft = d.arv?.arvPerSqft ? ` · $${Math.round(d.arv.arvPerSqft)}/sf` : (askPpsf ? ` · $${askPpsf}/sf` : '');
 
+    const _beds=d.beds&&String(d.beds)!=='0'?d.beds+'bd':''; const _baths=d.baths&&String(d.baths)!=='0'?d.baths+'ba':''; const _bb=[_beds,_baths].filter(Boolean).join('/'); const _sqft=d.sqft&&parseInt(d.sqft)>0?parseInt(d.sqft).toLocaleString()+' sqft':''; const _spec=[_bb,_sqft].filter(Boolean).join(' · ');
     el.innerHTML = `
       <div class="di-addr">${d.address || 'No address'}</div>
-      <div class="di-city">${d.city}, ${d.state} · ${d.beds||'?'}bd/${d.baths||'?'}ba · ${d.sqft ? parseInt(d.sqft).toLocaleString() : '?'} sqft${ppsqft}</div>
+      <div class="di-city">${d.city}, ${d.state}${_spec?' · '+_spec:''}${ppsqft}</div>
       <div class="di-meta">
         <span class="di-price">${price}</span>
         <span class="badge ${badgeCls}">${status}</span>
@@ -923,7 +934,7 @@ function showPending(partialUW) {
       const notice = document.createElement('div');
       notice.id = 'stale-uw-notice';
       notice.style.cssText = 'background:rgba(200,169,110,.08);border:1px solid rgba(200,169,110,.2);border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted)';
-      notice.innerHTML = '📋 Verdict loaded from history. Hit <strong style="color:var(--gold)">⚡ Underwrite</strong> for fresh live comps, flags, and full analysis.';
+      notice.innerHTML = '📋 Loaded from database. Hit <strong style="color:var(--accent)">⚡ Underwrite</strong> to refresh with live comps.';
       const uwContent = $('uw-content');
       if (uwContent?.firstChild) uwContent.insertBefore(notice, uwContent.firstChild);
     }
@@ -1109,7 +1120,7 @@ function renderUW(uw) {
   set('ov-trend', uw.marketAnalysis?.trend || '—');
   set('ov-hold', uw.financials?.holdMonths ? `${uw.financials.holdMonths} months` : '—');
   const profMinPct = ask2 >= 1000000 ? '$100K' : Math.max(Math.round((ask2||0)*0.1/1000)*1000, 20000).toLocaleString();
-  set('cc-profit', uw.financials?.meetsMinimumProfit ? '✅ Yes (≥10%)' : '❌ No (need 10%)');
+  {const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?'$100K':('$'+Math.round(Math.max(_a*.10,20000)/1000)+'K');set('cc-profit',uw.financials?.meetsMinimumProfit?'✅ Yes (≥'+_m+')':'❌ No (need '+_m+')');} 
   cls('cc-profit', `mv ${uw.financials?.meetsMinimumProfit ? 'g' : 'r'}`);
   const inMkt = ['pasco','hillsborough','polk','pinellas','hernando'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
   set('cc-mkt', inMkt ? '✅ In Market' : '⚠️ Extended');
@@ -1323,13 +1334,19 @@ function renderUW(uw) {
 function fillPropTab(d) {
   const el = $('deal-full-info');
   if (!el) return;
-  const vv = x => (x && x !== '' && x !== '0') ? x : null;
+  const vv = x => {
+    if (!x || x === '' || x === '0') return null;
+    if (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(x)) {
+      try { return new Date(x).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch {}
+    }
+    return x;
+  };
   const money = x => x && parseFloat(x) ? '$' + parseFloat(x).toLocaleString() : null;
   const lnk = (url, label) => url ? `<a href="${url}" target="_blank">${label} ↗</a>` : null;
   const hasFlag = x => x && !['no','n/a','none','x',''].includes((x||'').toLowerCase().trim());
 
   const prow = (label, val, opts={}) => {
-    if (!val) return '';
+    if (val === null || val === undefined || val === '' || val === false || val === 'false' || val === 0) return '';
     const cls = opts.warn ? 'warn' : opts.big ? 'big' : opts.pos ? 'pos' : '';
     return `<div class="prow ${cls}"><div class="plbl">${label}</div><div class="pval">${val}</div></div>`;
   };
@@ -1347,7 +1364,7 @@ function fillPropTab(d) {
       prow('Expires', vv(d.expires), {warn: !!vv(d.expires)}),
       prow('Email Subject', vv(d.emailSubject)),
       prow('List / Source', vv(d.listName)),
-      prow('Photos', vv(d.photosIncluded) ? `${d.photosIncluded} · ${vv(d.photoCount)||'?'} photos` : null),
+      prow('Photos', vv(d.photosIncluded)&&d.photosIncluded!=='false'&&d.photosIncluded!==false ? (d.photoCount&&parseInt(d.photoCount)>0 ? `${parseInt(d.photoCount)} photos included` : 'Photos included') : null),
     ]),
     sec('🏠', 'PROPERTY', [
       prow('Address', `${d.address}<br><small style="color:var(--muted)">${d.city}, ${d.state} ${d.zip} — ${d.county} County</small>`),
@@ -1361,9 +1378,9 @@ function fillPropTab(d) {
       prow('Construction', vv(d.construction)),
       prow('Foundation', vv(d.foundation)),
       prow('Occupancy', vv(d.occupancy)),
-      prow('Pool', vv(d.pool) ? d.pool+(vv(d.poolNotes)?' — '+d.poolNotes:'') : null),
-      prow('Garage', vv(d.garage) ? d.garage+(vv(d.garageSpaces)?' · '+d.garageSpaces+' spaces':'')+(vv(d.carport)?' · Carport':'') : null),
-      prow('Basement / Attic', [vv(d.basement)&&'Basement: '+d.basement, vv(d.attic)&&'Attic: '+d.attic].filter(Boolean).join(' · ')||null),
+      prow('Pool', (d.pool&&d.pool!=='false'&&d.pool!==false&&String(d.pool).toLowerCase()!=='no') ? 'Yes'+(vv(d.poolNotes)?' — '+d.poolNotes:'') : null),
+      prow('Garage', (d.garage&&d.garage!=='false'&&d.garage!==false&&String(d.garage).toLowerCase()!=='no') ? (d.garage===true||d.garage==='true'?'Yes':d.garage)+(vv(d.garageSpaces)?' · '+d.garageSpaces+' spaces':'')+(vv(d.carport)?' · Carport':'') : null),
+      prow('Basement / Attic', [vv(d.basement)&&d.basement!=='false'&&d.basement!==false&&'Basement: '+d.basement,vv(d.attic)&&d.attic!=='false'&&d.attic!==false&&'Attic: '+d.attic].filter(Boolean).join(' · ')||null),
       prow('Flood Zone', hasFlag(d.floodZone) ? d.floodZone : null, {warn: hasFlag(d.floodZone)}),
       prow('HOA', hasFlag(d.hoa) ? d.hoa+(vv(d.hoaFee)?' — $'+parseFloat(d.hoaFee).toLocaleString()+'/mo':'') : null, {warn: true}),
       vv(d.googleMapsLink) ? `<div class="prow"><div class="plbl">Maps</div><div class="pval">${lnk(d.googleMapsLink,'Open in Maps')}</div></div>` : '',
@@ -1371,7 +1388,7 @@ function fillPropTab(d) {
     sec('💰', 'WHOLESALER NUMBERS', [
       prow('Asking Price', money(d.askingPrice), {big: true}),
       prow('Wholesaler ARV', money(d.wholesalerARV), {big: true}),
-      prow('Repairs Estimate', money(d.repairsEstimate)||'Not provided'),
+      prow('Repairs Estimate', d.repairsEstimate ? money(d.repairsEstimate) : null),
       prow('Assignment Fee', money(d.assignmentFee)),
       prow('Equity', money(d.equity)),
       prow('Annual Taxes', money(d.annualTaxes)),
@@ -1432,8 +1449,8 @@ function fillPropTab(d) {
       `<div class="prow"><div class="plbl">Zillow</div><div class="pval">${d.zillowLink ? lnk(d.zillowLink,'View on Zillow') : lnk('https://www.zillow.com/homes/'+encodeURIComponent(d.address+' '+d.city+' '+d.state)+'_rb/','Search Zillow')}</div></div>`,
       vv(d.driveLink) ? `<div class="prow"><div class="plbl">Google Drive</div><div class="pval">${lnk(d.driveLink,'Open Drive Folder')}</div></div>` : '',
       vv(d.googleMapsLink) ? `<div class="prow"><div class="plbl">Maps</div><div class="pval">${lnk(d.googleMapsLink,'Google Maps')}</div></div>` : '',
-      vv(d.allOtherLinks) ? `<div class="prow"><div class="plbl">Other Links</div><div class="pval" style="font-size:11px">${d.allOtherLinks}</div></div>` : '',
-      vv(d.photoLinks) ? `<div class="prow"><div class="plbl">Photos</div><div class="pval" style="font-size:11px">${d.photoLinks}</div></div>` : '',
+      vv(d.allOtherLinks) ? `<div class="prow"><div class="plbl">Other Links</div><div class="pval" style="word-break:break-all;font-size:11px">${d.allOtherLinks}</div></div>` : '',
+      vv(d.photoLinks) ? `<div class="prow"><div class="plbl">Photos</div><div class="pval" style="word-break:break-all;font-size:11px">${d.photoLinks}</div></div>` : '',
     ]),
   ].join('');
 }
@@ -1465,6 +1482,7 @@ $('btn-ov-rehab').addEventListener('click', async () => {
 // ── CHAT ──────────────────────────────────────────────────────────────────────
 $('btn-chat').addEventListener('click', () => $('chat-panel').classList.add('open'));
 $('chat-x').addEventListener('click', () => $('chat-panel').classList.remove('open'));
+document.addEventListener('keydown', e => { if (e.key==='Escape') $('chat-panel').classList.remove('open'); });
 function setAuth(a) {
   author = a;
   document.querySelectorAll('.auth-btn').forEach(b => b.classList.toggle('on', b.dataset.a === a));
@@ -1811,13 +1829,19 @@ window.addEventListener('message', e => {
 function fillPropTab(d) {
   const el = $('deal-full-info');
   if (!el) return;
-  const vv = x => (x && x !== '' && x !== '0') ? x : null;
+  const vv = x => {
+    if (!x || x === '' || x === '0') return null;
+    if (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(x)) {
+      try { return new Date(x).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch {}
+    }
+    return x;
+  };
   const money = x => x && parseFloat(x) ? '$' + parseFloat(x).toLocaleString() : null;
   const lnk = (url, label) => url ? `<a href="${url}" target="_blank">${label} ↗</a>` : null;
   const hasFlag = x => x && !['no','n/a','none','x',''].includes((x||'').toLowerCase().trim());
 
   const prow = (label, val, opts={}) => {
-    if (!val) return '';
+    if (val === null || val === undefined || val === '' || val === false || val === 'false' || val === 0) return '';
     const cls = opts.warn ? 'warn' : opts.big ? 'big' : opts.pos ? 'pos' : '';
     return `<div class="prow ${cls}"><div class="plbl">${label}</div><div class="pval">${val}</div></div>`;
   };
@@ -1835,7 +1859,7 @@ function fillPropTab(d) {
       prow('Expires', vv(d.expires), {warn: !!vv(d.expires)}),
       prow('Email Subject', vv(d.emailSubject)),
       prow('List / Source', vv(d.listName)),
-      prow('Photos', vv(d.photosIncluded) ? `${d.photosIncluded} · ${vv(d.photoCount)||'?'} photos` : null),
+      prow('Photos', vv(d.photosIncluded)&&d.photosIncluded!=='false'&&d.photosIncluded!==false ? (d.photoCount&&parseInt(d.photoCount)>0 ? `${parseInt(d.photoCount)} photos included` : 'Photos included') : null),
     ]),
     sec('🏠', 'PROPERTY', [
       prow('Address', `${d.address}<br><small style="color:var(--muted)">${d.city}, ${d.state} ${d.zip} — ${d.county} County</small>`),
@@ -1849,9 +1873,9 @@ function fillPropTab(d) {
       prow('Construction', vv(d.construction)),
       prow('Foundation', vv(d.foundation)),
       prow('Occupancy', vv(d.occupancy)),
-      prow('Pool', vv(d.pool) ? d.pool+(vv(d.poolNotes)?' — '+d.poolNotes:'') : null),
-      prow('Garage', vv(d.garage) ? d.garage+(vv(d.garageSpaces)?' · '+d.garageSpaces+' spaces':'')+(vv(d.carport)?' · Carport':'') : null),
-      prow('Basement / Attic', [vv(d.basement)&&'Basement: '+d.basement, vv(d.attic)&&'Attic: '+d.attic].filter(Boolean).join(' · ')||null),
+      prow('Pool', (d.pool&&d.pool!=='false'&&d.pool!==false&&String(d.pool).toLowerCase()!=='no') ? 'Yes'+(vv(d.poolNotes)?' — '+d.poolNotes:'') : null),
+      prow('Garage', (d.garage&&d.garage!=='false'&&d.garage!==false&&String(d.garage).toLowerCase()!=='no') ? (d.garage===true||d.garage==='true'?'Yes':d.garage)+(vv(d.garageSpaces)?' · '+d.garageSpaces+' spaces':'')+(vv(d.carport)?' · Carport':'') : null),
+      prow('Basement / Attic', [vv(d.basement)&&d.basement!=='false'&&d.basement!==false&&'Basement: '+d.basement,vv(d.attic)&&d.attic!=='false'&&d.attic!==false&&'Attic: '+d.attic].filter(Boolean).join(' · ')||null),
       prow('Flood Zone', hasFlag(d.floodZone) ? d.floodZone : null, {warn: hasFlag(d.floodZone)}),
       prow('HOA', hasFlag(d.hoa) ? d.hoa+(vv(d.hoaFee)?' — $'+parseFloat(d.hoaFee).toLocaleString()+'/mo':'') : null, {warn: true}),
       vv(d.googleMapsLink) ? `<div class="prow"><div class="plbl">Maps</div><div class="pval">${lnk(d.googleMapsLink,'Open in Maps')}</div></div>` : '',
@@ -1859,7 +1883,7 @@ function fillPropTab(d) {
     sec('💰', 'WHOLESALER NUMBERS', [
       prow('Asking Price', money(d.askingPrice), {big: true}),
       prow('Wholesaler ARV', money(d.wholesalerARV), {big: true}),
-      prow('Repairs Estimate', money(d.repairsEstimate)||'Not provided'),
+      prow('Repairs Estimate', d.repairsEstimate ? money(d.repairsEstimate) : null),
       prow('Assignment Fee', money(d.assignmentFee)),
       prow('Equity', money(d.equity)),
       prow('Annual Taxes', money(d.annualTaxes)),
@@ -1920,8 +1944,8 @@ function fillPropTab(d) {
       `<div class="prow"><div class="plbl">Zillow</div><div class="pval">${d.zillowLink ? lnk(d.zillowLink,'View on Zillow') : lnk('https://www.zillow.com/homes/'+encodeURIComponent(d.address+' '+d.city+' '+d.state)+'_rb/','Search Zillow')}</div></div>`,
       vv(d.driveLink) ? `<div class="prow"><div class="plbl">Google Drive</div><div class="pval">${lnk(d.driveLink,'Open Drive Folder')}</div></div>` : '',
       vv(d.googleMapsLink) ? `<div class="prow"><div class="plbl">Maps</div><div class="pval">${lnk(d.googleMapsLink,'Google Maps')}</div></div>` : '',
-      vv(d.allOtherLinks) ? `<div class="prow"><div class="plbl">Other Links</div><div class="pval" style="font-size:11px">${d.allOtherLinks}</div></div>` : '',
-      vv(d.photoLinks) ? `<div class="prow"><div class="plbl">Photos</div><div class="pval" style="font-size:11px">${d.photoLinks}</div></div>` : '',
+      vv(d.allOtherLinks) ? `<div class="prow"><div class="plbl">Other Links</div><div class="pval" style="word-break:break-all;font-size:11px">${d.allOtherLinks}</div></div>` : '',
+      vv(d.photoLinks) ? `<div class="prow"><div class="plbl">Photos</div><div class="pval" style="word-break:break-all;font-size:11px">${d.photoLinks}</div></div>` : '',
     ]),
   ].join('');
 }
@@ -1953,6 +1977,7 @@ $('btn-ov-rehab').addEventListener('click', async () => {
 // ── CHAT ──────────────────────────────────────────────────────────────────────
 $('btn-chat').addEventListener('click', () => $('chat-panel').classList.add('open'));
 $('chat-x').addEventListener('click', () => $('chat-panel').classList.remove('open'));
+document.addEventListener('keydown', e => { if (e.key==='Escape') $('chat-panel').classList.remove('open'); });
 function setAuth(a) {
   author = a;
   document.querySelectorAll('.auth-btn').forEach(b => b.classList.toggle('on', b.dataset.a === a));
@@ -2299,13 +2324,19 @@ window.addEventListener('message', e => {
 function fillPropTab(d) {
   const el = $('deal-full-info');
   if (!el) return;
-  const vv = x => (x && x !== '' && x !== '0') ? x : null;
+  const vv = x => {
+    if (!x || x === '' || x === '0') return null;
+    if (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(x)) {
+      try { return new Date(x).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch {}
+    }
+    return x;
+  };
   const money = x => x && parseFloat(x) ? '$' + parseFloat(x).toLocaleString() : null;
   const lnk = (url, label) => url ? `<a href="${url}" target="_blank">${label} ↗</a>` : null;
   const hasFlag = x => x && !['no','n/a','none','x',''].includes((x||'').toLowerCase().trim());
 
   const prow = (label, val, opts={}) => {
-    if (!val) return '';
+    if (val === null || val === undefined || val === '' || val === false || val === 'false' || val === 0) return '';
     const cls = opts.warn ? 'warn' : opts.big ? 'big' : opts.pos ? 'pos' : '';
     return `<div class="prow ${cls}"><div class="plbl">${label}</div><div class="pval">${val}</div></div>`;
   };
@@ -2323,7 +2354,7 @@ function fillPropTab(d) {
       prow('Expires', vv(d.expires), {warn: !!vv(d.expires)}),
       prow('Email Subject', vv(d.emailSubject)),
       prow('List / Source', vv(d.listName)),
-      prow('Photos', vv(d.photosIncluded) ? `${d.photosIncluded} · ${vv(d.photoCount)||'?'} photos` : null),
+      prow('Photos', vv(d.photosIncluded)&&d.photosIncluded!=='false'&&d.photosIncluded!==false ? (d.photoCount&&parseInt(d.photoCount)>0 ? `${parseInt(d.photoCount)} photos included` : 'Photos included') : null),
     ]),
     sec('🏠', 'PROPERTY', [
       prow('Address', `${d.address}<br><small style="color:var(--muted)">${d.city}, ${d.state} ${d.zip} — ${d.county} County</small>`),
@@ -2337,9 +2368,9 @@ function fillPropTab(d) {
       prow('Construction', vv(d.construction)),
       prow('Foundation', vv(d.foundation)),
       prow('Occupancy', vv(d.occupancy)),
-      prow('Pool', vv(d.pool) ? d.pool+(vv(d.poolNotes)?' — '+d.poolNotes:'') : null),
-      prow('Garage', vv(d.garage) ? d.garage+(vv(d.garageSpaces)?' · '+d.garageSpaces+' spaces':'')+(vv(d.carport)?' · Carport':'') : null),
-      prow('Basement / Attic', [vv(d.basement)&&'Basement: '+d.basement, vv(d.attic)&&'Attic: '+d.attic].filter(Boolean).join(' · ')||null),
+      prow('Pool', (d.pool&&d.pool!=='false'&&d.pool!==false&&String(d.pool).toLowerCase()!=='no') ? 'Yes'+(vv(d.poolNotes)?' — '+d.poolNotes:'') : null),
+      prow('Garage', (d.garage&&d.garage!=='false'&&d.garage!==false&&String(d.garage).toLowerCase()!=='no') ? (d.garage===true||d.garage==='true'?'Yes':d.garage)+(vv(d.garageSpaces)?' · '+d.garageSpaces+' spaces':'')+(vv(d.carport)?' · Carport':'') : null),
+      prow('Basement / Attic', [vv(d.basement)&&d.basement!=='false'&&d.basement!==false&&'Basement: '+d.basement,vv(d.attic)&&d.attic!=='false'&&d.attic!==false&&'Attic: '+d.attic].filter(Boolean).join(' · ')||null),
       prow('Flood Zone', hasFlag(d.floodZone) ? d.floodZone : null, {warn: hasFlag(d.floodZone)}),
       prow('HOA', hasFlag(d.hoa) ? d.hoa+(vv(d.hoaFee)?' — $'+parseFloat(d.hoaFee).toLocaleString()+'/mo':'') : null, {warn: true}),
       vv(d.googleMapsLink) ? `<div class="prow"><div class="plbl">Maps</div><div class="pval">${lnk(d.googleMapsLink,'Open in Maps')}</div></div>` : '',
@@ -2347,7 +2378,7 @@ function fillPropTab(d) {
     sec('💰', 'WHOLESALER NUMBERS', [
       prow('Asking Price', money(d.askingPrice), {big: true}),
       prow('Wholesaler ARV', money(d.wholesalerARV), {big: true}),
-      prow('Repairs Estimate', money(d.repairsEstimate)||'Not provided'),
+      prow('Repairs Estimate', d.repairsEstimate ? money(d.repairsEstimate) : null),
       prow('Assignment Fee', money(d.assignmentFee)),
       prow('Equity', money(d.equity)),
       prow('Annual Taxes', money(d.annualTaxes)),
@@ -2408,8 +2439,8 @@ function fillPropTab(d) {
       `<div class="prow"><div class="plbl">Zillow</div><div class="pval">${d.zillowLink ? lnk(d.zillowLink,'View on Zillow') : lnk('https://www.zillow.com/homes/'+encodeURIComponent(d.address+' '+d.city+' '+d.state)+'_rb/','Search Zillow')}</div></div>`,
       vv(d.driveLink) ? `<div class="prow"><div class="plbl">Google Drive</div><div class="pval">${lnk(d.driveLink,'Open Drive Folder')}</div></div>` : '',
       vv(d.googleMapsLink) ? `<div class="prow"><div class="plbl">Maps</div><div class="pval">${lnk(d.googleMapsLink,'Google Maps')}</div></div>` : '',
-      vv(d.allOtherLinks) ? `<div class="prow"><div class="plbl">Other Links</div><div class="pval" style="font-size:11px">${d.allOtherLinks}</div></div>` : '',
-      vv(d.photoLinks) ? `<div class="prow"><div class="plbl">Photos</div><div class="pval" style="font-size:11px">${d.photoLinks}</div></div>` : '',
+      vv(d.allOtherLinks) ? `<div class="prow"><div class="plbl">Other Links</div><div class="pval" style="word-break:break-all;font-size:11px">${d.allOtherLinks}</div></div>` : '',
+      vv(d.photoLinks) ? `<div class="prow"><div class="plbl">Photos</div><div class="pval" style="word-break:break-all;font-size:11px">${d.photoLinks}</div></div>` : '',
     ]),
   ].join('');
 }
@@ -2441,6 +2472,7 @@ $('btn-ov-rehab').addEventListener('click', async () => {
 // ── CHAT ──────────────────────────────────────────────────────────────────────
 $('btn-chat').addEventListener('click', () => $('chat-panel').classList.add('open'));
 $('chat-x').addEventListener('click', () => $('chat-panel').classList.remove('open'));
+document.addEventListener('keydown', e => { if (e.key==='Escape') $('chat-panel').classList.remove('open'); });
 function setAuth(a) {
   author = a;
   document.querySelectorAll('.auth-btn').forEach(b => b.classList.toggle('on', b.dataset.a === a));
