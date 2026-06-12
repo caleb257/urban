@@ -1398,7 +1398,7 @@ function fillPropTab(d) {
       prow('Inspection Period', vv(d.inspectionPeriod)),
       prow('Earnest Money', money(d.earnestMoney)),
       prow('Financing Terms', vv(d.financingTerms)),
-      prow('Cash Only', vv(d.cashOnly), {warn: (d.cashOnly||'').toLowerCase()==='yes'}),
+      prow('Cash Only', d.cashOnly&&d.cashOnly!=='false'&&d.cashOnly!==false ? ((d.cashOnly===true||d.cashOnly==='true')?'Yes':'Cash Only') : null, {warn: true}),
     ]),
     sec('🔧', 'SYSTEMS & CONDITION', [
       prow('Overall Condition', vv(d.overall_condition), {warn: (d.overall_condition||'').toLowerCase().includes('poor')||(d.overall_condition||'').toLowerCase().includes('bad')}),
