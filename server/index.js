@@ -795,7 +795,7 @@ async function regenerateVerdict(uw) {
     price,
     label:    price >= Math.round(asking*0.98) ? 'Asking' : price === mao ? 'MAO' : price < mao ? 'Stretch' : 'Counter',
     profit:   Math.round(arv - price - repairs - costs),
-    meetsMin: Math.round(arv - price - repairs - costs) >= 40000,
+    meetsMin: (() => { const _p=Math.round(arv-price-repairs-costs); const _min=price>=1000000?100000:Math.max(price*0.10,20000); return _p>=_min; })(),
     roi:      arv > 0 ? parseFloat(((Math.round(arv - price - repairs - costs) / (price + repairs)) * 100).toFixed(1)) : 0
   }));
 
@@ -817,7 +817,7 @@ async function regenerateVerdict(uw) {
     'Repairs: $' + repairs.toLocaleString() + ' | Asking: $' + asking.toLocaleString() + '\n' +
     'MAO (ARV×70%-repairs): $' + mao.toLocaleString() + '\n' +
     'Net Profit @ Ask: $' + profit.toLocaleString() + ' | ROI: ' + roi + '%\n' +
-    'Meets $40K min: ' + (profit >= 40000 ? 'YES' : 'NO — ' + (40000 - profit).toLocaleString() + ' short') + '\n' +
+    'Meets profit min (' + (ask < 1000000 ? Math.round(Math.max(ask*0.10,20000)/1000)+'K' : '$100K') + '): ' + (profit >= Math.max(ask*0.10,20000) ? 'YES' : 'NO') + '\n' +
     'Prior verdict: ' + (uw.verdict||'?') + ' (' + (uw.score||0) + '/10)\n\n' +
     'Based ONLY on these corrected numbers, give a new verdict, score, reason, and recommendation.\n' +
     'Respond with ONLY valid JSON (no markdown):\n' +
@@ -1367,7 +1367,7 @@ OUTPUT: ONLY valid JSON, no markdown, no extra text..`;
              price < mao ? 'Stretch offer' :
              price > Math.round(ask * 0.98) ? 'Near ask' : 'Counter',
       profit: Math.round(arv - price - repairs - costs),
-      meetsMin: Math.round(arv - price - repairs - costs) >= 40000,
+      meetsMin: (() => { const _p=Math.round(arv-price-repairs-costs); const _min=price>=1000000?100000:Math.max(price*0.10,20000); return _p>=_min; })(),
       roi:   arv > 0 ? parseFloat(((arv - price - repairs - costs) / (price + repairs) * 100).toFixed(1)) : 0
     }));
   } catch(e) { /* non-critical */ }
@@ -2600,7 +2600,7 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
       'MAO: '+n(uw.financials?.mao)+' | Gap vs asking: '+n(uw.financials?.overUnderMAO)+' ('+((uw.financials?.overUnderMAO||0)>0?'over MAO — deal is expensive':'under MAO — room to negotiate')+')',
       'Net profit @ asking: '+n(uw.financials?.netProfitAtAsking)+' | @ MAO: '+n(uw.financials?.netProfitAtMAO)+' | ROI: '+(uw.financials?.roi||'?')+'%',
       'Hold: '+(uw.financials?.holdMonths||'?')+' months | Hard money: '+n(uw.financials?.hardMoney?.monthlyPayment)+'/mo, '+n(uw.financials?.hardMoney?.totalInterest)+' total interest',
-      'Meets $40K min profit: '+(uw.financials?.meetsMinimumProfit?'YES ✅':'NO ❌'),
+      'Meets profit min (10%): '+(uw.financials?.meetsMinimumProfit?'YES ✅':'NO ❌'),
       '',
       '━━ VERDICT ━━',
       uw.verdict+' ('+uw.score+'/10) — '+uw.verdictReason,
@@ -2628,7 +2628,7 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
       '- Always end a recalculation: "→ New verdict: [VERDICT] ([score]/10) | Net profit: [amount]"',
       '- Log brain lessons: "🧠 Noted: [insight]"',
       '- Be honest if your estimate was off. Own it and update.',
-      '- MAO formula: ARV × 70% - Repairs | Min profit $40K | Hard money 9.5% | Pasco/Hillsborough/Polk/Pinellas/Hernando'
+      '- MAO formula: ARV × 70% - Repairs | Min profit: 10% of ask (≥$20K floor) | Hard money 9.5% | Pasco/Hillsborough/Polk/Pinellas/Hernando'
     ].filter(Boolean).join('\n')
 
     const historyForAPI = chatHistory.slice(-10).map(h => ({
@@ -2803,7 +2803,7 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
           price,
           label: price >= Math.round(ask*0.98) ? 'Asking' : price === uw.financials.mao ? 'MAO' : price < uw.financials.mao ? 'Stretch' : 'Counter',
           profit: Math.round(arv - price - repairs - costs),
-          meetsMin: Math.round(arv - price - repairs - costs) >= 40000
+          meetsMin: (() => { const _p=Math.round(arv-price-repairs-costs); const _min=price>=1000000?100000:Math.max(price*0.10,20000); return _p>=_min; })()
         }));
         console.log('🔢 Recalculated: MAO=' + uw.financials.mao + ' Profit=' + uw.financials.netProfitAtAsking);
       }
