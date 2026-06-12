@@ -1259,7 +1259,7 @@ OUTPUT: ONLY valid JSON, no markdown, no extra text.`;
     try {
       res = await getAnthropic().messages.create({
         model,
-        max_tokens: deep ? 3000 : 1600,
+        max_tokens: deep ? 4000 : 2500,
         system: system,
         messages: [{
           role: 'user',
@@ -1295,30 +1295,32 @@ OUTPUT: ONLY valid JSON, no markdown, no extra text.`;
   const f = rawText.indexOf('{'), l = rawText.lastIndexOf('}');
   if (f === -1 || l === -1) throw new Error(`No JSON object in response. Raw: ${rawText.slice(0,200)}`);
   let underwrite;
-  // Recovery if JSON was truncated by token limit — close unclosed braces
+  // Robust JSON recovery — handles truncated objects AND arrays
   let jsonStr = rawText.slice(f, l + 1);
-  if (!jsonStr.trimEnd().endsWith('}')) {
-    console.warn('JSON truncated at token limit — recovering');
-    jsonStr = jsonStr.trimEnd().replace(/,\s*$/, '');
-    let depth = 0, inStr = false;
-    for (let ci = 0; ci < jsonStr.length; ci++) {
-      const ch = jsonStr[ci];
-      if (ch === '"' && jsonStr[ci-1] !== '\\') inStr = !inStr;
-      if (!inStr) { if (ch === '{') depth++; else if (ch === '}') depth--; }
-    }
-    while (depth > 0) { jsonStr += '}'; depth--; }
-  }
   try {
     underwrite = JSON.parse(jsonStr);
-  } catch(jsonErr) {
-    console.error('JSON parse error. Attempting cleanup...');
-    const cleaned = jsonStr
-      .replace(/[ -]/g, ' ')
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']');
-    underwrite = JSON.parse(cleaned);
+  } catch(e1) {
+    console.warn('JSON parse fail — recovering truncated response...');
+    let str = jsonStr.trimEnd().replace(/,\s*$/, '');
+    const stack = [];
+    let inStr = false, esc = false;
+    for (let ci = 0; ci < str.length; ci++) {
+      const ch = str[ci];
+      if (esc) { esc = false; continue; }
+      if (ch === '\\' && inStr) { esc = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === '{') stack.push('}');
+      else if (ch === '[') stack.push(']');
+      else if ((ch === '}' || ch === ']') && stack.length) stack.pop();
+    }
+    while (stack.length) str += stack.pop();
+    try { underwrite = JSON.parse(str); }
+    catch(e2) {
+      const cleaned = str.replace(/[\x00-\x1f]/g,' ').replace(/,\s*}/g,'}').replace(/,\s*]/g,']');
+      underwrite = JSON.parse(cleaned);
+    }
   }
-
   underwrite.uid = uid;
   underwrite.deal = deal;
   underwrite.comps = comps;
