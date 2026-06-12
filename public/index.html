@@ -1236,8 +1236,8 @@ function renderUW(uw) {
   set('fi-sc', fmt(f.sellingCosts?.total));
   set('fi-tot', fmt(f.totalCost));
   const pa = f.netProfitAtAsking;
-  set('fi-pa', fmt(pa));
-  cls('fi-pa', `fv ${pa>=40000?'g':pa>=0?'':'r'}`);
+  {const _ask=parseFloat(curDeal?.askingPrice)||0; const _pct=_ask>0&&pa!=null?'('+( pa/_ask*100).toFixed(1)+'%)':''; set('fi-pa', fmt(pa)+(_pct?' '+_pct:'')); }
+  cls('fi-pa', `fv ${(()=>{const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?100000:Math.max(_a*.10,20000);return pa>=_m?'g':pa>=0?'y':'r';})()} `);
   set('fi-pm', fmt(f.netProfitAtMAO));
   set('fi-roi', f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—');
   set('fi-min', f.meetsMinimumProfit ? '✅ YES' : '❌ NO');
@@ -1723,8 +1723,8 @@ window.addEventListener('message', e => {
   set('fi-sc', fmt(f.sellingCosts?.total));
   set('fi-tot', fmt(f.totalCost));
   const pa = f.netProfitAtAsking;
-  set('fi-pa', fmt(pa));
-  cls('fi-pa', `fv ${pa>=40000?'g':pa>=0?'':'r'}`);
+  {const _ask=parseFloat(curDeal?.askingPrice)||0; const _pct=_ask>0&&pa!=null?'('+( pa/_ask*100).toFixed(1)+'%)':''; set('fi-pa', fmt(pa)+(_pct?' '+_pct:'')); }
+  cls('fi-pa', `fv ${(()=>{const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?100000:Math.max(_a*.10,20000);return pa>=_m?'g':pa>=0?'y':'r';})()} `);
   set('fi-pm', fmt(f.netProfitAtMAO));
   set('fi-roi', f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—');
   set('fi-min', f.meetsMinimumProfit ? '✅ YES' : '❌ NO');
@@ -2210,8 +2210,8 @@ window.addEventListener('message', e => {
   set('fi-sc', fmt(f.sellingCosts?.total));
   set('fi-tot', fmt(f.totalCost));
   const pa = f.netProfitAtAsking;
-  set('fi-pa', fmt(pa));
-  cls('fi-pa', `fv ${pa>=40000?'g':pa>=0?'':'r'}`);
+  {const _ask=parseFloat(curDeal?.askingPrice)||0; const _pct=_ask>0&&pa!=null?'('+( pa/_ask*100).toFixed(1)+'%)':''; set('fi-pa', fmt(pa)+(_pct?' '+_pct:'')); }
+  cls('fi-pa', `fv ${(()=>{const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?100000:Math.max(_a*.10,20000);return pa>=_m?'g':pa>=0?'y':'r';})()} `);
   set('fi-pm', fmt(f.netProfitAtMAO));
   set('fi-roi', f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—');
   set('fi-min', f.meetsMinimumProfit ? '✅ YES' : '❌ NO');
