@@ -32,7 +32,6 @@ app.use(express.static(path.join(__dirname, '../public'), {
 }));
 
 // Explicit HTML route — reads from disk on EVERY request, defeats all CDN caching
-const fs = require('fs');
 const INDEX_PATH = path.join(__dirname, '../public/index.html');
 app.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
