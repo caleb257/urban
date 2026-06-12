@@ -2179,8 +2179,10 @@ app.post('/api/auto-underwrite-batch', auth, async (req, res) => {
           await new Promise(r => setTimeout(r, 4000)); // 4s between underwrites — stays under Haiku TPM limit
           console.log(`⚡ Batch: ${deal.address} → ${uw.verdict} (${completed}/${pending.length})`);
         } catch(e) {
-          send({ error: e.message, address: deal.address });
+          const rl = e.status === 429 || (e.message||'').includes('rate_limit') || (e.message||'').includes('429');
+          send({ error: e.message, address: deal.address, rateLimited: rl });
           completed++;
+          if (rl) await new Promise(r => setTimeout(r, 5000)); // brief pause after 429
         }
       }
     }

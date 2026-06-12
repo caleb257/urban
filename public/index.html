@@ -576,11 +576,18 @@ async function doLoadDeals(skipAuto = false) {
     // Poll for new pending deals every 3 minutes while page is open
     if (!window._uwPollStarted) {
       window._uwPollStarted = true;
-      setInterval(() => {
+      window._consecutiveRateLimits = 0;
+    window._uwPollInterval = setInterval(() => {
         const pending = deals.filter(d => !d.underwriteStatus || d.underwriteStatus === 'PENDING' || d.underwriteStatus === '');
         if (pending.length > 0 && !autoUnderwriteRunning) {
+          if (window._consecutiveRateLimits >= 3) {
+            console.log('[Poll] Repeated rate limits — pausing auto-underwrite for 30 min');
+            return; // Stop hammering the API
+          }
           console.log(`[Poll] ${pending.length} pending deals — auto-underwriting`);
           autoUnderwritePending();
+        } else if (pending.length === 0) {
+          window._consecutiveRateLimits = 0; // Reset on success
         }
       }, 3 * 60 * 1000); // every 3 minutes
     }
@@ -998,10 +1005,19 @@ async function doUnderwrite(force, deep) {
             renderList();
           }
           if (data.error) {
-            show('loading-state', false);
+            const isRL = data.error.includes('rate_limit') || data.error.includes('429');
+            if (isRL) {
+              window._consecutiveRateLimits = (window._consecutiveRateLimits || 0) + 1;
+              const msg = '⏳ Rate limited — Urban will retry when the API limit clears. Your deals are safe.';
+              $('load-msg').textContent = msg;
+              show('loading-state', true);
+              setTimeout(() => show('loading-state', false), 8000);
+            } else {
+              show('loading-state', false);
+              $('load-msg').textContent = '⚠️ ' + data.error + ' — try Re-run';
+              setTimeout(() => show('loading-state', false), 3000);
+            }
             console.error('Underwrite error from server:', data.error);
-            $('load-msg').textContent = '❌ ' + data.error;
-            setTimeout(() => show('loading-state', false), 3000);
           }
         } catch(pe) { /* ignore malformed SSE lines */ }
       }
