@@ -426,7 +426,7 @@ a{color:var(--accent)}
               <div class="fr"><span class="fl">Net Profit @ Asking</span><span class="fv" id="fi-pa" style="font-size:17px"></span></div>
               <div class="fr g"><span class="fl">Net Profit @ MAO</span><span class="fv" id="fi-pm" style="font-size:17px"></span></div>
               <div class="fr"><span class="fl">ROI</span><span class="fv" id="fi-roi"></span></div>
-              <div class="fr"><span class="fl">Meets $40k Minimum</span><span class="fv" id="fi-min"></span></div>
+              <div class="fr"><span class="fl">Meets Profit Min (10%)</span><span class="fv" id="fi-min"></span></div>
             </div>
           </div>
         </div>
@@ -792,6 +792,7 @@ function renderList() {
     const normStatus = status === 'HARD NO' ? 'HARDNO' : status;
     const matchFilter = curFilter === 'ALL' 
       || normStatus === curFilter
+      || (curFilter === 'BUY' && (status === 'BUY' || status === 'HOT'))
       || (curFilter === 'PASS' && status === 'PASS')
       || (curFilter === 'HARDNO' && status === 'HARD NO')
       || (curFilter === 'NEEDS_ARV' && (!d.arv || !d.arv.wholesalerARV || d.arv.wholesalerARV === 0) && !['PASS','HARD NO'].includes(status));
@@ -824,7 +825,8 @@ function renderList() {
     const ageLabel = ageDays === null ? '' : ageDays === 0 ? '🟢 Today' : ageDays === 1 ? '🟡 1d' : ageDays <= 3 ? `🟡 ${ageDays}d` : ageDays <= 7 ? `🟠 ${ageDays}d` : `🔴 ${ageDays}d`;
     const staleLabel = d.isStale ? '<span class="stale-badge">⏰ STALE</span>' : '';
     const sqftLabel = d.sqft ? `${parseInt(d.sqft).toLocaleString()} sf` : '';
-    const ppsqft = (d.underwriteScore && d.arv?.arvPerSqft) ? ` · $${Math.round(d.arv.arvPerSqft)}/sf` : '';
+    const askPpsf = (d.askingPrice && d.sqft) ? Math.round(parseFloat(d.askingPrice)/parseFloat(d.sqft)) : 0;
+    const ppsqft = d.arv?.arvPerSqft ? ` · $${Math.round(d.arv.arvPerSqft)}/sf` : (askPpsf ? ` · $${askPpsf}/sf` : '');
 
     el.innerHTML = `
       <div class="di-addr">${d.address || 'No address'}</div>
@@ -1241,7 +1243,7 @@ function renderUW(uw) {
   cls('fi-pa', `fv ${(()=>{const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?100000:Math.max(_a*.10,20000);return pa>=_m?'g':pa>=0?'y':'r';})()} `);
   set('fi-pm', fmt(f.netProfitAtMAO));
   set('fi-roi', f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—');
-  set('fi-min', f.meetsMinimumProfit ? '✅ YES' : '❌ NO');
+  { const _a3=parseFloat(curDeal?.askingPrice)||0; const _m3=_a3>=1000000?'$100K+':('$'+Math.round(Math.max(_a3*.10,20000)/1000)+'K min'); set('fi-min', f.meetsMinimumProfit ? ('✅ YES ('+_m3+')') : ('❌ NO ('+_m3+' needed)')); }
   cls('fi-min', `fv ${f.meetsMinimumProfit?'g':'r'}`);
 
   // RENTAL TAB
@@ -1729,7 +1731,7 @@ window.addEventListener('message', e => {
   cls('fi-pa', `fv ${(()=>{const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?100000:Math.max(_a*.10,20000);return pa>=_m?'g':pa>=0?'y':'r';})()} `);
   set('fi-pm', fmt(f.netProfitAtMAO));
   set('fi-roi', f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—');
-  set('fi-min', f.meetsMinimumProfit ? '✅ YES' : '❌ NO');
+  { const _a3=parseFloat(curDeal?.askingPrice)||0; const _m3=_a3>=1000000?'$100K+':('$'+Math.round(Math.max(_a3*.10,20000)/1000)+'K min'); set('fi-min', f.meetsMinimumProfit ? ('✅ YES ('+_m3+')') : ('❌ NO ('+_m3+' needed)')); }
   cls('fi-min', `fv ${f.meetsMinimumProfit?'g':'r'}`);
 
   // RENTAL TAB
@@ -2217,7 +2219,7 @@ window.addEventListener('message', e => {
   cls('fi-pa', `fv ${(()=>{const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?100000:Math.max(_a*.10,20000);return pa>=_m?'g':pa>=0?'y':'r';})()} `);
   set('fi-pm', fmt(f.netProfitAtMAO));
   set('fi-roi', f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—');
-  set('fi-min', f.meetsMinimumProfit ? '✅ YES' : '❌ NO');
+  { const _a3=parseFloat(curDeal?.askingPrice)||0; const _m3=_a3>=1000000?'$100K+':('$'+Math.round(Math.max(_a3*.10,20000)/1000)+'K min'); set('fi-min', f.meetsMinimumProfit ? ('✅ YES ('+_m3+')') : ('❌ NO ('+_m3+' needed)')); }
   cls('fi-min', `fv ${f.meetsMinimumProfit?'g':'r'}`);
 
   // RENTAL TAB
