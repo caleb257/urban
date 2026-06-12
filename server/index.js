@@ -1263,15 +1263,8 @@ OUTPUT: ONLY valid JSON, no markdown, no extra text.`;
         system: system,
         messages: [{
           role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: prompt,
-              cache_control: { type: 'ephemeral' }
-            }
-          ]
-        }],
-        betas: ['prompt-caching-2024-07-31']
+          content: prompt
+        }]
       });
       break; // success
     } catch(apiErr) {
