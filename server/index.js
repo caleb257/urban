@@ -709,19 +709,9 @@ async function fetchComps(address, city, state, zip, deal = {}) {
       // Fall back to zip-level aggregate market data
       const mktData = await DB.getMarketData(zipKey).catch(() => null);
       if (mktData && mktData.median_sold) {
-        console.log('📊 Market data hit for zip', zipKey, '— $' + mktData.median_sold + ' median, $' + mktData.avg_ppsf + '/sqft');
-        const synth = [];
-        synth._meta = {
-          arvEstimate: mktData.median_sold,
-          source: 'market_db',
-          zip: zipKey,
-          city: mktData.city,
-          county: mktData.county,
-          median_dom: mktData.median_dom,
-          avg_ppsf: mktData.avg_ppsf
-        };
-        DB.saveComps(_ck, { comps: [], _meta: synth._meta }).catch(() => {});
-        return synth;
+        console.log('📊 Market data for zip', zipKey, '— $' + mktData.median_sold + ' median, falling through to web search for real comps');
+        // Don't return here — let web search get actual comp sales; store market data for context
+        deal._marketDataContext = { arvEstimate: mktData.median_sold, source: 'market_db', avg_ppsf: mktData.avg_ppsf };
       }
     }
   }
