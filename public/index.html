@@ -1174,7 +1174,10 @@ function renderUW(uw) {
   if ($('arv-asis')) {
     const _asis = uw.arv?.asIsValue;
     const _arv = uw.arv?.urbanARV;
-    set('arv-asis', _asis ? fmt(_asis) : '—');
+    // If asIsValue missing but we have ARV, estimate at 82% (typical as-is discount)
+    const _asisEst = _asis || (_arv ? Math.round(_arv * 0.82) : null);
+    const _asisLabel = _asis ? fmt(_asis) : (_asisEst ? fmt(_asisEst) + ' (est.)' : '—');
+    set('arv-asis', _asisLabel);
     set('arv-ur-big', _arv ? fmt(_arv) : '—');
     if (_asis && _arv) {
       const _spread = _arv - _asis;
