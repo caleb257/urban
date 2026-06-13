@@ -776,8 +776,15 @@ async function fetchComps(address, city, state, zip, deal = {}) {
     return liveComps;
   }
 
-  // Fallback 3: web-search comps (works for any county, ~10s, real Zillow/Redfin data)
-  console.log('🌐 No local comps — falling back to web-search comps for', address, zip);
+  // Fallback 3: web-search comps — only on manual ⚡ underwrite (not auto-batch)
+  // Auto-batch uses benchmarks to stay fast; manual press gets live web comps
+  if (!deal._forceRefreshComps) {
+    console.log('⚡ Auto-batch: using benchmarks for', address, '(hit ⚡ Underwrite for live comps)');
+    const emptyFast = [];
+    emptyFast._meta = { arvEstimate: null, source: 'benchmark_only', zip };
+    return emptyFast;
+  }
+  console.log('🌐 Manual underwrite: fetching live comps for', address, zip);
   const webComps = await fetchWebComps(address, city, zip, deal).catch(e => { console.warn('Web comps err:', e.message); return []; });
   if (webComps.length >= 2) {
     const prices = webComps.map(c => c.salePrice || c.sold_price).filter(p => p > 0).sort((a,b)=>a-b);
