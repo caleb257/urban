@@ -354,6 +354,23 @@ a{color:var(--accent)}
           <div class="arv-dn" id="arv-dn"></div>
           <div class="card" style="margin-bottom:14px">
             <div class="ct">Urban's Analysis <span class="conf" id="arv-conf"></span></div>
+              <div style="display:flex;gap:8px;padding:10px 0 6px;border-bottom:1px solid var(--border);margin-bottom:6px">
+                <div style="flex:1">
+                  <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">As-Is Value</div>
+                  <div class="big" id="arv-asis" style="font-size:20px">—</div>
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px">What we could wholesale it for today</div>
+                </div>
+                <div style="flex:1">
+                  <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Full Rehab ARV</div>
+                  <div class="big g" id="arv-ur-big" style="font-size:20px">—</div>
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px">After renovation value</div>
+                </div>
+                <div style="flex:1">
+                  <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Spread</div>
+                  <div class="big" id="arv-spread" style="font-size:20px">—</div>
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px">Flip profit opportunity</div>
+                </div>
+              </div>
             <p style="font-size:13px;color:var(--text);line-height:1.6" id="arv-notes"></p>
           </div>
           <div class="card" style="margin-bottom:14px">
@@ -465,8 +482,12 @@ a{color:var(--accent)}
             <div class="ct">New Construction Potential</div>
             <div class="grid" style="margin-bottom:14px">
               <div class="m"><div class="ml">Est. Lot Value</div><div class="mv big" id="nc-lot"></div></div>
-              <div class="m"><div class="ml">Build Cost (@ $150/sqft)</div><div class="mv" id="nc-build"></div></div>
-              <div class="m"><div class="ml">Est. New ARV</div><div class="mv" id="nc-arv"></div></div>
+              <div class="m"><div class="ml">CCG Land Equity (50%)</div><div class="mv warn" id="nc-equity"></div></div>
+              <div class="m"><div class="ml">Build Cost ($160/sqft)</div><div class="mv" id="nc-build"></div></div>
+              <div class="m"><div class="ml">Construction Loan (@ 11.5%)</div><div class="mv" id="nc-loan"></div></div>
+              <div class="m"><div class="ml">Est. Interest Cost</div><div class="mv" id="nc-interest"></div></div>
+              <div class="m"><div class="ml">Est. New ARV</div><div class="mv big g" id="nc-arv"></div></div>
+              <div class="m"><div class="ml">Net Profit (New Build)</div><div class="mv" id="nc-profit"></div></div>
             </div>
             <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:14px" id="nc-notes"></p>
           </div>
@@ -1149,6 +1170,23 @@ function renderUW(uw) {
   const ac = uw.arv?.arvConfidence || 'LOW';
   set('arv-ws', fmt(uw.arv?.wholesalerARV));
   set('arv-ur', fmt(uw.arv?.urbanARV));
+  // As-is value and spread
+  if ($('arv-asis')) {
+    const _asis = uw.arv?.asIsValue;
+    const _arv = uw.arv?.urbanARV;
+    set('arv-asis', _asis ? fmt(_asis) : '—');
+    set('arv-ur-big', _arv ? fmt(_arv) : '—');
+    if (_asis && _arv) {
+      const _spread = _arv - _asis;
+      const _spreadEl = $('arv-spread');
+      if (_spreadEl) {
+        _spreadEl.textContent = fmt(_spread);
+        _spreadEl.style.color = _spread > 50000 ? 'var(--buy)' : _spread > 20000 ? 'var(--review)' : 'var(--hot)';
+      }
+    } else {
+      set('arv-spread', '—');
+    }
+  }
   const arvDnText = !wsArv
     ? 'Wholesaler provided no ARV — Urban estimated independently from comps'
     : diff > 1000 ? `Wholesaler is ${fmt(diff)} (${((diff/(uw.arv?.urbanARV||1))*100).toFixed(1)}%) ABOVE Urban TRUE ARV — INFLATED`
@@ -1273,8 +1311,12 @@ function renderUW(uw) {
   // NEW CONSTRUCTION TAB
   const nc = uw.newConstruction || {};
   set('nc-lot', fmt(nc.lotValue));
-  set('nc-build', fmt(nc.estimatedBuildCost));
+  set('nc-equity', nc.lotEquityRequired ? fmt(nc.lotEquityRequired) + ' cash' : nc.lotValue ? fmt(Math.round(nc.lotValue*0.5)) + ' cash (est.)' : '—');
+  set('nc-build', nc.estimatedBuildCost ? fmt(nc.estimatedBuildCost) + (nc.buildCostPerSqft ? ' ($'+nc.buildCostPerSqft+'/sf)' : '') : '—');
+  set('nc-loan', nc.constructionLoanAmount ? fmt(nc.constructionLoanAmount) + ' @ 11.5%' : '—');
+  set('nc-interest', fmt(nc.estimatedInterestCost));
   set('nc-arv', fmt(nc.estimatedNewARV));
+  if ($('nc-profit')) { const _p=nc.netProfitNewBuild; $('nc-profit').textContent=_p!==undefined?fmt(_p):'—'; if (_p!==undefined) cls('nc-profit','mv '+(_p>50000?'g':_p>0?'y':'r')); }
   set('nc-notes', nc.notes || '');
 
   // FLAGS TAB
