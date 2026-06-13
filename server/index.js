@@ -524,6 +524,119 @@ async function fetchHillsboroughGIS(zip, beds, sqft) {
 }
 
 
+
+// ── WEB-SEARCH COMPS ─────────────────────────────────────────────────────────
+// Fallback comp source: uses Claude web search to find real Zillow/Redfin sold
+// listings for any address in Florida. Called automatically when CCG DB and 
+// Redfin HTML scraping both come up empty.
+async function fetchWebComps(address, city, zip, deal = {}) {
+  const beds   = deal.beds   ? parseInt(deal.beds)    : null;
+  const baths  = deal.baths  ? parseFloat(deal.baths) : null;
+  const sqft   = deal.sqft   ? parseInt(deal.sqft)    : null;
+  const county = deal.county || '';
+
+  const sqftLow  = sqft ? Math.round(sqft * 0.75) : 900;
+  const sqftHigh = sqft ? Math.round(sqft * 1.35) : 3000;
+
+  // 2 parallel searches: (1) nearby sold comps, (2) active/pending for market context
+  const [r1, r2] = await Promise.all([
+
+    // Search 1: primary comp search — sold homes, recent, nearby
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content:
+          `Search Zillow and Redfin for recently SOLD homes near: ${address}, ${city}, FL ${zip}${county ? ' (' + county + ' County)' : ''}.
+
+` +
+          `I need 5-8 comparable sales from the LAST 9 MONTHS within 0.75 miles or same zip code.
+` +
+          `Target property specs: ${beds||3}bd/${baths||2}ba, ~${sqft||1500} sqft, single family.
+` +
+          `Filter comps: ${sqftLow}-${sqftHigh} sqft range, ${beds ? Math.max(1,beds-1) : 2}-${(beds||3)+1}bd, single family only.
+
+` +
+          `Return ONLY a valid JSON array (no markdown, no explanation):
+` +
+          `[{"address":"123 Oak Ave","city":"${city||''}","zip":"${zip||''}","sqft":1350,"beds":3,"baths":2,"salePrice":248000,"saleDate":"2025-03","distanceMiles":0.4,"ppsf":183,"source":"zillow_sold"}]
+
+` +
+          `Include 5-8 comps. Use "redfin_sold" or "zillow_sold" as source. Return [] if no sold data found.`
+        }]
+      })
+    }).then(r => r.json()).catch(() => ({ content: [] })),
+
+    // Search 2: active listings + Zestimate for market context
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content:
+          `Look up the Zillow Zestimate for: ${address}, ${city}, FL ${zip}.
+` +
+          `Also find 2-3 recently SOLD homes in ${city || zip}, FL priced between $100K-$600K, single family.
+` +
+          `Return ONLY a JSON array:
+` +
+          `[{"address":"${address}","sqft":${sqft||1500},"beds":${beds||3},"baths":${baths||2},"salePrice":265000,"saleDate":"zestimate","source":"zestimate","distanceMiles":0}]
+` +
+          `Use "zestimate" as saleDate and source for the Zestimate result. Return [] if not found.`
+        }]
+      })
+    }).then(r => r.json()).catch(() => ({ content: [] }))
+  ]);
+
+  const comps = [];
+  const seen = new Set();
+
+  const parseComps = (result) => {
+    const tb = (result?.content || []).find(b => b.type === 'text');
+    if (!tb?.text) return;
+    const raw = tb.text.trim();
+    const s = raw.indexOf('['), e = raw.lastIndexOf(']');
+    if (s === -1 || e <= s) return;
+    try {
+      const arr = JSON.parse(raw.slice(s, e+1));
+      for (const c of arr) {
+        if (!c?.salePrice || c.salePrice < 50000) continue;
+        const key = (c.address||'').toLowerCase().trim();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const ppsf = c.ppsf || (c.sqft && c.salePrice ? Math.round(c.salePrice / c.sqft) : null);
+        comps.push({ ...c, ppsf, sold_price: c.salePrice });
+      }
+    } catch (e) { console.warn('Web comp parse error:', e.message?.slice(0,50)); }
+  };
+
+  parseComps(r1);
+  parseComps(r2);
+
+  // Sort by distance, prioritize actual sold over estimates
+  const sold = comps.filter(c => !c.source?.includes('zestimate')).sort((a,b) => (a.distanceMiles||1) - (b.distanceMiles||1));
+  const estimates = comps.filter(c => c.source?.includes('zestimate'));
+
+  const result = [...sold.slice(0, 7), ...estimates.slice(0, 1)];
+  console.log("Web comps: " + result.length + " results for " + address + " (" + sold.length + " sold + " + estimates.length + " est)");
+  return result;
+}
+
 async function fetchComps(address, city, state, zip, deal = {}) {
   const _ck = (address + '|' + (zip || city || '')).toLowerCase().trim();
   if (!deal._forceRefreshComps) {
@@ -644,6 +757,28 @@ async function fetchComps(address, city, state, zip, deal = {}) {
     };
     DB.saveComps(_ck, { comps: liveComps, _meta: liveComps._meta }).catch(() => {});
     return liveComps;
+  }
+
+  // Fallback 3: web-search comps (works for any county, ~10s, real Zillow/Redfin data)
+  console.log('🌐 No local comps — falling back to web-search comps for', address, zip);
+  const webComps = await fetchWebComps(address, city, zip, deal).catch(e => { console.warn('Web comps err:', e.message); return []; });
+  if (webComps.length >= 2) {
+    const prices = webComps.map(c => c.salePrice || c.sold_price).filter(p => p > 0).sort((a,b)=>a-b);
+    const pctile = (arr, p) => { const i = (arr.length-1)*p; const lo=Math.floor(i),hi=Math.ceil(i); return lo===hi?arr[lo]:Math.round(arr[lo]+(arr[hi]-arr[lo])*(i-lo)); };
+    const arvEst = pctile(prices, 0.60);   // P60 = light-rehab ARV
+    const p75 = pctile(prices, 0.75);      // P75 = full-rehab ARV
+    const avgPpsf = webComps.filter(c=>c.ppsf||c.sqft).reduce((s,c)=>s+(c.ppsf||(c.salePrice/c.sqft)||0),0)/webComps.filter(c=>c.sqft).length;
+    webComps._meta = {
+      arvEstimate: arvEst,
+      p60Estimate: arvEst,
+      p75Estimate: p75,
+      source: 'web_search',
+      zip: zip,
+      count: webComps.length,
+      avg_ppsf: Math.round(avgPpsf) || null
+    };
+    DB.saveComps(_ck, { comps: webComps, _meta: webComps._meta }).catch(() => {});
+    return webComps;
   }
 
   // Last resort: return empty comps with market aggregate from DB
@@ -1243,14 +1378,16 @@ CRITERIA: Hard money 9.5% IO 90%LTV | MAO=ARV×Repairs | 6% agent+1.5% closing+2
 PROFIT RULE: askingPrice<$1M → profit must be ≥10% of askingPrice (e.g. $300K ask=$30K min, $400K ask=$40K min, $250K ask=$25K min). askingPrice≥$1M → profit must be ≥$100K. Deals below threshold → HARD NO unless negotiable.
 
 ARV METHODOLOGY — CRITICAL, ALWAYS FOLLOW:
-1. urbanARV = P75 of sold comps. ALWAYS commit to a specific dollar amount — never return 0 or null.
-2. Florida $/sqft benchmarks (renovated, 2025 — use when limited comps):
+1. COMPS FIRST: urbanARV = P75 of the actual sold comps provided. When you have real sold comps (source: zillow_sold, redfin_sold, CCG), USE THEM as primary data — they override benchmarks. Calculate $/sqft from comps, weight by similarity (sqft, beds, distance, recency).
+2. COMP WEIGHTING: Prioritize comps within 0.5 miles, ±15% sqft match, sold within 6 months. P60 = as-is value, P75 = light-rehab ARV, P90 = top-of-market.
+3. WHEN NO COMPS: Use Florida $/sqft benchmarks (renovated, 2025):
    Hillsborough: $165-220/sf | Pasco: $155-210/sf | Pinellas coastal: $180-260/sf, inland: $150-195/sf
    Hernando: $130-175/sf | Polk: $130-165/sf | Orange/Osceola: $155-195/sf | Broward/Dade: $190-285/sf
    Sarasota/Charlotte: $165-235/sf | Lee/Collier: $165-230/sf | Volusia: $145-190/sf | Brevard: $145-185/sf
-   Pool premium: +$15-25K | Full rehab: -10-15% from top | Distressed/as-is: -20-25% | New construction area: -5%
-3. Always cite your $/sqft reasoning in arvNotes even without direct comps.
-4. NEVER anchor to wholesaler ARV. Derive independently from market data.
+   Pool premium: +$15-25K | Full rehab premium: +10-15% over as-is | Distressed/as-is: P50 of comps
+4. COMP QUALITY SIGNAL: arvConfidence = HIGH when 5+ real sold comps; MEDIUM when 2-4 comps or benchmarks; LOW when no comps/estimate only.
+5. In arvNotes ALWAYS state: (a) which comps you used, (b) calculated $/sqft, (c) how you derived urbanARV from those comps.
+6. NEVER anchor to wholesaler ARV. Derive independently. Flag if wholesaler is >15% above your calculation.
 
 REPAIR BENCHMARKS (Florida 2025): Roof shingle 1500sf=$8-13K/2000sf=$10-16K | HVAC full=$6-10K/condenser=$3-5K | Kitchen gut=$15-30K/cosmetic=$5-12K | Bath full=$8-18K/half=$5-10K | LVP=$3-6/sf | Repipe=$4-8K | Panel 200A=$2.5-5K | Int paint=$3-6K | Impact windows=$10-25K | Permits=$1.5-4K | Foundation=$8-30K | Septic=$4-10K | Pool resurface=$6-15K. ALWAYS fill lineItems with specific dollar estimates for every applicable category.
 
