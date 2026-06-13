@@ -239,6 +239,7 @@ a{color:var(--accent)}
       <div class="stat-chip"><div class="val" id="st-lessons">—</div><div class="lbl">Lessons</div></div>
       <div class="stat-chip"><div class="val" id="st-profit">—</div><div class="lbl">Avg Profit</div></div>
       <div class="stat-chip"><div class="val" id="st-pct">—</div><div class="lbl">BUY %</div></div>
+      <div class="stat-chip" title="Urban ARV vs Wholesaler avg difference"><div class="val" id="st-arv-acc" style="font-size:14px">—</div><div class="lbl">ARV vs WS</div><div style="font-size:9px;color:var(--muted);line-height:1.2" id="st-arv-tot"></div></div>
     </div>
     <div id="search-wrap" style="display:flex;gap:6px;align-items:center;padding:10px 18px">
       <input type="text" id="search-input" placeholder="Search..." style="flex:1">
@@ -588,6 +589,20 @@ async function doLoadStats() {
       const total = s.totalUnderwritten || 1;
       const good = (s.verdicts?.HOT||0) + (s.verdicts?.BUY||0);
       $('st-pct').textContent = Math.round(good/total*100) + '% BUY DEALS';
+    }
+    // ARV accuracy: avg Urban vs Wholesaler
+    if (s.arvAccuracy) {
+      const acc = s.arvAccuracy;
+      if ($('st-arv-acc')) {
+        const sign = acc.avgDiffPct >= 0 ? '+' : '';
+        $('st-arv-acc').textContent = sign + acc.avgDiffPct + '%';
+        $('st-arv-acc').style.color = Math.abs(acc.avgDiffPct) <= 5 ? 'var(--buy)' : Math.abs(acc.avgDiffPct) <= 15 ? 'var(--review)' : 'var(--hot)';
+      }
+      if ($('st-arv-tot')) {
+        const totK = Math.round(Math.abs(acc.totalDiffDollars) / 1000);
+        const dir = acc.totalDiffDollars >= 0 ? 'above WS' : 'below WS';
+        $('st-arv-tot').textContent = '$' + totK + 'K ' + dir + ' · ' + acc.dealCount + ' deals';
+      }
     }
   } catch {}
 }
