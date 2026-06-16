@@ -46,7 +46,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .di-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .di-price{font-family:var(--mono);font-size:12px;color:var(--accent)}
 .badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:1px;text-transform:uppercase}
-.b-HOT{background:rgba(255,68,68,.2);color:var(--hot);border:1px solid rgba(255,68,68,.4)}
+.b-HOT{background:linear-gradient(135deg,rgba(255,100,30,.3),rgba(255,200,0,.2));color:#ff8030;border:1px solid rgba(255,140,40,.5);text-shadow:0 0 8px rgba(255,120,0,.4)}
 .b-BUY{background:rgba(68,204,136,.2);color:var(--buy);border:1px solid rgba(68,204,136,.4)}
 .b-REVIEW{background:rgba(240,160,48,.2);color:var(--review);border:1px solid rgba(240,160,48,.4)}
 .b-PASS{background:rgba(102,136,170,.2);color:var(--pass);border:1px solid rgba(102,136,170,.4)}
@@ -252,7 +252,7 @@ a{color:var(--accent)}
       <div class="ftab" data-f="REVIEW">Review</div>
       <div class="ftab" data-f="PASS">Pass</div>
       <div class="ftab" data-f="HARDNO">Hard No</div>
-      <div class="ftab" data-f="NEEDS_ARV">No ARV</div>
+      <div class="ftab" data-f="NEEDS_ARV">Need Comps</div>
       <div class="ftab" data-f="PENDING">Pending</div>
     </div>
     <div id="deal-list"></div>
@@ -876,12 +876,12 @@ function renderList() {
 
     const _beds=d.beds&&String(d.beds)!=='0'?d.beds+'bd':''; const _baths=d.baths&&String(d.baths)!=='0'?d.baths+'ba':''; const _bb=[_beds,_baths].filter(Boolean).join('/'); const _sqft=d.sqft&&parseInt(d.sqft)>0?parseInt(d.sqft).toLocaleString()+' sqft':''; const _spec=[_bb,_sqft].filter(Boolean).join(' · ');
     el.innerHTML = `
-      <div class="di-addr">${d.address || 'No address'}</div>
-      <div class="di-city">${d.city}, ${d.state}${_spec?' · '+_spec:''}${ppsqft}</div>
+      <div class="di-addr">${d.address || 'No address'}${['Land','Lot','Vacant Land','Acreage'].some(t=>d.propertyType?.toLowerCase().includes(t.toLowerCase()))?' <span title="Land/Lot" style="font-size:10px">🌿</span>':''}</div>
+      <div class="di-city">${d.city}, ${d.state}${_spec?' · '+_spec:''}${ppsqft}${(d.propertyType&&d.propertyType!=='Single Family'&&d.propertyType!=='SFR')?` <span style="color:var(--gold);font-size:10px;opacity:.8;">${d.propertyType.toUpperCase()}</span>`:''}</div>
       <div class="di-meta">
         <span class="di-price">${price}</span>
         <span class="badge ${badgeCls}">${status}</span>
-        ${d.underwriteScore ? `<span class="di-score">${d.underwriteScore}/10</span>` : ''}
+        ${d.underwriteScore ? `<span class="di-score" style="font-weight:700">${d.underwriteScore}/10</span>` : ''}
         ${ageLabel ? `<span class="di-age">${ageLabel}</span>` : ''}
         ${staleLabel}
       </div>`;
@@ -915,7 +915,7 @@ async function selectDeal(d) {
   show('dv', true);
   $('dv-addr').textContent = d.address || 'Unknown';
   const countyPart = d.county ? (d.county.toLowerCase().includes('county') ? d.county : d.county + ' County') : '';
-  $('dv-city').textContent = [`${d.city||''}, ${d.state||''} ${d.zip||''}`.trim().replace(/^,\s*/, ''), countyPart, d.propertyType || 'SFR'].filter(Boolean).join(' · ');
+  $('dv-city').textContent = [`${d.city||''}, ${d.state||''} ${d.zip||''}`.trim().replace(/^,\s*/, ''), countyPart, d.propertyType ? (d.propertyType === 'Single Family' ? 'SFR' : d.propertyType) : 'SFR'].filter(Boolean).join(' · ');
 
   // Always fill property tab with sheet data
   fillPropTab(d);
@@ -1254,7 +1254,7 @@ function renderUW(uw) {
         <td title="${c.source||''}">${src}</td>`;
       compsTb.appendChild(tr);
     });
-    if (!uw.comps?.length) compsTb.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px;font-size:12px">No comps in DB — Urban ARV derived from Florida market benchmarks<br><small>Hit ⚡ Underwrite to fetch live comps from MLS</small></td></tr>';
+    if (!uw.comps?.length) compsTb.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px;font-size:12px">No live comps loaded yet<br><small style="opacity:.7">Hit ⚡ Underwrite → pulls real sold comps from Zillow, Redfin &amp; Public Records</small></td></tr>';
   }
 
   // REHAB TAB
