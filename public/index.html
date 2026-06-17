@@ -309,7 +309,13 @@ a{color:var(--accent)}
         <div class="tc active" id="t-overview">
           <!-- NEGOTIATION LADDER -->
             <div id="neg-ladder" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:16px;margin-bottom:16px;display:none">
-              <div class="ct" style="margin-bottom:10px">Negotiation Ladder</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <div class="ct">Negotiation Ladder</div>
+                <div style="font-size:10px;color:var(--muted);display:flex;gap:16px">
+                  <span style="min-width:90px;text-align:right">NET PROFIT</span>
+                  <span style="min-width:42px;text-align:right">MARGIN</span>
+                </div>
+              </div>
               <div id="neg-rows"></div>
             </div>
             <div class="rec-box">
@@ -325,7 +331,8 @@ a{color:var(--accent)}
               <div class="m"><div class="ml">MAO (Max Offer)</div><div class="mv" id="ov-mao"></div></div>
               <div class="m"><div class="ml">Asking Price</div><div class="mv" id="ov-ask"></div></div>
               <hr class="d">
-              <div class="m"><div class="ml">Net Profit @ Asking</div><div class="mv" id="ov-profit"></div></div>
+              <div class="m"><div class="ml">Net Profit @ Ask</div><div class="mv" id="ov-profit"></div></div>
+              <div class="m" id="ov-spread-row" style="display:none"><div class="ml" style="font-size:10px;color:var(--muted)">Room below MAO</div><div class="mv" id="ov-spread-mao" style="color:var(--buy);font-size:12px"></div></div>
             </div>
             <div class="card">
               <div class="ct">ARV Comparison</div>
@@ -337,8 +344,8 @@ a{color:var(--accent)}
             </div>
             <div class="card">
               <div class="ct">Criteria Check</div>
-              <div class="m"><div class="ml">Profit Min (10%)</div><div class="mv" id="cc-profit"></div></div>
-              <div class="m"><div class="ml">In Market</div><div class="mv" id="cc-mkt"></div></div>
+              <div class="m"><div class="ml">Profit Target</div><div class="mv" id="cc-profit"></div></div>
+              <div class="m"><div class="ml">Exit Market</div><div class="mv" id="cc-mkt"></div></div>
               <div class="m"><div class="ml">Flood Zone</div><div class="mv" id="cc-flood"></div></div>
               <div class="m"><div class="ml">High Risk Flags</div><div class="mv" id="cc-risk"></div></div>
               <div class="m"><div class="ml">Rehab Scope</div><div class="mv" id="cc-scope"></div></div>
@@ -451,7 +458,7 @@ a{color:var(--accent)}
             <div class="card">
               <div class="ct">Profit</div>
               <div class="fr"><span class="fl">Net Profit @ Asking</span><span class="fv" id="fi-pa" style="font-size:17px"></span></div>
-              <div class="fr g"><span class="fl">Net Profit @ MAO</span><span class="fv" id="fi-pm" style="font-size:17px"></span></div>
+              <div class="fr g"><span class="fl" style="font-size:11px">Profit if paid ceiling (MAO)</span><span class="fv" id="fi-pm" style="font-size:15px"></span></div>
               <div class="fr"><span class="fl">ROI</span><span class="fv" id="fi-roi"></span></div>
               <div class="fr"><span class="fl">Meets Profit Min (10%)</span><span class="fv" id="fi-min"></span></div>
             </div>
@@ -1139,6 +1146,14 @@ function renderUW(uw) {
   const profitStr = profit != null ? fmt(profit) + (profitPct ? ` (${profitPct}%)` : '') : '—';
   set('ov-profit', profitStr);
   cls('ov-profit', `mv ${profit >= profitMin ? 'g' : profit >= 0 ? 'y' : 'r'}`);
+  // Room below MAO — how much cheaper we could get it vs ceiling
+  const _maoVal = uw.financials?.mao || 0;
+  const _askVal = parseFloat(curDeal?.askingPrice) || 0;
+  const _spreadRow = $('ov-spread-row');
+  if (_maoVal > 0 && _askVal > 0 && _askVal < _maoVal && _spreadRow) {
+    _spreadRow.style.display = '';
+    set('ov-spread-mao', `$${(_maoVal - _askVal).toLocaleString()} below ceiling`);
+  } else if (_spreadRow) { _spreadRow.style.display = 'none'; }
   const wsArvVal = uw.arv?.wholesalerARV;
   set('ov-warv', wsArvVal && wsArvVal > 0 ? fmt(wsArvVal) : 'Not provided');
   const diff = (uw.arv?.wholesalerARV||0) - (uw.arv?.urbanARV||0);
@@ -1156,10 +1171,10 @@ function renderUW(uw) {
   set('ov-trend', uw.marketAnalysis?.trend || '—');
   set('ov-hold', uw.financials?.holdMonths ? `${uw.financials.holdMonths} months` : '—');
   const profMinPct = ask2 >= 1000000 ? '$100K' : Math.max(Math.round((ask2||0)*0.1/1000)*1000, 20000).toLocaleString();
-  {const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?'$100K':('$'+Math.round(Math.max(_a*.10,20000)/1000)+'K');set('cc-profit',uw.financials?.meetsMinimumProfit?'✅ Yes (≥'+_m+')':'❌ No (need '+_m+')');} 
+  {const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?'$100K':('$'+Math.round(Math.max(_a*.10,20000)/1000)+'K');const _actualP = uw.financials?.netProfitAtAsking; const _actualStr = _actualP != null ? ' ($'+Math.round(_actualP/1000)+'K)' : ''; set('cc-profit',uw.financials?.meetsMinimumProfit?'✅ YES'+_actualStr:'❌ NO (min '+_m+')');} 
   cls('cc-profit', `mv ${uw.financials?.meetsMinimumProfit ? 'g' : 'r'}`);
-  const inMkt = ['pasco','hillsborough','polk','pinellas','hernando'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
-  set('cc-mkt', inMkt ? '✅ In Market' : '⚠️ Extended');
+  const inMkt = ['pasco','hillsborough','polk','pinellas','hernando','sarasota'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
+  set('cc-mkt', inMkt ? '✅ CCG Market' : '⚠️ Extended');
   cls('cc-mkt', `mv ${inMkt ? 'g' : 'y'}`);
   const flood = curDeal?.floodZone;
   const hasFlood = flood && !['no','n/a','','none','x'].includes((flood||'').toLowerCase());
@@ -1308,7 +1323,7 @@ function renderUW(uw) {
   const pa = f.netProfitAtAsking;
   {const _ask=parseFloat(curDeal?.askingPrice)||0; const _pct=_ask>0&&pa!=null?'('+( pa/_ask*100).toFixed(1)+'%)':''; set('fi-pa', fmt(pa)+(_pct?' '+_pct:'')); }
   cls('fi-pa', `fv ${(()=>{const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?100000:Math.max(_a*.10,20000);return pa>=_m?'g':pa>=0?'y':'r';})()} `);
-  set('fi-pm', fmt(f.netProfitAtMAO));
+  { const _pm = f.netProfitAtMAO; set('fi-pm', _pm === 0 || Math.abs(_pm) < 5000 ? '≈ $0 (break-even)' : fmt(_pm)); }
   set('fi-roi', f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—');
   { const _a3=parseFloat(curDeal?.askingPrice)||0; const _m3=_a3>=1000000?'$100K+':('$'+Math.round(Math.max(_a3*.10,20000)/1000)+'K min'); set('fi-min', f.meetsMinimumProfit ? ('✅ YES ('+_m3+')') : ('❌ NO ('+_m3+' needed)')); }
   cls('fi-min', `fv ${f.meetsMinimumProfit?'g':'r'}`);
@@ -1357,14 +1372,26 @@ function renderUW(uw) {
     if (_nr) {
       _nr.innerHTML = ladder.map(r => {
         const pc = r.meetsMin ? 'neg-ok' : r.profit >= 0 ? 'neg-no' : 'neg-bad';
-        const lc = r.label === 'Asking' ? 'background:rgba(255,160,32,.15);color:var(--review)' :
-                   r.label === 'MAO'    ? 'background:rgba(60,200,130,.15);color:var(--buy)' :
-                   r.label === 'Stretch'? 'background:rgba(60,120,255,.12);color:#7799ff' : '';
-        return `<div class="neg-row">
-          <span class="neg-label" style="${lc}">${r.label}</span>
-          <span class="neg-price">$${r.price.toLocaleString()}</span>
-          <span class="neg-profit ${pc}">${r.profit >= 0 ? '+' : ''}$${r.profit.toLocaleString()}</span>
-          ${r.roi !== undefined ? `<span class="neg-roi">${r.roi}%</span>` : ''}
+        const isCeiling  = r.label === 'CEILING' || r.label === 'Max Offer';
+        const isAsking   = r.label === 'Asking' || r.label.includes('ASKING');
+        const isOpen     = r.label === 'Open offer' || r.label === 'Best case';
+        const isOver     = r.label.includes('over');
+        const lc = isAsking
+          ? 'background:rgba(255,160,32,.18);color:var(--review);border-left:3px solid var(--review)'
+          : isCeiling
+          ? 'background:rgba(100,100,100,.12);color:var(--muted);border-left:3px solid var(--border2)'
+          : isOpen
+          ? 'background:rgba(60,200,130,.12);color:var(--buy);border-left:3px solid var(--buy)'
+          : isOver
+          ? 'background:rgba(220,50,50,.1);color:#cc4455;border-left:3px solid rgba(220,50,50,.4)'
+          : 'background:rgba(60,120,255,.08);color:#7799ff;border-left:3px solid rgba(60,120,255,.3)';
+        const hint = isOpen ? ' <span style="font-size:9px;opacity:.7;font-style:italic">← start here</span>' : 
+                     isCeiling ? ' <span style="font-size:9px;opacity:.5;font-style:italic">do not exceed</span>' : '';
+        return `<div class="neg-row" style="margin-bottom:2px">
+          <span class="neg-label" style="${lc};border-radius:3px;padding:2px 6px">${r.label}${hint}</span>
+          <span class="neg-price" style="font-weight:${isOpen||isAsking?'600':'400'}">\$${r.price.toLocaleString()}</span>
+          <span class="neg-profit ${pc}">${r.profit >= 0 ? '+' : ''}\$${Math.abs(r.profit).toLocaleString()}</span>
+          ${r.roi !== undefined ? `<span class="neg-roi" style="color:var(--muted);font-size:11px">${r.roi}%</span>` : ''}
         </div>`;
       }).join('');
     }
