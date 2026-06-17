@@ -240,10 +240,14 @@ a{color:var(--accent)}
       <div class="stat-chip"><div class="val" id="st-profit">—</div><div class="lbl">Avg Profit</div></div>
       <div class="stat-chip"><div class="val" id="st-pct">—</div><div class="lbl">BUY %</div></div>
       <div class="stat-chip" title="Urban ARV vs Wholesaler avg difference"><div class="val" id="st-arv-acc" style="font-size:14px">—</div><div class="lbl">ARV vs WS</div><div style="font-size:9px;color:var(--muted);line-height:1.2" id="st-arv-tot"></div></div>
+      <div class="stat-chip" title="Click to exclude Hard No deals from stats and list" id="hardno-toggle-chip" onclick="toggleHardNo()" style="cursor:pointer;opacity:.7">
+        <div class="val" id="hardno-toggle-icon">⛔</div>
+        <div class="lbl" id="hardno-toggle-lbl">Inc. Hard No</div>
+      </div>
     </div>
     <div id="search-wrap" style="display:flex;gap:6px;align-items:center;padding:10px 18px">
       <input type="text" id="search-input" placeholder="Search..." style="flex:1">
-      <select id="sort-select" title="Sort" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:6px 5px;border-radius:4px;font-size:11px;font-family:var(--sans);outline:none;cursor:pointer;width:72px"><option value="date-new">↓ New</option><option value="date-old">↑ Old</option><option value="score-high">↓ Score</option><option value="ask-low">↑ Price</option></select>
+      <select id="sort-select" title="Sort" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:6px 5px;border-radius:4px;font-size:11px;font-family:var(--sans);outline:none;cursor:pointer;width:82px"><option value="date-new">↓ New</option><option value="date-old">↑ Old</option><option value="score-high">↓ Score</option><option value="expires">⏰ Expires</option><option value="ask-low">↑ Price</option></select>
     </div>
     <div id="filter-bar">
       <div class="ftab on" data-f="ALL">All</div>
@@ -252,11 +256,14 @@ a{color:var(--accent)}
       <div class="ftab" data-f="REVIEW">Review</div>
       <div class="ftab" data-f="PASS">Pass</div>
       <div class="ftab" data-f="HARDNO">Hard No</div>
-      <div class="ftab" data-f="NEEDS_ARV">Need Comps</div>
+      <div class="ftab" data-f="NEEDS_ARV" title="Deals without sold comps — click ⚡ to pull live comps on each">Need Comps</div>
       <div class="ftab" data-f="PENDING">Pending</div>
     </div>
     <div id="deal-list"></div>
-    <button id="ref-btn">↻ Pull from Derek's Sheet</button>
+    <div style="display:flex;gap:6px;padding:0 12px">
+      <button id="ref-btn" style="flex:1">↻ Pull from Derek's Sheet</button>
+      <button id="rewrite-all-btn" onclick="doRewriteAll()" title="Re-underwrite all deals with updated brain" style="padding:8px 10px;font-size:10px;background:rgba(255,160,32,.1);border-color:rgba(255,160,32,.3);color:rgba(255,160,32,.8)">⚡ All</button>
+    </div>
   </div>
 
   <div id="main">
@@ -666,6 +673,18 @@ async function doLoadStats() {
       const good = (s.verdicts?.HOT||0) + (s.verdicts?.BUY||0);
       $('st-pct').textContent = Math.round(good/total*100) + '% BUY DEALS';
     }
+    // If HARD NO toggle is on, recalculate stats from client-side deals array
+    if (hideHardNo && deals.length) {
+      const activeDeals = deals.filter(d => d.underwriteStatus !== 'HARD NO' && d.underwriteScore);
+      if (activeDeals.length) {
+        $('st-total').textContent = activeDeals.length;
+        const avgSc = activeDeals.reduce((s,d) => s+(d.underwriteScore||0), 0) / activeDeals.length;
+        $('st-avg').textContent = avgSc.toFixed(1);
+        const buys = activeDeals.filter(d => d.underwriteStatus === 'BUY' || d.underwriteStatus === 'HOT').length;
+        $('st-hot').textContent = buys;
+        if ($('st-pct')) $('st-pct').textContent = Math.round(buys/activeDeals.length*100) + '% BUY DEALS';
+      }
+    }
     // ARV accuracy: avg Urban vs Wholesaler
     if (s.arvAccuracy) {
       const acc = s.arvAccuracy;
@@ -897,6 +916,11 @@ function renderList() {
   // Apply sort
   const sortBy = $('sort-select')?.value || 'date-new';
   deals.sort((a, b) => {
+    if (sortBy === 'expires') {
+      const ea = a.expires ? new Date(a.expires) : new Date(9999,0,1);
+      const eb = b.expires ? new Date(b.expires) : new Date(9999,0,1);
+      return ea - eb; // soonest first
+    }
     if (sortBy === 'date-new') return new Date(b.dateReceived||0) - new Date(a.dateReceived||0);
     if (sortBy === 'date-old') return new Date(a.dateReceived||0) - new Date(b.dateReceived||0);
     if (sortBy === 'score-high') return (b.underwriteScore||0) - (a.underwriteScore||0);
@@ -912,6 +936,7 @@ function renderList() {
   const filtered = deals.filter(d => {
     const status = d.underwriteStatus || 'PENDING';
     const normStatus = status === 'HARD NO' ? 'HARDNO' : status;
+    if (hideHardNo && status === 'HARD NO' && curFilter !== 'HARDNO') return false; // HARD NO toggle
     const matchFilter = curFilter === 'ALL' 
       || normStatus === curFilter
       || (curFilter === 'BUY' && (status === 'BUY' || status === 'HOT'))
@@ -946,6 +971,18 @@ function renderList() {
       : null;
     const ageLabel = ageDays === null ? '' : ageDays === 0 ? '🟢 Today' : ageDays === 1 ? '🟡 1d' : ageDays <= 3 ? `🟡 ${ageDays}d` : ageDays <= 7 ? `🟠 ${ageDays}d` : `🔴 ${ageDays}d`;
     const staleLabel = d.isStale ? '<span class="stale-badge">⏰ STALE</span>' : '';
+    // Expiration warning — show if expires within 7 days
+    let expiresLabel = '';
+    if (d.expires && !d.isStale) {
+      try {
+        const expDate = new Date(d.expires);
+        const daysLeft = Math.ceil((expDate - Date.now()) / 86400000);
+        if (daysLeft >= 0 && daysLeft <= 7) {
+          const exClr = daysLeft <= 2 ? '#ff4455' : daysLeft <= 4 ? 'var(--hot)' : 'var(--review)';
+          expiresLabel = '<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(255,80,80,.12);color:' + exClr + ';border:1px solid ' + exClr + ';opacity:.9">⏰ ' + daysLeft + 'd left</span>';
+        }
+      } catch(e) {}
+    }
     const sqftLabel = d.sqft ? `${parseInt(d.sqft).toLocaleString()} sf` : '';
     const askPpsf = (d.askingPrice && d.sqft) ? Math.round(parseFloat(d.askingPrice)/parseFloat(d.sqft)) : 0;
     const ppsqft = d.arv?.arvPerSqft ? ` · $${Math.round(d.arv.arvPerSqft)}/sf` : (askPpsf ? ` · $${askPpsf}/sf` : '');
@@ -960,6 +997,7 @@ function renderList() {
         ${d.underwriteScore ? `<span class="di-score" style="font-weight:700">${d.underwriteScore}/10</span>` : ''}
         ${ageLabel ? `<span class="di-age">${ageLabel}</span>` : ''}
         ${staleLabel}
+        ${expiresLabel}
       </div>`;
     el.addEventListener('click', () => selectDeal(d));
     list.appendChild(el);
@@ -1922,7 +1960,16 @@ function renderChat(history) {
     return `<div style="color:var(--muted);font-size:11px;padding:14px;line-height:1.7;border-bottom:1px solid var(--border);background:var(--bg2)">
       <div style="font-weight:700;color:var(--text);margin-bottom:6px">📋 ${d.address}, ${d.city} FL</div>
       Ask Urban anything. Give better comps, correct the ARV, update repair costs — Urban recalculates everything and remembers your corrections permanently.
-      <div style="margin-top:6px;font-size:10px;opacity:.6">Try: "The roof was replaced in 2021" · "I have a comp at $285K" · "What if ARV is $310K?"</div>
+      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
+        ${[
+          'What if repairs are $45K?',
+          'Give me 3 better comps',
+          'What\'s the biggest risk here?',
+          'Counter-offer script for $210K',
+          'Is ARV supportable?',
+          'Worst-case scenario?'
+        ].map(q => '<span onclick="document.getElementById(\'chat-in\').value=\''+q+'\';document.getElementById(\'chat-in\').focus()" style="cursor:pointer;font-size:10px;padding:3px 8px;border-radius:12px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);color:rgba(255,215,0,.7);user-select:none" title="Click to use prompt">'+q+'</span>').join('')}
+      </div>
     </div>`;
   })();
     return;
@@ -1954,6 +2001,50 @@ function addMsg(role, content, ts) {
 $('btn-sheet').addEventListener('click', () => {
   window.open('https://docs.google.com/spreadsheets/d/1las1OYRL2ZgIZjq5_K4bcMM9dAhGxgMOBghfyR29ynU', '_blank');
 });
+
+// ── HARD NO TOGGLE ───────────────────────────────────────────────────────────
+let hideHardNo = false;
+function toggleHardNo() {
+  hideHardNo = !hideHardNo;
+  const chip = document.getElementById('hardno-toggle-chip');
+  const icon = document.getElementById('hardno-toggle-icon');
+  const lbl = document.getElementById('hardno-toggle-lbl');
+  if (chip) chip.style.opacity = hideHardNo ? '1' : '.7';
+  if (icon) icon.textContent = hideHardNo ? '✅' : '⛔';
+  if (lbl) lbl.textContent = hideHardNo ? 'Ex. Hard No' : 'Inc. Hard No';
+  renderList();
+  doLoadStats();
+}
+
+// ── RE-UNDERWRITE ALL ────────────────────────────────────────────────────────
+let rewriteAllRunning = false;
+async function doRewriteAll() {
+  if (rewriteAllRunning) return;
+  const btn = document.getElementById('rewrite-all-btn');
+  const toRewrite = deals.filter(d => d.uid && d.underwriteStatus && d.underwriteStatus !== 'PENDING' && d.underwriteStatus !== 'HARD NO');
+  if (!toRewrite.length) { alert('No eligible deals to re-underwrite.'); return; }
+  if (!confirm('Re-underwrite ' + toRewrite.length + ' deals with the updated brain? This runs in the background and may take a few minutes.')) return;
+  rewriteAllRunning = true;
+  if (btn) { btn.textContent = '⏳ 0/' + toRewrite.length; btn.style.opacity = '.6'; btn.style.pointerEvents = 'none'; }
+  let done = 0;
+  for (const d of toRewrite) {
+    try {
+      const uid = d.uid;
+      await fetch('/api/underwrite/' + encodeURIComponent(uid), {
+        method: 'POST',
+        headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true, deep: false })
+      });
+      done++;
+      if (btn) btn.textContent = '⏳ ' + done + '/' + toRewrite.length;
+      await new Promise(r => setTimeout(r, 800)); // pace API calls
+    } catch(e) { done++; }
+  }
+  rewriteAllRunning = false;
+  if (btn) { btn.textContent = '✅ Done'; btn.style.opacity = '1'; btn.style.pointerEvents = ''; }
+  await doLoadDeals();
+  setTimeout(() => { if (btn) btn.textContent = '⚡ All'; }, 3000);
+}
 
 // ── PHOTOS ───────────────────────────────────────────────────────────────────
 function openPhotos() {
