@@ -2052,27 +2052,44 @@ function openPhotos() {
   if (url) window.open(url, '_blank', 'noopener');
 }
 
+const PHOTO_TRACKING_PATTERNS = ['click.email.','email.21propertygroup.com/c/','click.mailchi.mp','mailtrack.io','/click?','email-click.','hs-link.'];
+function isTrackingPhotoUrl(url) { return !!url && PHOTO_TRACKING_PATTERNS.some(p => url.includes(p)); }
+
 function updatePhotosUI(deal) {
-  // Check all possible photo link fields — photoLinks, driveLink, or any Dropbox/Drive URL in allOtherLinks
+  // Check all possible photo link fields — prefer resolved direct links
   let photoUrl = deal?.photoLinks || deal?.driveLink;
-  if (!photoUrl && deal?.allOtherLinks) {
-    // Scan allOtherLinks for Dropbox or Drive photo URLs
-    const links = (deal.allOtherLinks || '').split(/[\s,;]+/).filter(u => u.startsWith('http'));
-    const photoLink = links.find(u => u.includes('dropbox') || u.includes('drive.google') || u.includes('/photos') || u.includes('album'));
-    if (photoLink) photoUrl = photoLink;
+  const isTracking = isTrackingPhotoUrl(photoUrl);
+  // If it's a tracking URL, also check allOtherLinks for a direct Dropbox/Drive link
+  if (!photoUrl || isTracking) {
+    if (deal?.allOtherLinks) {
+      const links = (deal.allOtherLinks || '').split(/[\s,;]+/).filter(u => u.startsWith('http'));
+      const direct = links.find(u => u.includes('dropbox') || u.includes('drive.google') || u.includes('/photos') || u.includes('album'));
+      if (direct) photoUrl = direct; // prefer direct link
+    }
   }
   const hasPhotos = !!photoUrl;
+  const stillTracking = isTrackingPhotoUrl(photoUrl);
+
   // Header button
   const btn = document.getElementById('btn-photos');
   if (btn) {
     btn.style.display = hasPhotos ? '' : 'none';
+    btn.textContent = stillTracking ? '📸 See Photos ⚠️' : '📸 See Photos';
+    btn.title = stillTracking ? 'Link may expire — if it fails, check the original email.' : 'View property photos';
     btn.onclick = () => photoUrl && window.open(photoUrl, '_blank', 'noopener');
   }
   // Overview banner
   const banner = document.getElementById('photo-banner');
   const bannerLink = document.getElementById('photo-banner-link');
   if (banner) banner.style.display = hasPhotos ? 'flex' : 'none';
-  if (bannerLink && photoUrl) bannerLink.href = photoUrl;
+  if (bannerLink && photoUrl) {
+    bannerLink.href = photoUrl;
+    // Warn if still a tracking URL (server hasn't resolved it yet)
+    const bannerText = banner.querySelector('span');
+    if (bannerText) bannerText.textContent = stillTracking
+      ? 'Photos available — link may expire soon'
+      : 'Photos available for this property';
+  }
 }
 
 // ── POSTMESSAGE BRIDGE (for testing) ─────────────────────────────────────────
