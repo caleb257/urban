@@ -280,6 +280,7 @@ a{color:var(--accent)}
         <button class="btn" id="btn-regen" title="Recalculate verdict from current numbers — no new comps, cheap" style="background:rgba(100,200,150,.08);border-color:rgba(100,200,150,.25);color:rgba(100,200,150,.9)">⚡ Regen</button>
         <button class="btn" id="btn-chat">💬 Chat</button>
         <button class="btn" id="btn-sheet">📊 Sheet</button>
+        <button class="btn" id="btn-photos" style="display:none;background:rgba(180,140,255,.12);border-color:rgba(180,140,255,.3);color:rgba(180,140,255,.9)" onclick="openPhotos()">📸 See Photos</button>
       </div>
 
       <div id="pending-card">
@@ -307,6 +308,12 @@ a{color:var(--accent)}
 
         <!-- OVERVIEW -->
         <div class="tc active" id="t-overview">
+          <!-- PHOTO LINK BANNER — shows when photos available -->
+          <div id="photo-banner" style="display:none;background:rgba(180,140,255,.1);border:1px solid rgba(180,140,255,.25);border-radius:6px;padding:10px 14px;margin-bottom:14px;display:none;align-items:center;gap:12px">
+            <span style="font-size:18px">📸</span>
+            <span style="flex:1;font-size:12px;color:var(--text)">Photos available for this property</span>
+            <a id="photo-banner-link" href="#" target="_blank" rel="noopener" style="padding:5px 14px;background:rgba(180,140,255,.2);border:1px solid rgba(180,140,255,.4);border-radius:4px;color:rgba(200,160,255,.95);font-size:11px;font-weight:700;text-decoration:none;letter-spacing:.5px">VIEW PHOTOS ↗</a>
+          </div>
           <!-- NEGOTIATION LADDER -->
             <div id="neg-ladder" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:16px;margin-bottom:16px;display:none">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -988,6 +995,7 @@ async function selectDeal(d) {
 
   // Always fill property tab with sheet data
   fillPropTab(d);
+  updatePhotosUI(d);
 
   // Try to load existing underwrite
   try {
@@ -1785,7 +1793,14 @@ function fillPropTab(d) {
       vv(d.driveLink) ? `<div class="prow"><div class="plbl">Google Drive</div><div class="pval">${lnk(d.driveLink,'Open Drive Folder')}</div></div>` : '',
       vv(d.googleMapsLink) ? `<div class="prow"><div class="plbl">Maps</div><div class="pval">${lnk(d.googleMapsLink,'Google Maps')}</div></div>` : '',
       vv(d.allOtherLinks) ? `<div class="prow"><div class="plbl">Other Links</div><div class="pval" style="word-break:break-all;font-size:11px">${d.allOtherLinks}</div></div>` : '',
-      vv(d.photoLinks) ? `<div class="prow"><div class="plbl">Photos</div><div class="pval" style="word-break:break-all;font-size:11px">${d.photoLinks}</div></div>` : '',
+      (vv(d.photoLinks) || vv(d.driveLink)) ? (() => {
+        const _photoUrl = d.photoLinks || d.driveLink;
+        const _cnt = d.photoCount && parseInt(d.photoCount) > 0 ? ' (' + parseInt(d.photoCount) + ' photos)' : '';
+        return `<div class="prow" style="border:1px solid rgba(180,140,255,.3);border-radius:5px;background:rgba(180,140,255,.1);padding:8px 12px">
+          <div class="plbl" style="color:rgba(200,160,255,.85);font-size:11px;font-weight:700;margin-bottom:4px">📸 PHOTOS${_cnt}</div>
+          <div class="pval"><a href="${_photoUrl}" target="_blank" rel="noopener" style="display:inline-block;padding:6px 16px;background:rgba(180,140,255,.2);border:1px solid rgba(180,140,255,.45);border-radius:4px;color:rgba(210,175,255,.98);font-size:12px;font-weight:700;text-decoration:none;letter-spacing:.3px">VIEW PHOTOS ↗</a></div>
+        </div>`;
+      })() : '',
     ]),
   ].join('');
 }
@@ -1939,6 +1954,35 @@ function addMsg(role, content, ts) {
 $('btn-sheet').addEventListener('click', () => {
   window.open('https://docs.google.com/spreadsheets/d/1las1OYRL2ZgIZjq5_K4bcMM9dAhGxgMOBghfyR29ynU', '_blank');
 });
+
+// ── PHOTOS ───────────────────────────────────────────────────────────────────
+function openPhotos() {
+  const url = curDeal?.photoLinks || curDeal?.driveLink || curDeal?.allOtherLinks;
+  if (url) window.open(url, '_blank', 'noopener');
+}
+
+function updatePhotosUI(deal) {
+  // Check all possible photo link fields — photoLinks, driveLink, or any Dropbox/Drive URL in allOtherLinks
+  let photoUrl = deal?.photoLinks || deal?.driveLink;
+  if (!photoUrl && deal?.allOtherLinks) {
+    // Scan allOtherLinks for Dropbox or Drive photo URLs
+    const links = (deal.allOtherLinks || '').split(/[\s,;]+/).filter(u => u.startsWith('http'));
+    const photoLink = links.find(u => u.includes('dropbox') || u.includes('drive.google') || u.includes('/photos') || u.includes('album'));
+    if (photoLink) photoUrl = photoLink;
+  }
+  const hasPhotos = !!photoUrl;
+  // Header button
+  const btn = document.getElementById('btn-photos');
+  if (btn) {
+    btn.style.display = hasPhotos ? '' : 'none';
+    btn.onclick = () => photoUrl && window.open(photoUrl, '_blank', 'noopener');
+  }
+  // Overview banner
+  const banner = document.getElementById('photo-banner');
+  const bannerLink = document.getElementById('photo-banner-link');
+  if (banner) banner.style.display = hasPhotos ? 'flex' : 'none';
+  if (bannerLink && photoUrl) bannerLink.href = photoUrl;
+}
 
 // ── POSTMESSAGE BRIDGE (for testing) ─────────────────────────────────────────
 window.addEventListener('message', e => {
