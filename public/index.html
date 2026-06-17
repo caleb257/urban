@@ -312,14 +312,15 @@ a{color:var(--accent)}
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
                 <div class="ct">Negotiation Ladder</div>
                 <div style="font-size:10px;color:var(--muted);display:flex;gap:16px">
-                  <span style="min-width:90px;text-align:right">NET PROFIT</span>
-                  <span style="min-width:42px;text-align:right">MARGIN</span>
+                  <span style="width:100px;text-align:right;font-size:9px">OFFER PRICE</span>
+                  <span style="width:110px;text-align:right;font-size:9px">NET PROFIT</span>
+                  <span style="width:50px;text-align:right;font-size:9px">ROI</span>
                 </div>
               </div>
               <div id="neg-rows"></div>
             </div>
             <div class="rec-box">
-            <div class="ct">Urban's Recommendation</div>
+            <div class="ct" style="display:flex;align-items:center;gap:8px">Urban's Recommendation <span style="font-size:9px;opacity:.5;font-weight:400;letter-spacing:.5px">INDEPENDENT ANALYSIS</span></div>
             <div class="rec-txt" id="ov-rec"></div>
             <div class="off-strat" id="ov-off"></div>
           </div>
@@ -331,7 +332,7 @@ a{color:var(--accent)}
               <div class="m"><div class="ml">MAO (Max Offer)</div><div class="mv" id="ov-mao"></div></div>
               <div class="m"><div class="ml">Asking Price</div><div class="mv" id="ov-ask"></div></div>
               <hr class="d">
-              <div class="m"><div class="ml">Net Profit @ Ask</div><div class="mv" id="ov-profit"></div></div>
+              <div class="m"><div class="ml">Net Profit @ Asking <span style="font-size:9px;opacity:.5">(ARV minus all-in)</span></div><div class="mv" id="ov-profit"></div></div>
               <div class="m" id="ov-spread-row" style="display:none"><div class="ml" style="font-size:10px;color:var(--muted)">Room below MAO</div><div class="mv" id="ov-spread-mao" style="color:var(--buy);font-size:12px"></div></div>
             </div>
             <div class="card">
@@ -344,7 +345,7 @@ a{color:var(--accent)}
             </div>
             <div class="card">
               <div class="ct">Criteria Check</div>
-              <div class="m"><div class="ml">Profit Target</div><div class="mv" id="cc-profit"></div></div>
+              <div class="m"><div class="ml">Profit Min (10%)</div><div class="mv" id="cc-profit"></div></div>
               <div class="m"><div class="ml">Exit Market</div><div class="mv" id="cc-mkt"></div></div>
               <div class="m"><div class="ml">Flood Zone</div><div class="mv" id="cc-flood"></div></div>
               <div class="m"><div class="ml">High Risk Flags</div><div class="mv" id="cc-risk"></div></div>
@@ -457,7 +458,7 @@ a{color:var(--accent)}
             </div>
             <div class="card">
               <div class="ct">Profit</div>
-              <div class="fr"><span class="fl">Net Profit @ Asking</span><span class="fv" id="fi-pa" style="font-size:17px"></span></div>
+              <div class="fr"><span class="fl">Net Profit @ Asking <span style="font-size:9px;opacity:.6">(ARV minus all costs)</span></span><span class="fv" id="fi-pa" style="font-size:17px"></span></div>
               <div class="fr g"><span class="fl" style="font-size:11px">Profit if paid ceiling (MAO)</span><span class="fv" id="fi-pm" style="font-size:15px"></span></div>
               <div class="fr"><span class="fl">ROI</span><span class="fv" id="fi-roi"></span></div>
               <div class="fr"><span class="fl">Meets Profit Min (10%)</span><span class="fv" id="fi-min"></span></div>
@@ -1134,7 +1135,17 @@ function renderUW(uw) {
   set('dv-vr', uw.verdictReason || '');
 
   // OVERVIEW
-  const profit = uw.financials?.netProfitAtAsking;
+  // Use server-recalculated profit (matches ladder calculation)
+  const _uvArv    = uw.arv?.urbanARV || 0;
+  const _uvAsk    = parseFloat(curDeal?.askingPrice) || 0;
+  const _uvRepair = uw.rehab?.urbanEstimate || 0;
+  const _uvCosts  = (uw.financials?.holdingCosts?.total || 0) +
+                    (uw.financials?.sellingCosts?.total || (_uvArv * 0.075)) +
+                    (uw.financials?.hardMoney?.totalInterest || 0) +
+                    (uw.financials?.hardMoney?.originationPoints || 0);
+  const profit = _uvArv > 0 && _uvAsk > 0
+    ? Math.round(_uvArv - _uvAsk - _uvRepair - _uvCosts)
+    : (uw.financials?.netProfitAtAsking || null);
   const arvPpsf2 = uw.arv?.arvPerSqft || (uw.arv?.urbanARV && curDeal?.sqft ? Math.round(uw.arv.urbanARV / parseFloat(curDeal.sqft)) : null);
   set('ov-arv', fmt(uw.arv?.urbanARV) + (arvPpsf2 ? ` (${arvPpsf2}/sf)` : ''));
   set('ov-rehab', fmt(uw.rehab?.urbanEstimate));
@@ -1171,8 +1182,16 @@ function renderUW(uw) {
   set('ov-trend', uw.marketAnalysis?.trend || '—');
   set('ov-hold', uw.financials?.holdMonths ? `${uw.financials.holdMonths} months` : '—');
   const profMinPct = ask2 >= 1000000 ? '$100K' : Math.max(Math.round((ask2||0)*0.1/1000)*1000, 20000).toLocaleString();
-  {const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?'$100K':('$'+Math.round(Math.max(_a*.10,20000)/1000)+'K');const _actualP = uw.financials?.netProfitAtAsking; const _actualStr = _actualP != null ? ' ($'+Math.round(_actualP/1000)+'K)' : ''; set('cc-profit',uw.financials?.meetsMinimumProfit?'✅ YES'+_actualStr:'❌ NO (min '+_m+')');} 
-  cls('cc-profit', `mv ${uw.financials?.meetsMinimumProfit ? 'g' : 'r'}`);
+  {const _a=parseFloat(curDeal?.askingPrice)||0;
+  const _m=_a>=1000000?'$100K':('$'+Math.round(Math.max(_a*.10,20000)/1000)+'K');
+  const _uArv2=uw.arv?.urbanARV||0, _uRep2=uw.rehab?.urbanEstimate||0;
+  const _uCosts2=(uw.financials?.holdingCosts?.total||0)+(uw.financials?.sellingCosts?.total||(_uArv2*.075))+(uw.financials?.hardMoney?.totalInterest||0)+(uw.financials?.hardMoney?.originationPoints||0);
+  const _actualP = _uArv2>0&&_a>0 ? Math.round(_uArv2-_a-_uRep2-_uCosts2) : uw.financials?.netProfitAtAsking;
+  const _pMin = _a>=1000000?100000:Math.max(_a*.10,20000);
+  const _meetsP = _actualP != null && _actualP >= _pMin;
+  const _actualStr = _actualP != null ? ' ('+(_actualP>=0?'+':'')+fmt(_actualP)+')' : '';
+  set('cc-profit', _meetsP ? '✅ YES'+_actualStr : '❌ NO (need '+_m+')');} 
+  cls('cc-profit', `mv ${_meetsP ? 'g' : 'r'}`);
   const inMkt = ['pasco','hillsborough','polk','pinellas','hernando','sarasota'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
   set('cc-mkt', inMkt ? '✅ CCG Market' : '⚠️ Extended');
   cls('cc-mkt', `mv ${inMkt ? 'g' : 'y'}`);
@@ -1213,8 +1232,9 @@ function renderUW(uw) {
       const _spread = _arv - _asis;
       const _spreadEl = $('arv-spread');
       if (_spreadEl) {
-        _spreadEl.textContent = fmt(_spread);
-        _spreadEl.style.color = _spread > 50000 ? 'var(--buy)' : _spread > 20000 ? 'var(--review)' : 'var(--hot)';
+        _spreadEl.textContent = (_spread > 0 ? '+' : '') + fmt(_spread);
+        _spreadEl.style.color = _spread > 50000 ? 'var(--buy)' : _spread > 20000 ? 'var(--review)' : _spread > 0 ? 'var(--hot)' : 'var(--red)';
+        _spreadEl.style.fontWeight = '700';
       }
     } else {
       set('arv-spread', '—');
@@ -1370,30 +1390,62 @@ function renderUW(uw) {
     if (ladderEl) ladderEl.style.display = '';
     const _nr = $('neg-rows');
     if (_nr) {
-      _nr.innerHTML = ladder.map(r => {
-        const pc = r.meetsMin ? 'neg-ok' : r.profit >= 0 ? 'neg-no' : 'neg-bad';
-        const isCeiling  = r.label === 'CEILING' || r.label === 'Max Offer';
-        const isAsking   = r.label === 'Asking' || r.label.includes('ASKING');
-        const isOpen     = r.label === 'Open offer' || r.label === 'Best case';
-        const isOver     = r.label.includes('over');
-        const lc = isAsking
-          ? 'background:rgba(255,160,32,.18);color:var(--review);border-left:3px solid var(--review)'
-          : isCeiling
-          ? 'background:rgba(100,100,100,.12);color:var(--muted);border-left:3px solid var(--border2)'
-          : isOpen
-          ? 'background:rgba(60,200,130,.12);color:var(--buy);border-left:3px solid var(--buy)'
-          : isOver
-          ? 'background:rgba(220,50,50,.1);color:#cc4455;border-left:3px solid rgba(220,50,50,.4)'
-          : 'background:rgba(60,120,255,.08);color:#7799ff;border-left:3px solid rgba(60,120,255,.3)';
-        const hint = isOpen ? ' <span style="font-size:9px;opacity:.7;font-style:italic">← start here</span>' : 
-                     isCeiling ? ' <span style="font-size:9px;opacity:.5;font-style:italic">do not exceed</span>' : '';
-        return `<div class="neg-row" style="margin-bottom:2px">
-          <span class="neg-label" style="${lc};border-radius:3px;padding:2px 6px">${r.label}${hint}</span>
-          <span class="neg-price" style="font-weight:${isOpen||isAsking?'600':'400'}">\$${r.price.toLocaleString()}</span>
-          <span class="neg-profit ${pc}">${r.profit >= 0 ? '+' : ''}\$${Math.abs(r.profit).toLocaleString()}</span>
-          ${r.roi !== undefined ? `<span class="neg-roi" style="color:var(--muted);font-size:11px">${r.roi}%</span>` : ''}
-        </div>`;
+      // Re-calculate profits using consistent formula (match server-side calc)
+      const _lArv = curUW?.arv?.urbanARV || 0;
+      const _lRepairs = curUW?.rehab?.urbanEstimate || 0;
+      const _lCosts = (curUW?.financials?.holdingCosts?.total || 0) +
+                      (curUW?.financials?.sellingCosts?.total || (_lArv * 0.075)) +
+                      (curUW?.financials?.hardMoney?.totalInterest || 0) +
+                      (curUW?.financials?.hardMoney?.originationPoints || 0);
+
+      _nr.innerHTML = ladder.map((r, i) => {
+        const trueProfit = _lArv > 0 ? Math.round(_lArv - r.price - _lRepairs - _lCosts) : r.profit;
+        const trueRoi    = _lArv > 0 && r.price > 0 ? parseFloat((trueProfit / (r.price + _lRepairs) * 100).toFixed(1)) : r.roi;
+        const meetsMin   = trueProfit >= Math.max(r.price * 0.10, 20000);
+
+        const isCeiling  = r.label === 'MAX OFFER';
+        const isAsking   = r.label === 'At asking';
+        const isOpen     = r.label === 'Opening offer';
+        const isOver     = r.label.includes('Over') || r.label.includes('over');
+        const isCounter  = !isCeiling && !isAsking && !isOpen && !isOver;
+
+        // Row accent color
+        const borderClr = isOpen ? 'var(--buy)' : isAsking ? 'var(--review)' : isCeiling ? '#666' : isOver ? '#cc3344' : 'rgba(100,140,255,.5)';
+        const bgAlpha   = isOpen ? '.15' : isAsking ? '.12' : isCeiling ? '.06' : '.06';
+        const bgClr     = isOpen ? `rgba(60,200,130,${bgAlpha})` : isAsking ? `rgba(255,160,32,${bgAlpha})` : isCeiling ? `rgba(120,120,120,${bgAlpha})` : `rgba(80,120,240,${bgAlpha})`;
+        const textClr   = isOpen ? 'var(--buy)' : isAsking ? 'var(--review)' : isCeiling ? 'var(--muted)' : 'var(--text)';
+
+        // Profit color
+        const profitClr = trueProfit > 40000 ? 'var(--buy)' : trueProfit > 20000 ? 'var(--review)' : 'var(--red)';
+
+        // Step indicator
+        const stepNum = i + 1;
+        const stepIcon = isOpen ? '🟢' : isCeiling ? '🔴' : isAsking ? '💛' : '⬜';
+
+        // Label hint
+        const hint = isOpen ? '<span style="font-size:9px;opacity:.65;margin-left:4px;font-style:italic">← start here</span>'
+                   : isCeiling ? '<span style="font-size:9px;opacity:.55;margin-left:4px;font-style:italic">↑ walk away above this</span>'
+                   : isAsking ? '<span style="font-size:9px;opacity:.6;margin-left:4px">seller ask</span>'
+                   : '';
+
+        return \`<div style="display:flex;align-items:center;gap:0;padding:7px 10px;margin-bottom:3px;border-radius:5px;background:\${bgClr};border-left:3px solid \${borderClr}">
+          <div style="width:18px;font-size:11px;flex-shrink:0">\${stepNum}</div>
+          <div style="flex:1;min-width:0">
+            <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:\${textClr}">\${r.label}\${hint}</span>
+          </div>
+          <div style="width:100px;text-align:right;font-size:15px;font-weight:\${isOpen||isAsking?'700':'500'};color:\${textClr};font-variant-numeric:tabular-nums">\$\${r.price.toLocaleString()}</div>
+          <div style="width:110px;text-align:right;font-size:13px;font-weight:600;color:\${profitClr};font-variant-numeric:tabular-nums">\${trueProfit>=0?'+':''} \$\${Math.abs(trueProfit).toLocaleString()}</div>
+          <div style="width:50px;text-align:right;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums">\${trueRoi}%</div>
+        </div>\`;
       }).join('');
+
+      // Walk away line below ladder
+      const _mao2 = curUW?.financials?.mao || 0;
+      if (_mao2 > 0) {
+        _nr.insertAdjacentHTML('beforeend', `<div style="margin-top:8px;padding:5px 10px;font-size:10px;color:var(--muted);text-align:center;border-top:1px solid var(--border1)">
+          Walk away above <strong style="color:#cc4455">$${Math.round(_mao2).toLocaleString()}</strong> — below that price, any offer pencils
+        </div>`);
+      }
     }
   } else {
     if (ladderEl) ladderEl.style.display = 'none';
