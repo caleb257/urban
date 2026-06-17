@@ -348,7 +348,7 @@ a{color:var(--accent)}
               <div class="m"><div class="ml">Profit Min (10%)</div><div class="mv" id="cc-profit"></div></div>
               <div class="m"><div class="ml">Exit Market</div><div class="mv" id="cc-mkt"></div></div>
               <div class="m"><div class="ml">Flood Zone</div><div class="mv" id="cc-flood"></div></div>
-              <div class="m"><div class="ml">High Risk Flags</div><div class="mv" id="cc-risk"></div></div>
+              <div class="m"><div class="ml">Risk Level</div><div class="mv" id="cc-risk"></div></div>
               <div class="m"><div class="ml">Rehab Scope</div><div class="mv" id="cc-scope"></div></div>
             </div>
           </div>
@@ -1193,7 +1193,8 @@ function renderUW(uw) {
   set('cc-profit', _meetsP ? '✅ YES'+_actualStr : '❌ NO (need '+_m+')');} 
   cls('cc-profit', `mv ${_meetsP ? 'g' : 'r'}`);
   const inMkt = ['pasco','hillsborough','polk','pinellas','hernando','sarasota'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
-  set('cc-mkt', inMkt ? '✅ CCG Market' : '⚠️ Extended');
+  const _cntyDisplay = (curDeal?.county||'').replace(' County','').trim() || curDeal?.city || '';
+  set('cc-mkt', inMkt ? '✅ In Market' + (_cntyDisplay ? ' · '+_cntyDisplay : '') : '⚠️ Outside CCG zones');
   cls('cc-mkt', `mv ${inMkt ? 'g' : 'y'}`);
   const flood = curDeal?.floodZone;
   const hasFlood = flood && !['no','n/a','','none','x'].includes((flood||'').toLowerCase());
