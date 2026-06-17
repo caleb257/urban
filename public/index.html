@@ -1392,6 +1392,21 @@ function renderUW(uw) {
     if (ladderEl) ladderEl.style.display = '';
     const _nr = $('neg-rows');
     if (_nr) {
+      // Always sort ascending (lowest price = best deal = top)
+      const _sortedLadder = [...ladder].sort((a, b) => a.price - b.price);
+      // Normalize labels based on position so old DB data displays correctly
+      const _labelMap = {0: 'Opening offer', 1: 'Counter', 2: 'Best counter', 3: 'At asking', 4: 'MAX OFFER'};
+      // Detect if any row is marked as asking price
+      const _askRow = _sortedLadder.findIndex(r => r.label && (r.label.toLowerCase().includes('ask') || r.label === 'ASKING'));
+      _sortedLadder.forEach((r, i) => {
+        if (r.label === 'MAX OFFER' || r.label === 'MAO') r._displayLabel = 'MAX OFFER';
+        else if (r.label === 'At asking' || r.label === 'ASKING' || r.label === 'Asking') r._displayLabel = 'At asking';
+        else if (r.label === 'Opening offer') r._displayLabel = 'Opening offer';
+        else if (i === 0) r._displayLabel = 'Opening offer';
+        else if (i === _sortedLadder.length - 1) r._displayLabel = 'MAX OFFER';
+        else if (_askRow >= 0 && i === _askRow) r._displayLabel = 'At asking';
+        else r._displayLabel = 'Counter';
+      });
       // Re-calculate profits using consistent formula (match server-side calc)
       const _lArv = curUW?.arv?.urbanARV || 0;
       const _lRepairs = curUW?.rehab?.urbanEstimate || 0;
@@ -1400,7 +1415,7 @@ function renderUW(uw) {
                       (curUW?.financials?.hardMoney?.totalInterest || 0) +
                       (curUW?.financials?.hardMoney?.originationPoints || 0);
 
-      _nr.innerHTML = ladder.map((r, i) => {
+      _nr.innerHTML = _sortedLadder.map((r, i) => {
         const _lArv = curUW && curUW.arv ? curUW.arv.urbanARV || 0 : 0;
         const _lRep = curUW && curUW.rehab ? curUW.rehab.urbanEstimate || 0 : 0;
         const _lHold = curUW && curUW.financials && curUW.financials.holdingCosts ? curUW.financials.holdingCosts.total || 0 : 0;
@@ -1411,10 +1426,11 @@ function renderUW(uw) {
         const trueProfit = _lArv > 0 ? Math.round(_lArv - r.price - _lRep - _lCosts) : r.profit;
         const trueRoi = _lArv > 0 && r.price > 0 ? parseFloat((trueProfit / (r.price + _lRep) * 100).toFixed(1)) : (r.roi || 0);
 
-        const isCeiling = r.label === 'MAX OFFER';
-        const isAsking  = r.label === 'At asking';
-        const isOpen    = r.label === 'Opening offer';
-        const isOver    = r.label && (r.label.includes('Over') || r.label.includes('over'));
+        const lbl = r._displayLabel || r.label || '';
+        const isCeiling = lbl === 'MAX OFFER';
+        const isAsking  = lbl === 'At asking';
+        const isOpen    = lbl === 'Opening offer';
+        const isOver    = lbl.includes('Over') || lbl.includes('over');
 
         const borderClr = isOpen ? 'var(--buy)' : isAsking ? 'var(--review)' : isCeiling ? '#666' : isOver ? '#cc3344' : 'rgba(100,140,255,.5)';
         const bgAlpha   = isOpen ? '.15' : isAsking ? '.12' : isCeiling ? '.06' : '.06';
@@ -1434,7 +1450,7 @@ function renderUW(uw) {
 
         return '<div style="display:flex;align-items:center;gap:0;padding:7px 10px;margin-bottom:3px;border-radius:5px;background:' + bgClr + ';border-left:3px solid ' + borderClr + '">'
           + '<div style="width:18px;font-size:11px;flex-shrink:0">' + (i + 1) + '</div>'
-          + '<div style="flex:1;min-width:0"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + textClr + '">' + r.label + hintText + '</span></div>'
+          + '<div style="flex:1;min-width:0"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + textClr + '">' + lbl + hintText + '</span></div>'
           + '<div style="width:100px;text-align:right;font-size:15px;font-weight:' + boldWt + ';color:' + textClr + ';font-variant-numeric:tabular-nums">' + priceStr + '</div>'
           + '<div style="width:110px;text-align:right;font-size:13px;font-weight:600;color:' + profitClr + ';font-variant-numeric:tabular-nums">' + profitStr + '</div>'
           + '<div style="width:50px;text-align:right;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums">' + roiStr + '</div>'
