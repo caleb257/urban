@@ -1400,44 +1400,44 @@ function renderUW(uw) {
                       (curUW?.financials?.hardMoney?.originationPoints || 0);
 
       _nr.innerHTML = ladder.map((r, i) => {
-        const trueProfit = _lArv > 0 ? Math.round(_lArv - r.price - _lRepairs - _lCosts) : r.profit;
-        const trueRoi    = _lArv > 0 && r.price > 0 ? parseFloat((trueProfit / (r.price + _lRepairs) * 100).toFixed(1)) : r.roi;
-        const meetsMin   = trueProfit >= Math.max(r.price * 0.10, 20000);
+        const _lArv = curUW && curUW.arv ? curUW.arv.urbanARV || 0 : 0;
+        const _lRep = curUW && curUW.rehab ? curUW.rehab.urbanEstimate || 0 : 0;
+        const _lHold = curUW && curUW.financials && curUW.financials.holdingCosts ? curUW.financials.holdingCosts.total || 0 : 0;
+        const _lSell = curUW && curUW.financials && curUW.financials.sellingCosts ? curUW.financials.sellingCosts.total || (_lArv * 0.075) : (_lArv * 0.075);
+        const _lInt  = curUW && curUW.financials && curUW.financials.hardMoney ? curUW.financials.hardMoney.totalInterest || 0 : 0;
+        const _lOrig = curUW && curUW.financials && curUW.financials.hardMoney ? curUW.financials.hardMoney.originationPoints || 0 : 0;
+        const _lCosts = _lHold + _lSell + _lInt + _lOrig;
+        const trueProfit = _lArv > 0 ? Math.round(_lArv - r.price - _lRep - _lCosts) : r.profit;
+        const trueRoi = _lArv > 0 && r.price > 0 ? parseFloat((trueProfit / (r.price + _lRep) * 100).toFixed(1)) : (r.roi || 0);
 
-        const isCeiling  = r.label === 'MAX OFFER';
-        const isAsking   = r.label === 'At asking';
-        const isOpen     = r.label === 'Opening offer';
-        const isOver     = r.label.includes('Over') || r.label.includes('over');
-        const isCounter  = !isCeiling && !isAsking && !isOpen && !isOver;
+        const isCeiling = r.label === 'MAX OFFER';
+        const isAsking  = r.label === 'At asking';
+        const isOpen    = r.label === 'Opening offer';
+        const isOver    = r.label && (r.label.includes('Over') || r.label.includes('over'));
 
-        // Row accent color
         const borderClr = isOpen ? 'var(--buy)' : isAsking ? 'var(--review)' : isCeiling ? '#666' : isOver ? '#cc3344' : 'rgba(100,140,255,.5)';
         const bgAlpha   = isOpen ? '.15' : isAsking ? '.12' : isCeiling ? '.06' : '.06';
-        const bgClr     = isOpen ? `rgba(60,200,130,${bgAlpha})` : isAsking ? `rgba(255,160,32,${bgAlpha})` : isCeiling ? `rgba(120,120,120,${bgAlpha})` : `rgba(80,120,240,${bgAlpha})`;
+        const bgClr     = isOpen ? 'rgba(60,200,130,' + bgAlpha + ')' : isAsking ? 'rgba(255,160,32,' + bgAlpha + ')' : isCeiling ? 'rgba(120,120,120,' + bgAlpha + ')' : 'rgba(80,120,240,' + bgAlpha + ')';
         const textClr   = isOpen ? 'var(--buy)' : isAsking ? 'var(--review)' : isCeiling ? 'var(--muted)' : 'var(--text)';
-
-        // Profit color
         const profitClr = trueProfit > 40000 ? 'var(--buy)' : trueProfit > 20000 ? 'var(--review)' : 'var(--red)';
 
-        // Step indicator
-        const stepNum = i + 1;
-        const stepIcon = isOpen ? '🟢' : isCeiling ? '🔴' : isAsking ? '💛' : '⬜';
+        const hintText = isOpen ? ' <span style="font-size:9px;opacity:.65;margin-left:4px;font-style:italic">← start here</span>'
+                       : isCeiling ? ' <span style="font-size:9px;opacity:.55;margin-left:4px;font-style:italic">↑ walk away above this</span>'
+                       : isAsking ? ' <span style="font-size:9px;opacity:.6;margin-left:4px">seller ask</span>'
+                       : '';
 
-        // Label hint
-        const hint = isOpen ? '<span style="font-size:9px;opacity:.65;margin-left:4px;font-style:italic">← start here</span>'
-                   : isCeiling ? '<span style="font-size:9px;opacity:.55;margin-left:4px;font-style:italic">↑ walk away above this</span>'
-                   : isAsking ? '<span style="font-size:9px;opacity:.6;margin-left:4px">seller ask</span>'
-                   : '';
+        const profitStr = (trueProfit >= 0 ? '+$' : '-$') + Math.abs(trueProfit).toLocaleString();
+        const priceStr  = '$' + r.price.toLocaleString();
+        const roiStr    = trueRoi + '%';
+        const boldWt    = (isOpen || isAsking) ? '700' : '500';
 
-        return \`<div style="display:flex;align-items:center;gap:0;padding:7px 10px;margin-bottom:3px;border-radius:5px;background:\${bgClr};border-left:3px solid \${borderClr}">
-          <div style="width:18px;font-size:11px;flex-shrink:0">\${stepNum}</div>
-          <div style="flex:1;min-width:0">
-            <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:\${textClr}">\${r.label}\${hint}</span>
-          </div>
-          <div style="width:100px;text-align:right;font-size:15px;font-weight:\${isOpen||isAsking?'700':'500'};color:\${textClr};font-variant-numeric:tabular-nums">\$\${r.price.toLocaleString()}</div>
-          <div style="width:110px;text-align:right;font-size:13px;font-weight:600;color:\${profitClr};font-variant-numeric:tabular-nums">\${trueProfit>=0?'+':''} \$\${Math.abs(trueProfit).toLocaleString()}</div>
-          <div style="width:50px;text-align:right;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums">\${trueRoi}%</div>
-        </div>\`;
+        return '<div style="display:flex;align-items:center;gap:0;padding:7px 10px;margin-bottom:3px;border-radius:5px;background:' + bgClr + ';border-left:3px solid ' + borderClr + '">'
+          + '<div style="width:18px;font-size:11px;flex-shrink:0">' + (i + 1) + '</div>'
+          + '<div style="flex:1;min-width:0"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + textClr + '">' + r.label + hintText + '</span></div>'
+          + '<div style="width:100px;text-align:right;font-size:15px;font-weight:' + boldWt + ';color:' + textClr + ';font-variant-numeric:tabular-nums">' + priceStr + '</div>'
+          + '<div style="width:110px;text-align:right;font-size:13px;font-weight:600;color:' + profitClr + ';font-variant-numeric:tabular-nums">' + profitStr + '</div>'
+          + '<div style="width:50px;text-align:right;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums">' + roiStr + '</div>'
+          + '</div>';
       }).join('');
 
       // Walk away line below ladder
