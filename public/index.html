@@ -153,7 +153,7 @@ hr.d{border:none;border-top:1px solid var(--border);margin:10px 0}
 /* FLAGS */
 .flags{display:flex;flex-direction:column;gap:8px}
 .flag{padding:12px 14px;border-radius:4px;border-left:3px solid;background:var(--bg3)}
-.flag-HIGH{border-color:var(--hot)}.flag-MEDIUM{border-color:var(--review)}.flag-LOW{border-color:var(--pass)}
+.flag-HIGH{border-left:4px solid var(--hot);background:rgba(255,68,68,.06)}.flag-MEDIUM{border-left:4px solid var(--review);background:rgba(240,160,48,.04)}.flag-LOW{border-left:4px solid var(--pass);background:rgba(102,136,170,.04)}
 .fn{font-size:12px;font-weight:600;margin-bottom:4px}
 .flag-HIGH .fn{color:var(--hot)}.flag-MEDIUM .fn{color:var(--review)}.flag-LOW .fn{color:var(--pass)}
 .fd{font-size:12px;color:var(--muted);line-height:1.5}
@@ -431,37 +431,82 @@ a{color:var(--accent)}
         <!-- FINANCIALS -->
         <div class="tc" id="t-financials">
           <div class="grid">
+
+            <!-- CARD 1: Deal Economics -->
             <div class="card">
               <div class="ct">Deal Economics</div>
               <div class="fr"><span class="fl">Asking Price</span><span class="fv" id="fi-ask"></span></div>
-              <div class="fr"><span class="fl">Urban's ARV</span><span class="fv" id="fi-arv"></span></div>
+              <div class="fr"><span class="fl">Urban&#39;s ARV</span><span class="fv y" id="fi-arv" style="font-size:16px;font-weight:700"></span></div>
+              <div class="fr"><span class="fl" style="font-size:11px;opacity:.7">Expected Sale (96% of ARV)</span><span class="fv" id="fi-sale" style="font-size:12px;opacity:.8"></span></div>
               <div class="fr"><span class="fl">Rehab Budget</span><span class="fv" id="fi-reh"></span></div>
-              <div class="fr tot"><span class="fl">MAO (ARV×70%−Repairs)</span><span class="fv" id="fi-mao"></span></div>
-              <div class="fr"><span class="fl">Over/Under MAO</span><span class="fv" id="fi-oum"></span></div>
+              <hr class="d">
+              <div class="fr tot"><span class="fl">MAO <span style="font-size:9px;font-weight:400;opacity:.6">(ARV &#215; 70% &#8722; Repairs)</span></span><span class="fv" id="fi-mao"></span></div>
+              <div class="fr"><span class="fl">Asking vs MAO</span><span class="fv" id="fi-oum"></span></div>
+              <div class="fr"><span class="fl" style="font-size:11px;opacity:.7">Room to negotiate</span><span class="fv" id="fi-room" style="font-size:12px"></span></div>
             </div>
+
+            <!-- CARD 2: Hard Money -->
             <div class="card">
-              <div class="ct">Hard Money · 9.5% Interest Only</div>
-              <div class="fr"><span class="fl">Loan (90% LTV)</span><span class="fv" id="fi-loan"></span></div>
-              <div class="fr"><span class="fl">Monthly Payment</span><span class="fv" id="fi-mo"></span></div>
+              <div class="ct">Hard Money &#183; 9.5% Interest Only</div>
+              <div class="fr"><span class="fl">Loan Amount <span style="font-size:9px;opacity:.6">(90% LTV)</span></span><span class="fv" id="fi-loan"></span></div>
+              <div class="fr"><span class="fl">Down Payment <span style="font-size:9px;opacity:.6">(10% cash)</span></span><span class="fv" id="fi-dp"></span></div>
+              <div class="fr"><span class="fl">Monthly Interest</span><span class="fv" id="fi-mo"></span></div>
               <div class="fr"><span class="fl">Hold Time</span><span class="fv" id="fi-hold"></span></div>
-              <div class="fr"><span class="fl">Total Interest</span><span class="fv" id="fi-int"></span></div>
-              <div class="fr"><span class="fl">Origination (2 pts)</span><span class="fv" id="fi-pts"></span></div>
+              <hr class="d">
+              <div class="fr"><span class="fl">Total Interest Cost</span><span class="fv" id="fi-int"></span></div>
+              <div class="fr"><span class="fl">Origination Fee <span style="font-size:9px;opacity:.6">(2 pts)</span></span><span class="fv" id="fi-pts"></span></div>
+              <div class="fr tot"><span class="fl">Total Financing Cost</span><span class="fv" id="fi-fin"></span></div>
             </div>
+
+            <!-- CARD 3: All-In Cost Breakdown -->
             <div class="card">
               <div class="ct">All-In Cost Breakdown</div>
               <div class="fr"><span class="fl">Purchase Price</span><span class="fv" id="fi-pp"></span></div>
-              <div class="fr"><span class="fl">Rehab</span><span class="fv" id="fi-rh2"></span></div>
-              <div class="fr"><span class="fl">Financing (interest + pts)</span><span class="fv" id="fi-fin"></span></div>
+              <div class="fr"><span class="fl">Rehab Budget</span><span class="fv" id="fi-rh2"></span></div>
+              <div class="fr"><span class="fl">Financing (int + pts)</span><span class="fv" id="fi-fin2"></span></div>
               <div class="fr"><span class="fl">Holding Costs</span><span class="fv" id="fi-hc"></span></div>
-              <div class="fr"><span class="fl">Selling (6% + 2%)</span><span class="fv" id="fi-sc"></span></div>
-              <div class="fr tot"><span class="fl">Total All-In</span><span class="fv" id="fi-tot"></span></div>
+              <div class="fr"><span class="fl">Selling <span style="font-size:9px;opacity:.6">(6% commission + 2% closing)</span></span><span class="fv" id="fi-sc"></span></div>
+              <div class="fr tot"><span class="fl">TOTAL ALL-IN</span><span class="fv" id="fi-tot" style="font-size:15px;font-weight:700"></span></div>
+              <hr class="d">
+              <div class="fr" style="background:rgba(60,120,255,.06);border-radius:4px;padding:4px 6px;margin-top:4px">
+                <span class="fl" style="font-weight:600">Cash to Close <span style="font-size:9px;opacity:.6">(down pmt + rehab)</span></span>
+                <span class="fv" id="fi-ctc" style="font-size:14px;font-weight:700;color:var(--gold)"></span>
+              </div>
             </div>
+
+            <!-- CARD 4: Profit & Returns -->
             <div class="card">
-              <div class="ct">Profit</div>
-              <div class="fr"><span class="fl">Net Profit @ Asking <span style="font-size:9px;opacity:.6">(ARV minus all costs)</span></span><span class="fv" id="fi-pa" style="font-size:17px"></span></div>
-              <div class="fr g"><span class="fl" style="font-size:11px">Profit if paid ceiling (MAO)</span><span class="fv" id="fi-pm" style="font-size:15px"></span></div>
-              <div class="fr"><span class="fl">ROI</span><span class="fv" id="fi-roi"></span></div>
+              <div class="ct">Profit &amp; Returns</div>
+              <div class="fr" style="padding:6px 0">
+                <span class="fl" style="font-weight:600">Net Profit @ Asking</span>
+                <span class="fv" id="fi-pa" style="font-size:20px;font-weight:700"></span>
+              </div>
+              <div class="fr"><span class="fl" style="font-size:11px;opacity:.7">Profit Margin <span style="font-size:9px">(% of ARV)</span></span><span class="fv" id="fi-pm2" style="font-size:13px"></span></div>
+              <div class="fr"><span class="fl" style="font-size:11px;opacity:.7">Return on All-In Cost</span><span class="fv" id="fi-roi2" style="font-size:13px"></span></div>
+              <hr class="d">
+              <div class="fr" style="background:rgba(60,200,130,.08);border-radius:4px;padding:4px 6px">
+                <span class="fl" style="font-weight:600">Cash-on-Cash Return <span style="font-size:9px;opacity:.6">(profit / cash deployed)</span></span>
+                <span class="fv" id="fi-coc" style="font-size:14px;font-weight:700;color:var(--buy)"></span>
+              </div>
+              <div class="fr" style="margin-top:4px;background:rgba(60,200,130,.05);border-radius:4px;padding:4px 6px">
+                <span class="fl" style="font-weight:600;font-size:11px">Annualized ROI</span>
+                <span class="fv" id="fi-aroi" style="font-size:13px;font-weight:700;color:var(--buy)"></span>
+              </div>
+              <hr class="d">
+              <div class="fr g"><span class="fl" style="font-size:11px">Profit if paid at MAO (ceiling)</span><span class="fv" id="fi-pm" style="font-size:13px"></span></div>
               <div class="fr"><span class="fl">Meets Profit Min (10%)</span><span class="fv" id="fi-min"></span></div>
+            </div>
+
+          </div>
+
+          <!-- BOTTOM: Holding Costs Detail -->
+          <div class="card" style="margin-top:14px">
+            <div class="ct">Holding Costs Detail <span style="font-size:10px;font-weight:400;opacity:.5" id="fi-hold-months-lbl"></span></div>
+            <div class="grid" style="gap:12px">
+              <div class="m"><div class="ml">Property Taxes (prorated)</div><div class="mv" id="fi-tx"></div></div>
+              <div class="m"><div class="ml">Insurance</div><div class="mv" id="fi-ins"></div></div>
+              <div class="m"><div class="ml">Utilities / Misc</div><div class="mv" id="fi-ut"></div></div>
+              <div class="m"><div class="ml">Total Holding</div><div class="mv" id="fi-hc2" style="font-weight:600"></div></div>
             </div>
           </div>
         </div>
@@ -487,11 +532,21 @@ a{color:var(--accent)}
 
         <!-- NEW CONSTRUCTION -->
         <div class="tc" id="t-newconstruction">
-          <div class="card">
+          <!-- Not Applicable State -->
+          <div id="nc-na-card" class="card" style="display:none">
+            <div class="ct" style="color:var(--muted)">New Construction — Not Applicable</div>
+            <div style="padding:12px 0;font-size:13px;color:var(--text);line-height:1.7" id="nc-na-reason"></div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border1)">
+              <div class="ct" style="font-size:11px;margin-bottom:8px;color:var(--muted)">Nearby New Construction Pressure</div>
+              <div style="font-size:13px;color:var(--text);line-height:1.6" id="nc-nearby"></div>
+            </div>
+          </div>
+          <!-- Applicable State -->
+          <div id="nc-applicable-card" class="card" style="display:none">
             <div class="ct">New Construction Potential</div>
             <div class="grid" style="margin-bottom:14px">
               <div class="m"><div class="ml">Est. Lot Value</div><div class="mv big" id="nc-lot"></div></div>
-              <div class="m"><div class="ml">CCG Land Equity (50%)</div><div class="mv warn" id="nc-equity"></div></div>
+              <div class="m"><div class="ml">CCG Land Equity Required (50%)</div><div class="mv warn" id="nc-equity"></div></div>
               <div class="m"><div class="ml">Build Cost ($160/sqft)</div><div class="mv" id="nc-build"></div></div>
               <div class="m"><div class="ml">Construction Loan (@ 11.5%)</div><div class="mv" id="nc-loan"></div></div>
               <div class="m"><div class="ml">Est. Interest Cost</div><div class="mv" id="nc-interest"></div></div>
@@ -499,6 +554,12 @@ a{color:var(--accent)}
               <div class="m"><div class="ml">Net Profit (New Build)</div><div class="mv" id="nc-profit"></div></div>
             </div>
             <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:14px" id="nc-notes"></p>
+          </div>
+          <!-- Always show: empty state with nearby competition note -->
+          <div id="nc-empty-card" style="display:none;padding:20px;text-align:center;color:var(--muted);font-size:13px">
+            <div style="font-size:22px;margin-bottom:8px">🏗️</div>
+            New construction analysis not generated.<br>
+            <span style="font-size:11px;opacity:.7">Hit ⚡ Underwrite to run new construction analysis.</span>
           </div>
         </div>
 
@@ -1202,7 +1263,8 @@ function renderUW(uw) {
   set('cc-flood', hasFlood ? `⚠️ ${flood}` : '✅ None');
   cls('cc-flood', `mv ${hasFlood ? 'r' : 'g'}`);
   const highFlags = (uw.riskFlags||[]).filter(f => f.severity==='HIGH').length;
-  set('cc-risk', highFlags > 0 ? `⚠️ ${highFlags} High` : '✅ Low');
+  const medFlags = (uw.riskFlags||[]).filter(f => f.severity==='MEDIUM').length;
+  set('cc-risk', highFlags > 0 ? ('\u26a0\ufe0f ' + highFlags + ' HIGH flag' + (highFlags>1?'s':'')) : medFlags > 0 ? (medFlags + ' medium' ) : '\u2705 Low');
   cls('cc-risk', `mv ${highFlags > 0 ? 'r' : 'g'}`);
   set('cc-scope', uw.rehab?.scopeLevel || '—');
   const recEl = $('ov-rec');
@@ -1307,11 +1369,40 @@ function renderUW(uw) {
     if (!Object.keys(items).length) {
       liEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:16px;text-align:center;border:1px dashed var(--border2);border-radius:6px">No line items in this underwrite.<br><span style="font-size:11px;opacity:.7">Hit <strong style=\"color:var(--gold)\">⚡ Underwrite</strong> for itemized breakdown.</span></div>';
     }
-    Object.entries(items).forEach(([k, vv]) => {
+    // Ordered display with friendly labels + context
+    const _sqft = parseInt(curDeal?.sqft) || 0;
+    const _beds = parseInt(curDeal?.beds) || 0;
+    const _baths = parseFloat(curDeal?.baths) || 0;
+    const lineOrder = [
+      ['roof','Roof'],['hvac','HVAC'],['plumbing','Plumbing'],['electrical','Electrical'],
+      ['kitchen','Kitchen'],['bathrooms','Bathrooms'],['flooring','Flooring'],
+      ['windows','Windows / Doors'],['paint','Paint'],['landscaping','Landscaping'],
+      ['permits','Permits & Inspections'],['misc','Misc / Cleanup'],['contingency','Contingency'],['other','Other']
+    ];
+    const contextMap = {
+      kitchen: _sqft < 1200 ? '(small house cosmetic, min $10K)' : '(full kitchen refresh)',
+      bathrooms: _baths > 1 ? '($5K × ' + _baths + ' baths all-in)' : '($5K all-in)',
+      flooring: _sqft > 0 ? '(' + _sqft + ' sf × $3 installed)' : '($2/sf materials + $1/sf labor)',
+      paint: _sqft > 0 ? '(' + _sqft + ' sf × $2 interior)' : '',
+      misc: '(fixtures, hardware, dumpster, cleanup)',
+      contingency: '(10% buffer on scoped work)',
+      permits: '(required for any permitted work)'
+    };
+    lineOrder.forEach(([k, label]) => {
+      const vv = items[k];
       if (!vv) return; tot += vv;
-      liEl.innerHTML += `<div class="rr"><span class="rn">${k.replace(/_/g,' ')}</span><span class="rv">${fmt(vv)}</span></div>`;
+      const ctx = contextMap[k] || '';
+      liEl.innerHTML += '<div class="rr"><span class="rn">' + label + (ctx ? ' <span style="font-size:10px;opacity:.5;font-style:italic">' + ctx + '</span>' : '') + '</span><span class="rv">' + fmt(vv) + '</span></div>';
     });
-    liEl.innerHTML += `<div class="rt"><span class="rn">TOTAL</span><span class="rv">${fmt(tot)}</span></div>`;
+    // Catch any extra keys not in the order map
+    Object.entries(items).forEach(([k, vv]) => {
+      if (!vv) return;
+      const alreadyShown = lineOrder.some(([key]) => key === k);
+      if (!alreadyShown) { tot += vv; liEl.innerHTML += '<div class="rr"><span class="rn">' + k.replace(/_/g,' ') + '</span><span class="rv">' + fmt(vv) + '</span></div>'; }
+    });
+    const rng2 = uw.rehab?.urbanEstimateRange;
+    const rngStr = rng2 ? ' <span style="font-size:10px;opacity:.5;font-style:italic">range ' + fmt(rng2.low) + ' – ' + fmt(rng2.high) + '</span>' : '';
+    liEl.innerHTML += '<div class="rt"><span class="rn">TOTAL' + rngStr + '</span><span class="rv">' + fmt(tot) + '</span></div>';
   }
   const rng = uw.rehab?.urbanEstimateRange;
   set('rehab-rng', rng ? `Range: ${fmt(rng.low)} – ${fmt(rng.high)}` : '');
@@ -1322,33 +1413,88 @@ function renderUW(uw) {
   const rc = uw.rehab?.confidence || 'MEDIUM';
   { const _e_rh_conf = $('rh-conf'); if (_e_rh_conf) _e_rh_conf.innerHTML = `<span class="conf conf-${rc}">${rc}</span>`; }
 
-  // FINANCIALS TAB
+  // FINANCIALS TAB — all numbers recalculated client-side for accuracy
   const f = uw.financials || {};
-  set('fi-ask', fmt(f.askingPrice || curDeal?.askingPrice));
-  set('fi-arv', fmt(uw.arv?.urbanARV));
-  set('fi-reh', fmt(uw.rehab?.urbanEstimate));
-  set('fi-mao', fmt(f.mao));
-  const oum = f.overUnderMAO;
-  set('fi-oum', oum != null ? `${oum>0?'+':''}${fmt(oum)} ${oum>0?'over':'under'} MAO` : '—');
-  cls('fi-oum', `fv ${oum>0?'r':'g'}`);
-  set('fi-loan', fmt(f.hardMoney?.loanAmount));
+  const fi_ask   = parseFloat(f.askingPrice || curDeal?.askingPrice) || 0;
+  const fi_arv   = uw.arv?.urbanARV || 0;
+  const fi_rehab = uw.rehab?.urbanEstimate || 0;
+  const fi_mao   = f.mao || Math.round(fi_arv * 0.7 - fi_rehab);
+  const fi_loan  = f.hardMoney?.loanAmount || Math.round(fi_ask * 0.90);
+  const fi_dp    = Math.round(fi_ask * 0.10);
+  const fi_int   = f.hardMoney?.totalInterest || 0;
+  const fi_pts   = f.hardMoney?.originationPoints || Math.round(fi_loan * 0.02);
+  const fi_hc    = f.holdingCosts?.total || 0;
+  const fi_sell  = f.sellingCosts?.total || Math.round(fi_arv * 0.075);
+  const fi_fin   = fi_int + fi_pts;
+  // Correctly sum all-in (override Claude's often-wrong totalCost)
+  const fi_tot   = fi_ask + fi_rehab + fi_fin + fi_hc + fi_sell;
+  // True profit = ARV - all costs
+  const fi_profit = fi_arv > 0 ? Math.round(fi_arv - fi_tot) : 0;
+  const fi_ctc   = fi_dp + fi_rehab;  // cash to close
+  const fi_hold  = f.holdMonths || 4;
+  const fi_sale  = Math.round(fi_arv * 0.96);
+
+  // CARD 1
+  set('fi-ask', fmt(fi_ask));
+  set('fi-arv', fmt(fi_arv));
+  set('fi-sale', fmt(fi_sale));
+  set('fi-reh', fmt(fi_rehab));
+  set('fi-mao', fmt(fi_mao));
+  const fi_oum = fi_ask - fi_mao;
+  set('fi-oum', fi_oum > 0 ? '+'+fmt(fi_oum)+' over MAO' : fmt(Math.abs(fi_oum))+' under MAO');
+  cls('fi-oum', 'fv ' + (fi_oum > 0 ? 'r' : 'g'));
+  set('fi-room', fi_oum > 0 ? 'Above ceiling — must negotiate down' : fmt(Math.abs(fi_oum))+' below ceiling — room to work');
+  cls('fi-room', 'fv ' + (fi_oum > 0 ? 'r' : 'g') + ' ' + (fi_oum <= 0 ? '' : ''));
+
+  // CARD 2
+  set('fi-loan', fmt(fi_loan));
+  set('fi-dp', fmt(fi_dp));
   set('fi-mo', fmt(f.hardMoney?.monthlyPayment));
-  set('fi-hold', f.holdMonths ? `${f.holdMonths} months` : '—');
-  set('fi-int', fmt(f.hardMoney?.totalInterest));
-  set('fi-pts', fmt(f.hardMoney?.originationPoints));
-  set('fi-pp', fmt(f.askingPrice || curDeal?.askingPrice));
-  set('fi-rh2', fmt(uw.rehab?.urbanEstimate));
-  set('fi-fin', fmt((f.hardMoney?.totalInterest||0) + (f.hardMoney?.originationPoints||0)));
-  set('fi-hc', fmt(f.holdingCosts?.total));
-  set('fi-sc', fmt(f.sellingCosts?.total));
-  set('fi-tot', fmt(f.totalCost));
-  const pa = f.netProfitAtAsking;
-  {const _ask=parseFloat(curDeal?.askingPrice)||0; const _pct=_ask>0&&pa!=null?'('+( pa/_ask*100).toFixed(1)+'%)':''; set('fi-pa', fmt(pa)+(_pct?' '+_pct:'')); }
-  cls('fi-pa', `fv ${(()=>{const _a=parseFloat(curDeal?.askingPrice)||0;const _m=_a>=1000000?100000:Math.max(_a*.10,20000);return pa>=_m?'g':pa>=0?'y':'r';})()} `);
-  { const _pm = f.netProfitAtMAO; set('fi-pm', _pm === 0 || Math.abs(_pm) < 5000 ? '≈ $0 (break-even)' : fmt(_pm)); }
-  set('fi-roi', f.roi ? `${parseFloat(f.roi).toFixed(1)}%` : '—');
-  { const _a3=parseFloat(curDeal?.askingPrice)||0; const _m3=_a3>=1000000?'$100K+':('$'+Math.round(Math.max(_a3*.10,20000)/1000)+'K min'); set('fi-min', f.meetsMinimumProfit ? ('✅ YES ('+_m3+')') : ('❌ NO ('+_m3+' needed)')); }
-  cls('fi-min', `fv ${f.meetsMinimumProfit?'g':'r'}`);
+  set('fi-hold', fi_hold + ' months');
+  set('fi-int', fmt(fi_int));
+  set('fi-pts', fmt(fi_pts));
+  set('fi-fin', fmt(fi_fin));
+  set('fi-hold-months-lbl', '(' + fi_hold + '-month hold)');
+
+  // CARD 3
+  set('fi-pp', fmt(fi_ask));
+  set('fi-rh2', fmt(fi_rehab));
+  set('fi-fin2', fmt(fi_fin));
+  set('fi-hc', fmt(fi_hc));
+  set('fi-sc', fmt(fi_sell));
+  set('fi-tot', fmt(fi_tot));
+  set('fi-ctc', fmt(fi_ctc));
+
+  // Holding detail
+  set('fi-tx', fmt(f.holdingCosts?.taxes));
+  set('fi-ins', fmt(f.holdingCosts?.insurance));
+  set('fi-ut', fmt(f.holdingCosts?.utilities));
+  set('fi-hc2', fmt(fi_hc));
+
+  // CARD 4 — Profit & Returns
+  const fi_pMin = fi_ask >= 1000000 ? 100000 : Math.max(fi_ask * 0.10, 20000);
+  const fi_profitPct = fi_arv > 0 ? (fi_profit / fi_arv * 100).toFixed(1) : '0';
+  const fi_roiPct = fi_tot > 0 ? (fi_profit / fi_tot * 100).toFixed(1) : '0';
+  const fi_coc = fi_ctc > 0 ? (fi_profit / fi_ctc * 100).toFixed(1) : '0';
+  const fi_aroiPct = fi_ctc > 0 && fi_hold > 0 ? ((fi_profit / fi_ctc) / (fi_hold / 12) * 100).toFixed(1) : '0';
+  const fi_profitAtMAO = Math.round(fi_arv - fi_mao - fi_rehab - fi_fin - fi_hc - fi_sell);
+
+  const fi_pColor = fi_profit >= fi_pMin ? 'g' : fi_profit >= 0 ? 'y' : 'r';
+  set('fi-pa', (fi_profit >= 0 ? '+' : '') + fmt(fi_profit));
+  cls('fi-pa', 'fv ' + fi_pColor);
+  set('fi-pm2', fi_profitPct + '% of ARV');
+  cls('fi-pm2', 'fv ' + (parseFloat(fi_profitPct) >= 20 ? 'g' : parseFloat(fi_profitPct) >= 10 ? 'y' : 'r'));
+  set('fi-roi2', fi_roiPct + '% return on total invested');
+  cls('fi-roi2', 'fv ' + (parseFloat(fi_roiPct) >= 30 ? 'g' : parseFloat(fi_roiPct) >= 15 ? 'y' : 'r'));
+  set('fi-coc', fi_coc + '%');
+  set('fi-aroi', fi_aroiPct + '% annualized');
+  const _pmStr = Math.abs(fi_profitAtMAO) < 5000 ? '≈ $0 (break-even)' : (fi_profitAtMAO >= 0 ? '+' : '') + fmt(fi_profitAtMAO);
+  set('fi-pm', _pmStr);
+  cls('fi-pm', 'fv ' + (fi_profitAtMAO >= fi_pMin ? 'g' : fi_profitAtMAO >= 0 ? 'y' : 'r'));
+  const _m3 = fi_ask>=1000000?'$100K+':('$'+Math.round(fi_pMin/1000)+'K min');
+  const _meets = fi_profit >= fi_pMin;
+  set('fi-min', _meets ? ('\u2705 YES ('+_m3+')') : ('\u274c NO ('+_m3+' needed)'));
+  cls('fi-min', 'fv ' + (_meets ? 'g' : 'r'));
 
   // RENTAL TAB
   const rn = uw.rental || {};
@@ -1365,14 +1511,36 @@ function renderUW(uw) {
 
   // NEW CONSTRUCTION TAB
   const nc = uw.newConstruction || {};
-  set('nc-lot', fmt(nc.lotValue));
-  set('nc-equity', nc.lotEquityRequired ? fmt(nc.lotEquityRequired) + ' cash' : nc.lotValue ? fmt(Math.round(nc.lotValue*0.5)) + ' cash (est.)' : '—');
-  set('nc-build', nc.estimatedBuildCost ? fmt(nc.estimatedBuildCost) + (nc.buildCostPerSqft ? ' ($'+nc.buildCostPerSqft+'/sf)' : '') : '—');
-  set('nc-loan', nc.constructionLoanAmount ? fmt(nc.constructionLoanAmount) + ' @ 11.5%' : '—');
-  set('nc-interest', fmt(nc.estimatedInterestCost));
-  set('nc-arv', fmt(nc.estimatedNewARV));
-  if ($('nc-profit')) { const _p=nc.netProfitNewBuild; $('nc-profit').textContent=_p!==undefined?fmt(_p):'—'; if (_p!==undefined) cls('nc-profit','mv '+(_p>50000?'g':_p>0?'y':'r')); }
-  set('nc-notes', nc.notes || '');
+  const ncNaCard2 = document.getElementById('nc-na-card');
+  const ncAppCard2 = document.getElementById('nc-applicable-card');
+  const ncEmptyCard2 = document.getElementById('nc-empty-card');
+  const _ncNA = nc.applicable === false || nc.notApplicableReason;
+  const _ncHasData = nc.lotValue || nc.estimatedBuildCost || nc.estimatedNewARV;
+  if (_ncNA && ncNaCard2) {
+    ncNaCard2.style.display = '';
+    if (ncAppCard2) ncAppCard2.style.display = 'none';
+    if (ncEmptyCard2) ncEmptyCard2.style.display = 'none';
+    const naR = document.getElementById('nc-na-reason');
+    if (naR) naR.textContent = nc.notApplicableReason || 'Existing structure fix-and-flip — not a teardown or infill lot candidate. New construction analysis not applicable to this deal.';
+    const nbEl = document.getElementById('nc-nearby');
+    if (nbEl) nbEl.textContent = nc.nearbyNewConstruction || 'Not analyzed. Verify active new builds in zip code on Zillow/MLS — competing new inventory affects pricing and DOM for flips.';
+  } else if (_ncHasData && ncAppCard2) {
+    ncAppCard2.style.display = '';
+    if (ncNaCard2) ncNaCard2.style.display = 'none';
+    if (ncEmptyCard2) ncEmptyCard2.style.display = 'none';
+    set('nc-lot', fmt(nc.lotValue));
+    set('nc-equity', nc.lotEquityRequired ? fmt(nc.lotEquityRequired)+' cash' : nc.lotValue ? fmt(Math.round(nc.lotValue*0.5))+' cash (est.)' : '—');
+    set('nc-build', nc.estimatedBuildCost ? fmt(nc.estimatedBuildCost)+(nc.buildCostPerSqft?' ($'+nc.buildCostPerSqft+'/sf)':'') : '—');
+    set('nc-loan', nc.constructionLoanAmount ? fmt(nc.constructionLoanAmount)+' @ 11.5%' : '—');
+    set('nc-interest', fmt(nc.estimatedInterestCost));
+    set('nc-arv', fmt(nc.estimatedNewARV));
+    if (document.getElementById('nc-profit')) { const _p=nc.netProfitNewBuild; const el=document.getElementById('nc-profit'); if(el){ el.textContent=_p!==undefined?fmt(_p):'—'; if(_p!==undefined) el.className='mv '+(_p>50000?'g':_p>0?'y':'r'); } }
+    set('nc-notes', nc.notes || '');
+  } else {
+    if (ncEmptyCard2) ncEmptyCard2.style.display = '';
+    if (ncNaCard2) ncNaCard2.style.display = 'none';
+    if (ncAppCard2) ncAppCard2.style.display = 'none';
+  }
 
   // FLAGS TAB
   const flagEl = $('flags-list');
@@ -1381,7 +1549,17 @@ function renderUW(uw) {
   const sortedFlags = (uw.riskFlags||[]).sort((a,b) => ['HIGH','MEDIUM','LOW'].indexOf(a.severity)-['HIGH','MEDIUM','LOW'].indexOf(b.severity));
   if (flagsEmpty) flagsEmpty.style.display = sortedFlags.length === 0 ? '' : 'none';
   sortedFlags.forEach(f => {
-      flagEl.innerHTML += `<div class="flag flag-${f.severity}"><div class="fn">⚑ ${f.flag} · ${f.severity}</div><div class="fd">${f.detail}</div></div>`;
+      const sev = (f.severity||'').toUpperCase();
+      const icon = sev === 'HIGH' ? '🔴' : sev === 'MEDIUM' ? '🟡' : '🔵';
+      const sevColor = sev === 'HIGH' ? '#ff4455' : sev === 'MEDIUM' ? 'var(--review)' : 'var(--muted)';
+      flagEl.innerHTML += '<div class="flag flag-' + sev + '" style="margin-bottom:8px;border-radius:6px;overflow:hidden">'
+        + '<div class="fn" style="display:flex;align-items:center;gap:8px">'
+        + '<span style="font-size:13px">' + icon + '</span>'
+        + '<span style="flex:1;font-weight:700;font-size:12px;letter-spacing:.3px">' + (f.flag||'Risk') + '</span>'
+        + '<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:' + sevColor + ';color:#000;opacity:.9">' + sev + '</span>'
+        + '</div>'
+        + '<div class="fd" style="font-size:12px;line-height:1.6;color:var(--text);padding:6px 10px 8px;opacity:.85">' + (f.detail||'') + '</div>'
+        + '</div>';
     });
   if (!uw.riskFlags?.length) flagEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No risk flags identified</div>';
 
