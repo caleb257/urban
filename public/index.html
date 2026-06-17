@@ -1190,8 +1190,9 @@ function renderUW(uw) {
   const _pMin = _a>=1000000?100000:Math.max(_a*.10,20000);
   const _meetsP = _actualP != null && _actualP >= _pMin;
   const _actualStr = _actualP != null ? ' ('+(_actualP>=0?'+':'')+fmt(_actualP)+')' : '';
-  set('cc-profit', _meetsP ? '✅ YES'+_actualStr : '❌ NO (need '+_m+')');} 
-  cls('cc-profit', `mv ${_meetsP ? 'g' : 'r'}`);
+  set('cc-profit', _meetsP ? '\u2705 YES'+_actualStr : '\u274c NO (need '+_m+')');
+  cls('cc-profit', 'mv ' + (_meetsP ? 'g' : 'r'));
+}
   const inMkt = ['pasco','hillsborough','polk','pinellas','hernando','sarasota'].some(c => (curDeal?.county||'').toLowerCase().includes(c));
   const _cntyDisplay = (curDeal?.county||'').replace(' County','').trim() || curDeal?.city || '';
   set('cc-mkt', inMkt ? '✅ In Market' + (_cntyDisplay ? ' · '+_cntyDisplay : '') : '⚠️ Outside CCG zones');
