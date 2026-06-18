@@ -287,9 +287,16 @@ a{color:var(--accent)}
         <button class="btn" id="btn-regen" title="Recalculate verdict from current numbers — no new comps, cheap" style="background:rgba(100,200,150,.08);border-color:rgba(100,200,150,.25);color:rgba(100,200,150,.9)">⚡ Regen</button>
         <button class="btn" id="btn-chat">💬 Chat</button>
         <button class="btn" id="btn-sheet">📊 Sheet</button>
+        <button class="btn" id="btn-hard-no" onclick="doMarkHardNo()" title="Mark this deal as Hard No — removes from pipeline" style="display:none;background:rgba(255,60,60,.12);border-color:rgba(255,60,60,.3);color:rgba(255,100,100,.9)">⛔ Hard No</button>
         <button class="btn" id="btn-photos" style="display:none;background:rgba(180,140,255,.12);border-color:rgba(180,140,255,.3);color:rgba(180,140,255,.9)" onclick="openPhotos()">📸 See Photos</button>
       </div>
 
+      <!-- DEAL TERMS BAR — shows close date, inspection period, EMD when available -->
+      <div id="deal-terms-bar" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 16px;margin-bottom:10px;display:none;gap:20px;flex-wrap:wrap">
+        <div id="dt-close" style="display:none"><span style="font-size:10px;color:var(--muted)">CLOSE DATE</span><br><span id="dt-close-val" style="font-size:12px;font-weight:600;color:var(--gold)"></span></div>
+        <div id="dt-insp" style="display:none"><span style="font-size:10px;color:var(--muted)">INSPECTION</span><br><span id="dt-insp-val" style="font-size:12px;font-weight:600"></span></div>
+        <div id="dt-emd" style="display:none"><span style="font-size:10px;color:var(--muted)">EMD</span><br><span id="dt-emd-val" style="font-size:12px;font-weight:600"></span></div>
+      </div>
       <div id="pending-card">
         <h3>NOT YET UNDERWRITTEN</h3>
         <p>Urban will auto-underwrite this deal in the background. Hit ⚡ to run it now.</p>
@@ -315,6 +322,11 @@ a{color:var(--accent)}
 
         <!-- OVERVIEW -->
         <div class="tc active" id="t-overview">
+          <!-- PRICE SANITY WARNING — shows when asking price looks off -->
+          <div id="price-sanity-banner" style="display:none;background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.25);border-radius:6px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:12px">
+            <span style="font-size:18px">⚠️</span>
+            <span style="flex:1;font-size:12px;color:var(--text)" id="price-sanity-msg">Asking price may be incorrect — verify against original email</span>
+          </div>
           <!-- PHOTO LINK BANNER — shows when photos available -->
           <div id="photo-banner" style="display:none;background:rgba(180,140,255,.1);border:1px solid rgba(180,140,255,.25);border-radius:6px;padding:10px 14px;margin-bottom:14px;display:none;align-items:center;gap:12px">
             <span style="font-size:18px">📸</span>
@@ -971,6 +983,17 @@ function renderList() {
       : null;
     const ageLabel = ageDays === null ? '' : ageDays === 0 ? '🟢 Today' : ageDays === 1 ? '🟡 1d' : ageDays <= 3 ? `🟡 ${ageDays}d` : ageDays <= 7 ? `🟠 ${ageDays}d` : `🔴 ${ageDays}d`;
     const staleLabel = d.isStale ? '<span class="stale-badge">⏰ STALE</span>' : '';
+    // Price sanity warning badge
+    let priceSanityBadge = '';
+    if (d.priceSanityFlag) {
+      const msgs = {
+        'ASK_NEAR_OR_ABOVE_ARV': '⚠️ Ask ≈ ARV',
+        'ASK_VS_WS_ARV_MISMATCH': '⚠️ Price?',
+        'PRICE_HIGH_FOR_SQFT': '⚠️ High/sf',
+        'PRICE_TOO_LOW': '⚠️ Price?'
+      };
+      priceSanityBadge = '<span title="' + d.priceSanityFlag + '" style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(255,200,0,.15);color:#ffcc00;border:1px solid rgba(255,200,0,.35)">' + (msgs[d.priceSanityFlag] || '⚠️') + '</span>';
+    }
     // Expiration warning — show if expires within 7 days
     let expiresLabel = '';
     if (d.expires && !d.isStale) {
@@ -998,6 +1021,7 @@ function renderList() {
         ${ageLabel ? `<span class="di-age">${ageLabel}</span>` : ''}
         ${staleLabel}
         ${expiresLabel}
+        ${priceSanityBadge}
       </div>`;
     el.addEventListener('click', () => selectDeal(d));
     list.appendChild(el);
@@ -1034,6 +1058,47 @@ async function selectDeal(d) {
   // Always fill property tab with sheet data
   fillPropTab(d);
   updatePhotosUI(d);
+
+  // HARD NO button
+  const hardNoBtn = document.getElementById('btn-hard-no');
+  if (hardNoBtn) hardNoBtn.style.display = (d.underwriteStatus !== 'HARD NO') ? '' : 'none';
+
+  // Price sanity warning banner
+  const sanityBanner = document.getElementById('price-sanity-banner');
+  const sanityMsg = document.getElementById('price-sanity-msg');
+  if (sanityBanner) {
+    if (d.priceSanityFlag) {
+      sanityBanner.style.display = 'flex';
+      const _psm = {
+        'ASK_NEAR_OR_ABOVE_ARV': '⚠️ Asking price is near or above ARV — verify against the original email before acting.',
+        'ASK_VS_WS_ARV_MISMATCH': '⚠️ Asking price differs significantly from wholesaler ARV — double-check the original email.',
+        'PRICE_HIGH_FOR_SQFT': '⚠️ Asking price seems high for the square footage — verify the listing.',
+        'PRICE_TOO_LOW': '⚠️ Asking price unusually low — may be a data entry error.'
+      };
+      if (sanityMsg) sanityMsg.textContent = _psm[d.priceSanityFlag] || '⚠️ Asking price may be incorrect.';
+    } else {
+      sanityBanner.style.display = 'none';
+    }
+  }
+
+  // Deal terms bar — close date, inspection period, EMD
+  const termsBar = document.getElementById('deal-terms-bar');
+  if (termsBar) {
+    const hasCd = d.closeDate, hasIp = d.inspectionPeriod, hasEmd = d.earnestMoney;
+    if (hasCd || hasIp || hasEmd) {
+      termsBar.style.display = 'flex';
+      const setTerm = (idEl, idVal, val) => {
+        const el = document.getElementById(idEl), v = document.getElementById(idVal);
+        if (el) el.style.display = val ? '' : 'none';
+        if (v) v.textContent = val || '';
+      };
+      setTerm('dt-close', 'dt-close-val', hasCd);
+      setTerm('dt-insp', 'dt-insp-val', hasIp);
+      setTerm('dt-emd', 'dt-emd-val', hasEmd);
+    } else {
+      termsBar.style.display = 'none';
+    }
+  }
 
   // Try to load existing underwrite
   try {
@@ -1285,7 +1350,19 @@ function renderUW(uw) {
   cls('ov-arvdiff', `mv ${diff > 10000 ? 'r' : diff < -10000 ? 'g' : ''}`);
   const cred = uw.wholesalerCredibility?.assessment || 'UNKNOWN';
   set('ov-cred', cred);
-  cls('ov-cred', `mv ${cred==='TRUSTED'?'g':cred==='QUESTIONABLE'?'y':'mu'}`);
+  cls('ov-cred', 'mv ' + (cred==='TRUSTED'?'g':cred==='QUESTIONABLE'?'y':'mu'));
+  // Wholesaler track record from deal data (populated by server brain lookup)
+  const wsTrackRow = document.getElementById('ov-ws-track-row');
+  const wsTrackEl = document.getElementById('ov-ws-track');
+  const wsC = curDeal?.wholesalerCredibility;
+  if (wsC && wsTrackRow && wsTrackEl) {
+    wsTrackRow.style.display = '';
+    const arvAdj = wsC.arvInflation ? (parseFloat(wsC.arvInflation) > 0 ? '+' : '') + wsC.arvInflation + '% ARV inflation avg' : '';
+    wsTrackEl.textContent = wsC.deals + ' prior deal' + (wsC.deals !== 1 ? 's' : '') + (arvAdj ? ' · ' + arvAdj : '') + (wsC.rating ? ' · ' + wsC.rating : '');
+    wsTrackEl.style.color = wsC.arvInflation && parseFloat(wsC.arvInflation) > 15 ? 'var(--hot)' : wsC.arvInflation && parseFloat(wsC.arvInflation) > 5 ? 'var(--review)' : 'var(--buy)';
+  } else if (wsTrackRow) {
+    wsTrackRow.style.display = 'none';
+  }
   set('ov-trend', uw.marketAnalysis?.trend || '—');
   set('ov-hold', uw.financials?.holdMonths ? `${uw.financials.holdMonths} months` : '—');
   const profMinPct = ask2 >= 1000000 ? '$100K' : Math.max(Math.round((ask2||0)*0.1/1000)*1000, 20000).toLocaleString();
@@ -2044,6 +2121,37 @@ async function doRewriteAll() {
   if (btn) { btn.textContent = '✅ Done'; btn.style.opacity = '1'; btn.style.pointerEvents = ''; }
   await doLoadDeals();
   setTimeout(() => { if (btn) btn.textContent = '⚡ All'; }, 3000);
+}
+
+// ── HARD NO ACTION ───────────────────────────────────────────────────────────
+async function doMarkHardNo() {
+  if (!curDeal) return;
+  const uid = curUW?.uid || curDeal?.uid;
+  if (!uid) return;
+  const reason = prompt('Reason for Hard No (optional):', 'Manually marked — not a fit');
+  if (reason === null) return; // cancelled
+  const btn = document.getElementById('btn-hard-no');
+  if (btn) { btn.textContent = '⏳ Saving...'; btn.style.opacity = '.6'; }
+  try {
+    const r = await fetch('/api/override/' + encodeURIComponent(uid), {
+      method: 'POST',
+      headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field: 'verdict', value: 'HARD NO', reason: reason || 'Manually marked', author })
+    });
+    if (r.ok) {
+      // Update local deal status
+      const d = deals.find(d => d.uid === uid);
+      if (d) { d.underwriteStatus = 'HARD NO'; d.underwriteScore = 1; }
+      if (btn) { btn.textContent = '✅ Marked'; btn.style.display = 'none'; }
+      renderList();
+      doLoadStats();
+    } else {
+      if (btn) { btn.textContent = '⛔ Hard No'; btn.style.opacity = '1'; }
+      alert('Could not update verdict — please re-underwrite to try again.');
+    }
+  } catch(e) {
+    if (btn) { btn.textContent = '⛔ Hard No'; btn.style.opacity = '1'; }
+  }
 }
 
 // ── PHOTOS ───────────────────────────────────────────────────────────────────
