@@ -18,11 +18,24 @@ async function initDB() {
         uid        TEXT PRIMARY KEY,
         address    TEXT,
         city       TEXT,
+        county     TEXT,
+        zip        TEXT,
+        beds       SMALLINT,
+        sqft       INTEGER,
         verdict    TEXT,
         score      INTEGER,
+        worth_brrrr BOOLEAN,
+        cash_flow_est INTEGER,
         data       JSONB NOT NULL,
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+      -- Add columns if upgrading existing DB
+      ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS county TEXT;
+      ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS zip TEXT;
+      ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS beds SMALLINT;
+      ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS sqft INTEGER;
+      ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS worth_brrrr BOOLEAN;
+      ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS cash_flow_est INTEGER;
       CREATE TABLE IF NOT EXISTS brain_store (
         key        TEXT PRIMARY KEY,
         value      JSONB NOT NULL,
@@ -30,6 +43,9 @@ async function initDB() {
       );
       CREATE INDEX IF NOT EXISTS idx_uw_verdict    ON underwrites(verdict);
       CREATE INDEX IF NOT EXISTS idx_uw_updated_at ON underwrites(updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_uw_county     ON underwrites(county);
+      CREATE INDEX IF NOT EXISTS idx_uw_zip        ON underwrites(zip);
+      CREATE INDEX IF NOT EXISTS idx_uw_brrrr      ON underwrites(worth_brrrr) WHERE worth_brrrr = TRUE;
     `);
     ready = true;
     console.log('✅ PostgreSQL connected');
@@ -160,13 +176,20 @@ async function saveComps(addressKey, comps) {
 async function saveUnderwrite(uid, uw) {
   if (!pool || !ready) return;
   try {
+    const cashFlow = uw.rental?.debtService?.dscrLoan?.cashFlow || null;
+    const worthBrrrr = uw.rental?.worthBRRRR || false;
     await pool.query(
-      `INSERT INTO underwrites (uid,address,city,verdict,score,data,updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,NOW())
+      `INSERT INTO underwrites (uid,address,city,county,zip,beds,sqft,verdict,score,worth_brrrr,cash_flow_est,data,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
        ON CONFLICT (uid) DO UPDATE SET
-         address=EXCLUDED.address, city=EXCLUDED.city, verdict=EXCLUDED.verdict,
-         score=EXCLUDED.score, data=EXCLUDED.data, updated_at=NOW()`,
-      [uid, uw.deal?.address||'', uw.deal?.city||'', uw.verdict||'', uw.score||0, JSON.stringify(uw)]
+         address=EXCLUDED.address, city=EXCLUDED.city, county=EXCLUDED.county,
+         zip=EXCLUDED.zip, beds=EXCLUDED.beds, sqft=EXCLUDED.sqft,
+         verdict=EXCLUDED.verdict, score=EXCLUDED.score,
+         worth_brrrr=EXCLUDED.worth_brrrr, cash_flow_est=EXCLUDED.cash_flow_est,
+         data=EXCLUDED.data, updated_at=NOW()`,
+      [uid, uw.deal?.address||'', uw.deal?.city||'', uw.deal?.county||null,
+       uw.deal?.zip||null, parseInt(uw.deal?.beds)||null, parseInt(uw.deal?.sqft)||null,
+       uw.verdict||'', uw.score||0, worthBrrrr, cashFlow, JSON.stringify(uw)]
     );
   } catch(e) { console.error('DB saveUnderwrite:', e.message); }
 }
@@ -388,12 +411,79 @@ async function getNbhcArv(nbhc) {
   } catch(e) { return null; }
 }
 
+// ── DEALS CACHE — snapshot of Derek's sheet so app works when Sheets is slow ──
+async function initDealsCache() {
+  if (!pool || !ready) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS deals_cache (
+        uid        TEXT PRIMARY KEY,
+        address    TEXT,
+        city       TEXT,
+        county     TEXT,
+        zip        TEXT,
+        data       JSONB NOT NULL,
+        sheet_date DATE,
+        cached_at  TIMESTAMPTZ DEFAULT NOW()
+      );
+      ALTER TABLE deals_cache ADD COLUMN IF NOT EXISTS sheet_date DATE;
+      CREATE INDEX IF NOT EXISTS idx_dc_county ON deals_cache(county);
+      CREATE INDEX IF NOT EXISTS idx_dc_city   ON deals_cache(city);
+    `);
+  } catch(e) { console.warn('deals_cache init:', e.message); }
+}
+
+async function saveDeal(uid, deal) {
+  if (!pool || !ready) return;
+  try {
+    await pool.query(
+      `INSERT INTO deals_cache (uid, address, city, county, zip, data, cached_at)
+       VALUES ($1,$2,$3,$4,$5,$6,NOW())
+       ON CONFLICT (uid) DO UPDATE SET
+         address=EXCLUDED.address, city=EXCLUDED.city, county=EXCLUDED.county,
+         zip=EXCLUDED.zip, data=EXCLUDED.data, cached_at=NOW()`,
+      [uid, deal.address||'', deal.city||'', deal.county||null, deal.zip||null, JSON.stringify(deal)]
+    );
+  } catch(e) { /* non-critical */ }
+}
+
+async function getCachedDeals() {
+  if (!pool || !ready) return null;
+  try {
+    // Return deals cached in the last 4 hours (fresh enough)
+    const r = await pool.query(
+      "SELECT data FROM deals_cache WHERE cached_at > NOW() - INTERVAL '4 hours' ORDER BY cached_at DESC"
+    );
+    return r.rows.length > 0 ? r.rows.map(row => row.data) : null;
+  } catch(e) { return null; }
+}
+
+async function getPortfolioStats() {
+  if (!pool || !ready) return null;
+  try {
+    const r = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE verdict = 'BUY' OR verdict = 'HOT') as buys,
+        COUNT(*) FILTER (WHERE verdict = 'PASS') as passes,
+        COUNT(*) FILTER (WHERE verdict = 'HARD NO') as hard_nos,
+        COUNT(*) FILTER (WHERE worth_brrrr = TRUE) as brrrr_candidates,
+        AVG(score) FILTER (WHERE verdict NOT IN ('HARD NO','PASS')) as avg_score,
+        SUM(cash_flow_est) FILTER (WHERE worth_brrrr = TRUE AND cash_flow_est > 0) as total_cf_potential,
+        COUNT(*) as total
+      FROM underwrites
+    `);
+    return r.rows[0] || null;
+  } catch(e) { return null; }
+}
+
 module.exports = {
   initDB, isAvailable,
   initCompCache, getCachedComps, saveComps,
+  initDealsCache, saveDeal, getCachedDeals,
   saveUnderwrite, getUnderwrite, getAllUnderwrites,
   saveBrainToDB, loadBrainFromDB,
   saveMarketData, getMarketData, getMarketStats,
   saveSoldComps, getSoldComps, getSoldCompStats,
-  saveNbhcStats, getNbhcArv
+  saveNbhcStats, getNbhcArv,
+  getPortfolioStats
 };
