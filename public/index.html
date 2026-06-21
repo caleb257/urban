@@ -540,129 +540,220 @@ a{color:var(--accent)}
         <!-- RENTAL -->
         <div class="tc" id="t-rental">
 
-          <!-- RENTAL VERDICT BANNER -->
-          <div id="rn-verdict-banner" style="display:none;border-radius:6px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;gap:14px;border:1px solid">
-            <span id="rn-verdict-icon" style="font-size:22px"></span>
+          <!-- ── RENTAL VERDICT + SUMMARY BANNER ───────────────────────── -->
+          <div id="rn-verdict-banner" style="display:none;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;border:1px solid">
+            <span id="rn-verdict-icon" style="font-size:26px"></span>
             <div style="flex:1">
-              <div id="rn-verdict-label" style="font-size:11px;font-weight:700;letter-spacing:.8px;margin-bottom:2px"></div>
-              <div id="rn-verdict-note" style="font-size:12px;opacity:.8;line-height:1.5"></div>
+              <div id="rn-verdict-label" style="font-size:13px;font-weight:800;letter-spacing:.8px;margin-bottom:3px"></div>
+              <div id="rn-verdict-note" style="font-size:12px;opacity:.8;line-height:1.5" id="rn-verdict-note"></div>
             </div>
-            <div style="text-align:right">
-              <div id="rn-brrrr-badge" style="display:none;font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;background:rgba(60,200,130,.2);color:var(--buy);border:1px solid rgba(60,200,130,.3)">BRRRR CANDIDATE</div>
+            <div style="text-align:right;flex-shrink:0">
+              <div id="rn-brrrr-badge" style="display:none;font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:rgba(60,200,130,.2);color:var(--buy);border:1px solid rgba(60,200,130,.3)">♻️ BRRRR CANDIDATE</div>
             </div>
           </div>
 
-          <div class="grid">
-
-            <!-- CARD 1: Market Rent -->
-            <div class="card">
-              <div class="ct">Market Rent Analysis</div>
-              <!-- Unit count badge — only shows for multi-unit -->
-              <div id="rn-unit-badge" style="display:none;text-align:center;margin-bottom:8px">
-                <span id="rn-unit-label" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;background:rgba(255,160,32,.12);color:var(--review);border:1px solid rgba(255,160,32,.3)"></span>
-              </div>
-              <div style="text-align:center;padding:8px 0 4px">
-                <div style="font-size:28px;font-weight:700;color:var(--gold)" id="rn-rent">—</div>
-                <div style="font-size:10px;color:var(--muted);margin-top:2px" id="rn-rent-sublabel">/month estimated gross rent</div>
-              </div>
-              <!-- Per-unit breakdown for multi-unit -->
-              <div id="rn-per-unit-row" style="display:none;text-align:center;padding:2px 0 10px">
-                <span style="font-size:12px;color:var(--muted)">(<span id="rn-rent-per-unit"></span>/unit × <span id="rn-unit-count-label"></span> units)</span>
-              </div>
-              <div style="text-align:center;margin-bottom:10px" id="rn-rent-range-row">
-                <span style="font-size:11px;color:var(--muted)" id="rn-rent-range"></span>
-              </div>
-              <div class="fr"><span class="fl">HUD Fair Market Rent</span><span class="fv" id="rn-hud"></span></div>
-              <div class="fr"><span class="fl">Rent / Sqft</span><span class="fv" id="rn-psf"></span></div>
-              <div class="fr"><span class="fl">Price-to-Rent Ratio</span><span class="fv" id="rn-ptr"></span></div>
-              <div class="fr"><span class="fl">Data Source</span><span class="fv mu" id="rn-source" style="font-size:10px"></span></div>
-              <div class="fr"><span class="fl">Confidence</span><span class="fv" id="rn-conf"></span></div>
-              <div id="rn-rent-comps" style="margin-top:10px;font-size:11px;color:var(--muted)"></div>
+          <!-- ── 3 KEY NUMBERS UP TOP ────────────────────────────────────── -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
+              <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:6px">MARKET RENT</div>
+              <div style="font-size:22px;font-weight:800;color:var(--gold)" id="rn-hero-rent">—</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px" id="rn-hero-rent-note">/month</div>
             </div>
-
-            <!-- CARD 2: Income & Expenses -->
-            <div class="card">
-              <div class="ct">Income &amp; Expenses <span style="font-size:10px;font-weight:400;opacity:.5" id="rn-exp-mo-label">(monthly)</span></div>
-              <div style="background:rgba(60,200,130,.06);border-radius:4px;padding:6px 10px;margin-bottom:8px">
-                <div class="fr" style="padding:0"><span class="fl" style="color:var(--buy);font-weight:600">Gross Rent <span id="rn-gross-units-note" style="font-size:9px;font-weight:400;opacity:.7"></span></span><span class="fv g" id="rn-gross"></span></div>
-                <div class="fr" style="padding:0;margin-top:2px"><span class="fl" style="font-size:11px;opacity:.7">Vacancy <span id="rn-vac-rate"></span></span><span class="fv mu" id="rn-vac-loss"></span></div>
-                <div class="fr" style="padding:0;margin-top:2px"><span class="fl" style="font-weight:600">Effective Gross Income</span><span class="fv" id="rn-egi" style="font-weight:700"></span></div>
-              </div>
-              <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:4px">OPERATING EXPENSES</div>
-              <div class="fr"><span class="fl">Property Mgmt <span id="rn-pm-rate" style="font-size:9px;opacity:.6"></span></span><span class="fv r" id="rn-pm"></span></div>
-              <div class="fr"><span class="fl">Property Taxes</span><span class="fv r" id="rn-tax"></span></div>
-              <div class="fr"><span class="fl">Insurance <span style="font-size:9px;opacity:.6">(FL windstorm incl.)</span></span><span class="fv r" id="rn-ins"></span></div>
-              <div class="fr"><span class="fl">Maintenance <span id="rn-maint-note" style="font-size:9px;opacity:.6"></span></span><span class="fv r" id="rn-maint"></span></div>
-              <div class="fr"><span class="fl">CapEx Reserve <span style="font-size:9px;opacity:.6">(roof/HVAC/appliances)</span></span><span class="fv r" id="rn-capex"></span></div>
-              <div class="fr"><span class="fl">HOA</span><span class="fv r" id="rn-hoa"></span></div>
-              <div class="fr"><span class="fl">Lawn / Trash / Utilities</span><span class="fv r" id="rn-util"></span></div>
-              <div class="fr tot"><span class="fl">Total Monthly Expenses</span><span class="fv r" id="rn-exp-tot" style="font-weight:700"></span></div>
-              <hr class="d">
-              <div class="fr" style="padding:6px 0"><span class="fl" style="font-weight:700">Net Operating Income</span><span class="fv" id="rn-noi" style="font-size:16px;font-weight:700"></span></div>
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
+              <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:6px">NET CASH FLOW</div>
+              <div style="font-size:22px;font-weight:800" id="rn-hero-cf">—</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px">after DSCR loan</div>
             </div>
-
-            <!-- CARD 3: Performance -->
-            <div class="card">
-              <div class="ct">Performance Metrics</div>
-              <div class="fr"><span class="fl">Cap Rate</span><span class="fv" id="rn-cap"></span></div>
-              <div class="fr"><span class="fl">Gross Yield</span><span class="fv" id="rn-gy"></span></div>
-              <div class="fr"><span class="fl">Net Yield</span><span class="fv" id="rn-ny"></span></div>
-              <hr class="d">
-              <div class="ct" style="margin-top:8px;font-size:11px">Financing Options</div>
-              <div style="background:rgba(60,120,255,.06);border-radius:4px;padding:8px 10px;margin-top:6px">
-                <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">DSCR LOAN <span id="rn-dscr-rate" style="font-weight:400"></span> · 75% LTV</div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Loan Amount</span><span class="fv" id="rn-dscr-loan" style="font-size:11px"></span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Monthly Payment</span><span class="fv" id="rn-dscr-pmt" style="font-size:11px"></span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px;font-weight:600">Monthly Cash Flow</span><span class="fv" id="rn-dscr-cf" style="font-size:13px;font-weight:700"></span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">DSCR</span><span class="fv" id="rn-dscr-ratio" style="font-size:13px;font-weight:700"></span></div>
-              </div>
-              <div style="background:rgba(100,140,255,.05);border-radius:4px;padding:8px 10px;margin-top:6px">
-                <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">CONVENTIONAL 30YR <span id="rn-conv-rate" style="font-weight:400"></span> · 80% LTV</div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Down Payment</span><span class="fv" id="rn-conv-dp" style="font-size:11px"></span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Monthly Payment</span><span class="fv" id="rn-conv-pmt" style="font-size:11px"></span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px;font-weight:600">Monthly Cash Flow</span><span class="fv" id="rn-conv-cf" style="font-size:13px;font-weight:700"></span></div>
-              </div>
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
+              <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:6px">CASH LEFT IN DEAL</div>
+              <div style="font-size:22px;font-weight:800" id="rn-hero-left">—</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px">after BRRRR refi</div>
             </div>
-
-            <!-- CARD 4: BRRRR Analysis -->
-            <div class="card" id="rn-brrrr-card">
-              <div class="ct">BRRRR Analysis</div>
-              <div style="margin-bottom:10px">
-                <div id="rn-brrrr-strategy" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px;display:inline-block"></div>
-              </div>
-              <div class="fr"><span class="fl">ARV (Refi Value)</span><span class="fv y" id="rn-b-arv"></span></div>
-              <div class="fr"><span class="fl">Refi @ 75% LTV</span><span class="fv" id="rn-b-loan"></span></div>
-              <div class="fr"><span class="fl">Total Cash In <span style="font-size:9px;opacity:.6">(purchase+rehab)</span></span><span class="fv" id="rn-b-cashin"></span></div>
-              <div class="fr tot"><span class="fl" style="font-weight:700">Cash Returned at Refi</span><span class="fv" id="rn-b-cashout" style="font-size:16px;font-weight:700"></span></div>
-              <div class="fr" style="background:rgba(60,200,130,.08);border-radius:4px;padding:4px 8px;margin-top:4px">
-                <span class="fl" style="font-weight:700">Cash Left in Deal</span>
-                <span class="fv" id="rn-b-left" style="font-size:14px;font-weight:700"></span>
-              </div>
-              <div id="rn-b-infinite" style="display:none;text-align:center;margin:8px 0;font-size:11px;color:var(--buy);font-weight:700">♾️ INFINITE RETURN — Full cash recycle</div>
-              <hr class="d">
-              <div class="fr"><span class="fl">Refi Payment <span style="font-size:9px;opacity:.6">(30yr @ 7.5%)</span></span><span class="fv" id="rn-b-pmt"></span></div>
-              <div class="fr"><span class="fl" style="font-weight:600">Cash Flow After Refi</span><span class="fv" id="rn-b-cf" style="font-size:14px;font-weight:700"></span></div>
-              <div class="fr"><span class="fl">DSCR After Refi</span><span class="fv" id="rn-b-dscr"></span></div>
-              <div class="fr"><span class="fl">Equity at Refi</span><span class="fv" id="rn-b-equity"></span></div>
-              <div class="fr"><span class="fl">Cash-on-Cash Return</span><span class="fv" id="rn-b-coc"></span></div>
-              <div style="margin-top:10px;font-size:11px;color:var(--muted);font-style:italic;line-height:1.5" id="rn-b-notes"></div>
-              <div style="margin-top:8px;font-size:10px;opacity:.5">⏱ Typical seasoning: 6-12 months before refi</div>
-            </div>
-
           </div>
 
-          <!-- Urban's Rental Assessment -->
-          <div class="card" style="margin-top:14px">
-            <div class="ct">Urban&#39;s Rental Assessment</div>
-            <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:10px" id="rn-notes"></p>
-            <div class="grid" style="gap:12px">
-              <div class="m"><div class="ml">Worth Holding?</div><div class="mv" id="rn-worth"></div></div>
-              <div class="m"><div class="ml">Worth BRRRR?</div><div class="mv" id="rn-worth-brrrr"></div></div>
+          <!-- ── EDITABLE CALCULATOR ──────────────────────────────────────── -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+
+            <!-- LEFT: INCOME INPUTS -->
+            <div class="card">
+              <div class="ct" style="display:flex;align-items:center;justify-content:space-between">
+                <span>💰 Income</span>
+                <span id="rn-unit-pill" style="display:none;font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,160,32,.12);color:var(--review);border:1px solid rgba(255,160,32,.25)"></span>
+              </div>
+              <div class="fr"><span class="fl">Rent per Unit / mo</span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span style="color:var(--muted);font-size:12px">$</span>
+                  <input type="number" id="rn-in-rent-pu" style="width:90px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:13px;font-weight:600;text-align:right" placeholder="0" oninput="rnCalc()">
+                </span>
+              </div>
+              <div class="fr"><span class="fl">Number of Units</span>
+                <input type="number" id="rn-in-units" style="width:60px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:13px;font-weight:600;text-align:right" min="1" max="20" placeholder="1" oninput="rnCalc()">
+              </div>
+              <div class="fr tot"><span class="fl" style="font-weight:700">Gross Rent / mo</span><span class="fv y" id="rn-calc-gross" style="font-weight:800">—</span></div>
+              <div class="fr"><span class="fl" style="font-size:11px;opacity:.7">Vacancy</span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <input type="number" id="rn-in-vac" style="width:55px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" min="0" max="30" step="0.5" placeholder="7" oninput="rnCalc()">
+                  <span style="color:var(--muted);font-size:11px">%</span>
+                </span>
+              </div>
+              <div class="fr"><span class="fl" style="font-weight:600">Effective Gross Income</span><span class="fv" id="rn-calc-egi" style="font-weight:700">—</span></div>
+              <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)" id="rn-rent-source-note">Source: AI estimate — edit above to override</div>
+            </div>
+
+            <!-- RIGHT: EXPENSE INPUTS -->
+            <div class="card">
+              <div class="ct">🏦 Monthly Expenses</div>
+              <div class="fr"><span class="fl">Mgmt Fee</span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <input type="number" id="rn-in-pm" style="width:55px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" min="0" max="20" step="0.5" placeholder="9" oninput="rnCalc()">
+                  <span style="color:var(--muted);font-size:11px">%</span>
+                </span>
+              </div>
+              <div class="fr"><span class="fl">Taxes / mo</span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span style="color:var(--muted);font-size:12px">$</span>
+                  <input type="number" id="rn-in-tax" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="0" oninput="rnCalc()">
+                </span>
+              </div>
+              <div class="fr"><span class="fl">Insurance / mo</span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span style="color:var(--muted);font-size:12px">$</span>
+                  <input type="number" id="rn-in-ins" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="250" oninput="rnCalc()">
+                </span>
+              </div>
+              <div class="fr"><span class="fl">Maintenance / mo</span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span style="color:var(--muted);font-size:12px">$</span>
+                  <input type="number" id="rn-in-maint" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="100" oninput="rnCalc()">
+                </span>
+              </div>
+              <div class="fr"><span class="fl">CapEx Reserve / mo</span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span style="color:var(--muted);font-size:12px">$</span>
+                  <input type="number" id="rn-in-capex" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="100" oninput="rnCalc()">
+                </span>
+              </div>
+              <div class="fr"><span class="fl">HOA / Other / mo</span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span style="color:var(--muted);font-size:12px">$</span>
+                  <input type="number" id="rn-in-other" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="80" oninput="rnCalc()">
+                </span>
+              </div>
+              <div class="fr tot"><span class="fl" style="font-weight:700">Total Expenses / mo</span><span class="fv r" id="rn-calc-exp" style="font-weight:800">—</span></div>
+            </div>
+          </div>
+
+          <!-- ── NOI + LOAN OPTIONS SIDE BY SIDE ─────────────────────────── -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+
+            <!-- NOI + METRICS -->
+            <div class="card">
+              <div class="ct">📊 Net Operating Income</div>
+              <div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:12px">
+                <div style="font-size:30px;font-weight:800" id="rn-calc-noi">—</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:4px">per month</div>
+              </div>
+              <div class="fr"><span class="fl">Cap Rate</span><span class="fv" id="rn-calc-cap">—</span></div>
+              <div class="fr"><span class="fl">Gross Yield</span><span class="fv" id="rn-calc-gy">—</span></div>
+              <div class="fr"><span class="fl">Price-to-Rent</span><span class="fv" id="rn-calc-ptr">—</span></div>
+              <div class="fr"><span class="fl">HUD Fair Market Rent</span><span class="fv mu" id="rn-calc-hud" style="font-size:11px">—</span></div>
+            </div>
+
+            <!-- LOAN SELECTOR + RESULTS -->
+            <div class="card">
+              <div class="ct">🏦 Financing</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+                <div style="background:var(--bg2);border-radius:6px;padding:8px">
+                  <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:6px">DSCR LOAN</div>
+                  <div style="display:flex;align-items:center;gap:3px;margin-bottom:4px">
+                    <input type="number" id="rn-in-dscr-rate" style="width:45px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="0.25" placeholder="8.0" oninput="rnCalc()">
+                    <span style="font-size:10px;color:var(--muted)">% · </span>
+                    <input type="number" id="rn-in-dscr-ltv" style="width:40px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="5" placeholder="75" oninput="rnCalc()">
+                    <span style="font-size:10px;color:var(--muted)">% LTV</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--muted)">Pmt: <span id="rn-calc-dscr-pmt" style="color:var(--text);font-weight:600">—</span></div>
+                  <div style="font-size:14px;font-weight:800;margin-top:4px" id="rn-calc-dscr-cf">—</div>
+                  <div style="font-size:9px;color:var(--muted)">cash flow/mo</div>
+                  <div style="font-size:10px;margin-top:4px">DSCR: <span id="rn-calc-dscr-ratio" style="font-weight:700">—</span></div>
+                </div>
+                <div style="background:var(--bg2);border-radius:6px;padding:8px">
+                  <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:6px">CONVENTIONAL</div>
+                  <div style="display:flex;align-items:center;gap:3px;margin-bottom:4px">
+                    <input type="number" id="rn-in-conv-rate" style="width:45px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="0.25" placeholder="7.25" oninput="rnCalc()">
+                    <span style="font-size:10px;color:var(--muted)">% · </span>
+                    <input type="number" id="rn-in-conv-ltv" style="width:40px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="5" placeholder="80" oninput="rnCalc()">
+                    <span style="font-size:10px;color:var(--muted)">% LTV</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--muted)">Pmt: <span id="rn-calc-conv-pmt" style="color:var(--text);font-weight:600">—</span></div>
+                  <div style="font-size:14px;font-weight:800;margin-top:4px" id="rn-calc-conv-cf">—</div>
+                  <div style="font-size:9px;color:var(--muted)">cash flow/mo</div>
+                  <div style="font-size:10px;margin-top:4px">Down: <span id="rn-calc-conv-dp" style="font-weight:700">—</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── BRRRR CALCULATOR ─────────────────────────────────────────── -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="ct" style="display:flex;align-items:center;justify-content:space-between">
+              <span>♻️ BRRRR Calculator</span>
+              <span id="rn-brrrr-strat-pill" style="font-size:10px;padding:2px 10px;border-radius:10px;font-weight:700"></span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:14px">
+              <!-- Step 1 -->
+              <div style="padding:12px;border-right:1px solid var(--border)">
+                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">① BUY + REHAB</div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Purchase</span><span class="fv" id="rn-b-purchase" style="font-size:11px">—</span></div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Rehab</span><span class="fv" id="rn-b-rehab" style="font-size:11px">—</span></div>
+                <div class="fr" style="padding:4px 0;border-top:1px solid var(--border);margin-top:4px"><span class="fl" style="font-size:11px;font-weight:700">Total Cash In</span><span class="fv y" id="rn-b-cashin" style="font-size:12px;font-weight:800">—</span></div>
+              </div>
+              <!-- Step 2 -->
+              <div style="padding:12px;border-right:1px solid var(--border)">
+                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">② REFI AT ARV</div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">ARV</span><span class="fv" id="rn-b-arv" style="font-size:11px">—</span></div>
+                <div style="display:flex;align-items:center;gap:4px;margin:4px 0">
+                  <span style="font-size:11px;color:var(--muted)">LTV</span>
+                  <input type="number" id="rn-in-refi-ltv" style="width:45px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="5" placeholder="75" oninput="rnCalc()">
+                  <span style="font-size:10px;color:var(--muted)">%</span>
+                  <span style="font-size:10px;color:var(--muted);margin-left:4px">@</span>
+                  <input type="number" id="rn-in-refi-rate" style="width:45px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="0.25" placeholder="7.5" oninput="rnCalc()">
+                  <span style="font-size:10px;color:var(--muted)">%</span>
+                </div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Refi Loan</span><span class="fv" id="rn-b-refi-loan" style="font-size:11px">—</span></div>
+              </div>
+              <!-- Step 3 -->
+              <div style="padding:12px;border-right:1px solid var(--border)">
+                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">③ CASH BACK</div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Cash Returned</span><span class="fv g" id="rn-b-cashout" style="font-size:13px;font-weight:800">—</span></div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px;font-weight:700">Cash Left In</span><span class="fv" id="rn-b-left" style="font-size:13px;font-weight:800">—</span></div>
+                <div id="rn-b-infinite" style="display:none;margin-top:6px;font-size:10px;color:var(--buy);font-weight:700;text-align:center">♾️ Full cash recycle</div>
+              </div>
+              <!-- Step 4 -->
+              <div style="padding:12px">
+                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">④ HOLD &amp; CASH FLOW</div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Refi Payment</span><span class="fv" id="rn-b-pmt" style="font-size:11px">—</span></div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px;font-weight:700">Cash Flow / mo</span><span class="fv" id="rn-b-cf" style="font-size:14px;font-weight:800">—</span></div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">DSCR</span><span class="fv" id="rn-b-dscr" style="font-size:11px;font-weight:700">—</span></div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">CoC Return</span><span class="fv" id="rn-b-coc" style="font-size:11px;font-weight:700">—</span></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+              <button onclick="rnReset()" style="font-size:10px;padding:4px 12px;border-radius:4px;background:rgba(100,100,140,.15);border:1px solid var(--border2);color:var(--muted);cursor:pointer">↺ Reset to AI estimates</button>
+            </div>
+          </div>
+
+          <!-- ── AI ASSESSMENT ────────────────────────────────────────────── -->
+          <div class="card">
+            <div class="ct">Urban's Rental Assessment</div>
+            <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px" id="rn-notes">—</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="m"><div class="ml">Worth Holding?</div><div class="mv" id="rn-worth">—</div></div>
+              <div class="ml"><div class="ml">Worth BRRRR?</div><div class="mv" id="rn-worth-brrrr">—</div></div>
             </div>
           </div>
         </div>
 
-        <!-- NEW CONSTRUCTION -->
+                <!-- NEW CONSTRUCTION -->
         <div class="tc" id="t-newconstruction">
           <!-- Not Applicable State -->
           <div id="nc-na-card" class="card" style="display:none">
@@ -1713,192 +1804,98 @@ function renderUW(uw) {
   set('fi-min', _meets ? ('\u2705 YES ('+_m3+')') : ('\u274c NO ('+_m3+' needed)'));
   cls('fi-min', 'fv ' + (_meets ? 'g' : 'r'));
 
-  // RENTAL TAB — full BRRRR analysis
+  // RENTAL TAB — editable live calculator + AI defaults
   const rn = uw.rental || {};
   const rnMR = rn.marketRent || {};
   const rnInc = rn.income || {};
   const rnExp = rn.expenses || {};
-  const rnNoi = rn.noi || {};
-  const rnPerf = rn.performance || {};
-  const rnDebt = rn.debtService || {};
-  const rnDscr = rnDebt.dscrLoan || {};
-  const rnConv = rnDebt.conventional30 || {};
-  const rnB = rn.brrrr || {};
-  const fi_arv2 = uw.arv?.urbanARV || 0;
-  const fi_ask2 = parseFloat(curDeal?.askingPrice) || 0;
-  const fi_rehab2 = uw.rehab?.urbanEstimate || 0;
+  const fi_arv3  = uw.arv?.urbanARV || 0;
+  const fi_ask3  = parseFloat(curDeal?.askingPrice) || 0;
+  const fi_reh3  = uw.rehab?.urbanEstimate || 0;
 
-  // Market rent fields
-  const estRent = rnMR.estimated || rn.marketRent || 0;
-  // Unit count awareness — show per-unit breakdown for multi-unit
-  const _unitCount = rnMR.unitCount || getUnitCount(curDeal?.propertyType) || 1;
-  const _rentPerUnit = rnMR.rentPerUnit || (estRent && _unitCount > 1 ? Math.round(estRent / _unitCount) : 0);
-  const unitBadge = document.getElementById('rn-unit-badge');
-  const perUnitRow = document.getElementById('rn-per-unit-row');
-  const rentSublabel = document.getElementById('rn-rent-sublabel');
-  if (_unitCount > 1) {
-    if (unitBadge) unitBadge.style.display = '';
-    if (document.getElementById('rn-unit-label')) document.getElementById('rn-unit-label').textContent = ['','','Duplex — 2 Units','Triplex — 3 Units','Quadplex — 4 Units'][_unitCount] || (_unitCount + '-Unit Property');
-    if (perUnitRow) perUnitRow.style.display = '';
-    if (document.getElementById('rn-rent-per-unit')) document.getElementById('rn-rent-per-unit').textContent = fmt(_rentPerUnit);
-    if (document.getElementById('rn-unit-count-label')) document.getElementById('rn-unit-count-label').textContent = _unitCount;
-    if (rentSublabel) rentSublabel.textContent = '/month TOTAL gross rent (all units)';
-  } else {
-    if (unitBadge) unitBadge.style.display = 'none';
-    if (perUnitRow) perUnitRow.style.display = 'none';
-    if (rentSublabel) rentSublabel.textContent = '/month estimated gross rent';
-  }
-  set('rn-rent', estRent ? fmt(estRent) + '/mo' : '—');
-  set('rn-rent-range', (rnMR.lowEnd && rnMR.highEnd) ? 'Range: ' + fmt(rnMR.lowEnd) + ' – ' + fmt(rnMR.highEnd) : '');
-  // Gross units note
-  const gnEl = document.getElementById('rn-gross-units-note');
-  if (gnEl) gnEl.textContent = _unitCount > 1 ? '(' + _unitCount + ' units × ' + fmt(_rentPerUnit) + ')' : '';
-  set('rn-hud', rnMR.hudFMR ? fmt(rnMR.hudFMR) + '/mo (HUD FMR)' : 'Not retrieved');
-  set('rn-psf', rnMR.rentPerSqft ? '$' + parseFloat(rnMR.rentPerSqft).toFixed(2) + '/sf' : '—');
-  const ptr = rnPerf.priceToRentRatio || (fi_arv2 && estRent ? (fi_arv2 / (estRent * 12)).toFixed(1) : null);
-  if (ptr) { set('rn-ptr', ptr + 'x'); const el = document.getElementById('rn-ptr'); if(el) el.className = 'fv ' + (parseFloat(ptr) < 15 ? 'g' : parseFloat(ptr) < 20 ? 'y' : 'r'); }
-  set('rn-source', rnMR.source || 'Estimated');
-  const conf = rnMR.confidence || '';
-  set('rn-conf', conf); if (document.getElementById('rn-conf')) document.getElementById('rn-conf').className = 'fv ' + (conf==='HIGH'?'g':conf==='MEDIUM'?'y':'mu');
-  // Rent comps
-  if (rnMR.comps && rnMR.comps.length && document.getElementById('rn-rent-comps')) {
-    document.getElementById('rn-rent-comps').innerHTML = '<div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px">RENTAL COMPS</div>' +
-      rnMR.comps.slice(0,4).map(c => '<div style="padding:2px 0">' + (c.address||'Nearby') + ' · ' + (c.beds||'?') + 'br · ' + fmt(c.rent) + '/mo</div>').join('');
+  // Unit count
+  const _uc = rnMR.unitCount || getUnitCount(curDeal?.propertyType) || 1;
+  const _rentPU = rnMR.rentPerUnit || (rnMR.estimated ? Math.round(rnMR.estimated / _uc) : 0);
+
+  // Populate editable inputs with AI estimates as defaults
+  const setIn = (id, val) => { const el = document.getElementById(id); if (el && !el._userEdited) el.value = val || ''; };
+  setIn('rn-in-rent-pu', _rentPU || Math.round((rnMR.estimated || 0) / Math.max(_uc, 1)));
+  setIn('rn-in-units', _uc);
+  setIn('rn-in-vac', Math.round((rnInc.vacancyRate || 0.07) * 100));
+  setIn('rn-in-pm',  Math.round((rnExp.propertyManagement?.rate || 0.09) * 100));
+  const _tax = rnExp.propertyTaxes?.monthly || (fi_arv3 ? Math.round(fi_arv3 * 0.012 / 12) : 0);
+  setIn('rn-in-tax', _tax);
+  setIn('rn-in-ins',   rnExp.insurance?.monthly    || 250);
+  setIn('rn-in-maint', rnExp.maintenance?.monthly  || Math.round((parseFloat(curDeal?.sqft)||1200)/12));
+  setIn('rn-in-capex', rnExp.capexReserve?.monthly || 100);
+  setIn('rn-in-other', (rnExp.hoa?.monthly || parseFloat(curDeal?.hoaFee) || 0) + (rnExp.lawnTrash?.monthly || 80));
+  setIn('rn-in-dscr-rate',  rn.debtService?.dscrLoan?.rate    || 8.0);
+  setIn('rn-in-dscr-ltv',   75);
+  setIn('rn-in-conv-rate',  rn.debtService?.conventional30?.rate || 7.25);
+  setIn('rn-in-conv-ltv',   80);
+  setIn('rn-in-refi-ltv',   75);
+  setIn('rn-in-refi-rate',  rn.debtService?.dscrLoan?.rate || 7.5);
+
+  // Unit pill
+  const _pill = document.getElementById('rn-unit-pill');
+  if (_pill) { _pill.style.display = _uc > 1 ? '' : 'none'; _pill.textContent = ['','','2-Unit Duplex','3-Unit Triplex','4-Unit Quad'][_uc] || (_uc+'-Unit'); }
+
+  // Rent source note
+  const _srcNote = document.getElementById('rn-rent-source-note');
+  if (_srcNote) {
+    const _src = rnMR.source || 'AI estimate';
+    const _conf = rnMR.confidence || '';
+    const hudStr = rnMR.hudFMR ? ' · HUD FMR: ' + (rnMR.hudFMR > 500 ? '$' + rnMR.hudFMR.toLocaleString() : rnMR.hudFMR) + '/mo' : '';
+    _srcNote.textContent = 'Source: ' + _src + (_conf ? ' · ' + _conf + ' confidence' : '') + hudStr + ' · Edit above to override';
   }
 
-  // Income
-  set('rn-gross', fmt(rnInc.monthlyGrossRent || estRent));
-  set('rn-vac-rate', rnInc.vacancyRate ? '(' + Math.round(rnInc.vacancyRate * 100) + '% vacancy)' : '(7%)');
-  const vacLoss = rnInc.vacancyLoss || (estRent * (rnInc.vacancyRate || 0.07));
-  set('rn-vac-loss', '− ' + fmt(Math.round(vacLoss)));
-  const egi = rnInc.effectiveGrossIncome || (estRent - vacLoss);
-  set('rn-egi', fmt(Math.round(egi)));
+  // HUD FMR + assessment fields
+  const rn_hud = document.getElementById('rn-calc-hud');
+  if (rn_hud) rn_hud.textContent = rnMR.hudFMR ? '$' + rnMR.hudFMR.toLocaleString() + '/mo (' + (curDeal?.beds||'?') + 'BR ' + (curDeal?.county||'FL') + ')' : 'Not available';
 
-  // Expenses
-  set('rn-pm-rate', rnExp.propertyManagement?.rate ? '(' + Math.round(rnExp.propertyManagement.rate * 100) + '%)' : '(9%)');
-  set('rn-pm', fmt(rnExp.propertyManagement?.monthly || Math.round(estRent * 0.09)));
-  set('rn-tax', fmt(rnExp.propertyTaxes?.monthly || (fi_arv2 ? Math.round(fi_arv2 * 0.012 / 12) : 0)));
-  set('rn-ins', fmt(rnExp.insurance?.monthly || 250));
-  set('rn-maint-note', rnExp.maintenance?.annual ? '' : '($1/sf/yr)');
-  set('rn-maint', fmt(rnExp.maintenance?.monthly || Math.round((parseFloat(curDeal?.sqft)||1200) / 12)));
-  set('rn-capex', fmt(rnExp.capexReserve?.monthly || Math.round(estRent * 0.06)));
-  set('rn-hoa', fmt(rnExp.hoa?.monthly || parseFloat(curDeal?.hoaFee) || 0));
-  set('rn-util', fmt((rnExp.utilities?.monthly || 0) + (rnExp.lawnTrash?.monthly || 80)));
-  const totalExp = rnExp.totalMonthly || (
-    (rnExp.propertyManagement?.monthly || Math.round(estRent * 0.09)) +
-    (rnExp.propertyTaxes?.monthly || (fi_arv2 ? Math.round(fi_arv2 * 0.012 / 12) : 0)) +
-    (rnExp.insurance?.monthly || 250) +
-    (rnExp.maintenance?.monthly || Math.round((parseFloat(curDeal?.sqft)||1200) / 12)) +
-    (rnExp.capexReserve?.monthly || Math.round(estRent * 0.06)) +
-    (rnExp.hoa?.monthly || parseFloat(curDeal?.hoaFee) || 0) +
-    (rnExp.utilities?.monthly || 0) + 80
-  );
-  set('rn-exp-tot', '− ' + fmt(Math.round(totalExp)));
-
-  // NOI
-  const noi = rnNoi.monthly || Math.round(egi - totalExp);
-  set('rn-noi', (noi >= 0 ? '+' : '') + fmt(noi) + '/mo');
-  document.getElementById('rn-noi').style.color = noi > 0 ? 'var(--buy)' : 'var(--red)';
-
-  // Performance
-  const noiAnnual = noi * 12;
-  const capRate = rnPerf.capRate || (fi_arv2 ? (noiAnnual / fi_arv2 * 100).toFixed(2) : null);
-  const gy = rnPerf.grossYield || (fi_arv2 && estRent ? (estRent * 12 / fi_arv2 * 100).toFixed(2) : null);
-  const ny = rnPerf.netYield || (fi_arv2 ? (noiAnnual / fi_arv2 * 100).toFixed(2) : null);
-  set('rn-cap', capRate ? capRate + '%' : '—');
-  if (document.getElementById('rn-cap')) document.getElementById('rn-cap').className = 'fv ' + (parseFloat(capRate) >= 7 ? 'g' : parseFloat(capRate) >= 5 ? 'y' : 'r');
-  set('rn-gy', gy ? gy + '%' : '—');
-  set('rn-ny', ny ? ny + '%' : '—');
-
-  // DSCR Loan
-  const dscrRate = rnDscr.rate || 8.0;
-  set('rn-dscr-rate', '@ ' + dscrRate + '%');
-  const dscrLoan = rnDscr.loanAmount || (fi_arv2 * 0.75);
-  set('rn-dscr-loan', fmt(Math.round(dscrLoan)));
-  const dscrPmt = rnDscr.monthlyPayment || Math.round(dscrLoan * (dscrRate/100/12) / (1 - Math.pow(1 + dscrRate/100/12, -360)));
-  set('rn-dscr-pmt', fmt(dscrPmt));
-  const dscrCf = rnDscr.cashFlow != null ? rnDscr.cashFlow : Math.round(noi - dscrPmt);
-  set('rn-dscr-cf', (dscrCf >= 0 ? '+' : '') + fmt(dscrCf) + '/mo');
-  document.getElementById('rn-dscr-cf').style.color = dscrCf >= 0 ? 'var(--buy)' : 'var(--red)';
-  const dscrRatio = rnDscr.dscr || (dscrPmt > 0 ? (noi / dscrPmt).toFixed(2) : null);
-  set('rn-dscr-ratio', dscrRatio ? dscrRatio + 'x' + (parseFloat(dscrRatio) >= 1.25 ? ' ✅' : ' ⚠️ <1.25') : '—');
-  document.getElementById('rn-dscr-ratio').style.color = parseFloat(dscrRatio) >= 1.25 ? 'var(--buy)' : parseFloat(dscrRatio) >= 1.0 ? 'var(--review)' : 'var(--red)';
-
-  // Conventional
-  const convRate = rnConv.rate || 7.25;
-  set('rn-conv-rate', '@ ' + convRate + '%');
-  const convLoan = rnConv.loanAmount || (fi_arv2 * 0.80);
-  set('rn-conv-dp', fmt(Math.round(fi_arv2 * 0.20)));
-  const convPmt = rnConv.monthlyPayment || Math.round(convLoan * (convRate/100/12) / (1 - Math.pow(1 + convRate/100/12, -360)));
-  set('rn-conv-pmt', fmt(convPmt));
-  const convCf = rnConv.cashFlow != null ? rnConv.cashFlow : Math.round(noi - convPmt);
-  set('rn-conv-cf', (convCf >= 0 ? '+' : '') + fmt(convCf) + '/mo');
-  document.getElementById('rn-conv-cf').style.color = convCf >= 0 ? 'var(--buy)' : 'var(--red)';
-
-  // BRRRR
-  const totalCashIn = rnB.totalCashInvested || (fi_ask2 + fi_rehab2);
-  const refiLoan = rnB.refiLoanAmount || (fi_arv2 * 0.75);
-  const cashOut = rnB.cashReturnedAtRefi || Math.round(refiLoan - (totalCashIn - fi_rehab2)); // rough: refi covers purchase
-  const cashLeft = rnB.cashLeftInDeal != null ? rnB.cashLeftInDeal : Math.round(totalCashIn - refiLoan);
-  const infiniteReturn = rnB.infiniteReturn || cashLeft <= 0;
-  const refiPmt = rnB.refiMonthlyPayment || dscrPmt; // reuse DSCR payment
-  const bCf = rnB.cashFlowAfterRefi != null ? rnB.cashFlowAfterRefi : Math.round(noi - refiPmt);
-  const bDscr = rnB.dscrAfterRefi || (refiPmt > 0 ? (noi / refiPmt).toFixed(2) : null);
-  const bEquity = rnB.equityAtRefi || Math.round(fi_arv2 - refiLoan);
-  const bCoc = (infiniteReturn || cashLeft <= 0) ? '∞' : (bCf * 12 / cashLeft * 100).toFixed(1) + '%';
-
-  set('rn-b-arv', fmt(fi_arv2 || rnB.refiArv));
-  set('rn-b-loan', fmt(Math.round(refiLoan)));
-  set('rn-b-cashin', fmt(Math.round(totalCashIn)));
-  set('rn-b-cashout', '+' + fmt(Math.round(Math.max(0, cashOut))));
-  set('rn-b-left', infiniteReturn ? '~$0 (full recycle)' : fmt(Math.round(cashLeft)));
-  document.getElementById('rn-b-left').style.color = infiniteReturn || cashLeft <= 0 ? 'var(--buy)' : cashLeft < totalCashIn * 0.3 ? 'var(--review)' : 'var(--text)';
-  if (document.getElementById('rn-b-infinite')) document.getElementById('rn-b-infinite').style.display = infiniteReturn ? '' : 'none';
-  set('rn-b-pmt', fmt(refiPmt));
-  set('rn-b-cf', (bCf >= 0 ? '+' : '') + fmt(bCf) + '/mo');
-  document.getElementById('rn-b-cf').style.color = bCf >= 100 ? 'var(--buy)' : bCf >= 0 ? 'var(--review)' : 'var(--red)';
-  set('rn-b-dscr', bDscr ? bDscr + 'x' : '—');
-  set('rn-b-equity', fmt(bEquity));
-  set('rn-b-coc', bCoc);
-
-  // Strategy badge
-  const strategyEl = document.getElementById('rn-brrrr-strategy');
-  if (strategyEl) {
-    const strat = rnB.strategy || (infiniteReturn ? 'FULL BRRRR' : cashLeft < totalCashIn * 0.3 ? 'PARTIAL BRRRR' : 'NOT VIABLE');
-    const stratColor = strat.includes('FULL') ? 'rgba(60,200,130,.15)' : strat.includes('PARTIAL') ? 'rgba(255,160,32,.12)' : 'rgba(120,120,120,.1)';
-    const stratBorder = strat.includes('FULL') ? 'var(--buy)' : strat.includes('PARTIAL') ? 'var(--review)' : 'var(--muted)';
-    strategyEl.textContent = strat;
-    strategyEl.style.background = stratColor;
-    strategyEl.style.color = strat.includes('FULL') ? 'var(--buy)' : strat.includes('PARTIAL') ? 'var(--review)' : 'var(--muted)';
-    strategyEl.style.border = '1px solid ' + stratBorder;
-  }
-  set('rn-b-notes', rnB.notes || '');
-
-  // Verdict banner
-  const rnVerdict = rn.rentalVerdict || (rn.worthConsidering ? 'POSSIBLE HOLD' : 'FLIP ONLY');
-  const vBanner = document.getElementById('rn-verdict-banner');
-  if (vBanner) {
-    vBanner.style.display = 'flex';
-    const vColors = {'STRONG HOLD': {bg:'rgba(60,200,130,.1)',border:'var(--buy)'}, 'BRRRR CANDIDATE': {bg:'rgba(60,200,130,.08)',border:'var(--buy)'}, 'POSSIBLE HOLD': {bg:'rgba(255,160,32,.08)',border:'var(--review)'}, 'FLIP ONLY': {bg:'rgba(120,120,120,.06)',border:'var(--muted)'}};
-    const vc = vColors[rnVerdict] || vColors['FLIP ONLY'];
-    vBanner.style.background = vc.bg; vBanner.style.borderColor = vc.border;
-    const icons = {'STRONG HOLD':'🏠','BRRRR CANDIDATE':'♻️','POSSIBLE HOLD':'🤔','FLIP ONLY':'🔨'};
-    set('rn-verdict-icon', icons[rnVerdict] || '📊');
-    set('rn-verdict-label', rnVerdict);
-    document.getElementById('rn-verdict-label').style.color = vc.border;
-    set('rn-verdict-note', rn.notes || '');
-    const brrrrBadge = document.getElementById('rn-brrrr-badge');
-    if (brrrrBadge) brrrrBadge.style.display = (rn.worthBRRRR || rnVerdict.includes('BRRRR')) ? '' : 'none';
-  }
-
-  // Worth
+  // AI assessment fields
+  set('rn-notes', rn.notes || '');
   set('rn-worth', rn.worthConsidering ? '✅ YES' : '❌ NO');
   if (document.getElementById('rn-worth')) document.getElementById('rn-worth').className = 'mv ' + (rn.worthConsidering ? 'g' : 'r');
   set('rn-worth-brrrr', rn.worthBRRRR ? '✅ YES' : '❌ NO');
   if (document.getElementById('rn-worth-brrrr')) document.getElementById('rn-worth-brrrr').className = 'mv ' + (rn.worthBRRRR ? 'g' : 'r');
-  set('rn-notes', rn.notes || '');
 
-// FLAGS TAB
+  // Verdict banner
+  const _vrd = rn.rentalVerdict || (rn.worthConsidering ? 'POSSIBLE HOLD' : 'FLIP ONLY');
+  const _vBanner = document.getElementById('rn-verdict-banner');
+  if (_vBanner) {
+    _vBanner.style.display = 'flex';
+    const _vC = {'STRONG HOLD':'rgba(60,200,130,.12)','BRRRR CANDIDATE':'rgba(60,200,130,.1)','POSSIBLE HOLD':'rgba(255,160,32,.08)','FLIP ONLY':'rgba(100,100,120,.06)'}[_vrd] || 'rgba(100,100,120,.06)';
+    const _vB = {'STRONG HOLD':'var(--buy)','BRRRR CANDIDATE':'var(--buy)','POSSIBLE HOLD':'var(--review)','FLIP ONLY':'var(--muted)'}[_vrd] || 'var(--muted)';
+    _vBanner.style.background = _vC; _vBanner.style.borderColor = _vB;
+    const _vIcons = {'STRONG HOLD':'🏠','BRRRR CANDIDATE':'♻️','POSSIBLE HOLD':'🤔','FLIP ONLY':'🔨'};
+    set('rn-verdict-icon', _vIcons[_vrd] || '📊');
+    set('rn-verdict-label', _vrd);
+    if (document.getElementById('rn-verdict-label')) document.getElementById('rn-verdict-label').style.color = _vB;
+    set('rn-verdict-note', rn.notes || '');
+    const _bBadge = document.getElementById('rn-brrrr-badge');
+    if (_bBadge) _bBadge.style.display = (rn.worthBRRRR || _vrd.includes('BRRRR')) ? '' : 'none';
+  }
+
+  // Static BRRRR fields from ARV/deal (don't change with calculator)
+  set('rn-b-purchase', fmt(fi_ask3));
+  set('rn-b-rehab', fmt(fi_reh3));
+  set('rn-b-arv', fmt(fi_arv3));
+
+  // Track user edits so we don't overwrite them
+  ['rn-in-rent-pu','rn-in-units','rn-in-vac','rn-in-pm','rn-in-tax','rn-in-ins','rn-in-maint','rn-in-capex','rn-in-other','rn-in-dscr-rate','rn-in-dscr-ltv','rn-in-conv-rate','rn-in-conv-ltv','rn-in-refi-ltv','rn-in-refi-rate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el._hasListener) {
+      el._hasListener = true;
+      el.addEventListener('change', () => { el._userEdited = true; });
+    }
+  });
+
+  // Run calculator
+  rnCalc();
+
+
+  // FLAGS TAB
   const flagEl = $('flags-list');
   flagEl.innerHTML = '';
   const flagsEmpty = $('flags-empty');
@@ -2367,6 +2364,159 @@ function getUnitCount(propertyType) {
   if (n) return Math.min(parseInt(n[1]), 20);
   if (t.includes('multi')) return 2;
   return 1;
+}
+
+// ── RENTAL LIVE CALCULATOR ────────────────────────────────────────────────────
+function rnCalc() {
+  const g = id => parseFloat(document.getElementById(id)?.value) || 0;
+  const fi_arv = (typeof curUW !== 'undefined' && curUW?.arv?.urbanARV) || 0;
+  const fi_ask = parseFloat(curDeal?.askingPrice) || 0;
+  const fi_reh = (typeof curUW !== 'undefined' && curUW?.rehab?.urbanEstimate) || 0;
+
+  // Income
+  const rentPU  = g('rn-in-rent-pu');
+  const units   = Math.max(1, g('rn-in-units') || 1);
+  const gross   = Math.round(rentPU * units);
+  const vacPct  = g('rn-in-vac') / 100;
+  const egi     = Math.round(gross * (1 - vacPct));
+
+  // Expenses
+  const pmPct   = g('rn-in-pm') / 100;
+  const pm      = Math.round(gross * pmPct);
+  const tax     = g('rn-in-tax');
+  const ins     = g('rn-in-ins');
+  const maint   = g('rn-in-maint');
+  const capex   = g('rn-in-capex');
+  const other   = g('rn-in-other');
+  const totExp  = pm + tax + ins + maint + capex + other;
+  const noi     = Math.round(egi - totExp);
+
+  // Metrics
+  const capRate = fi_arv > 0 ? (noi * 12 / fi_arv * 100).toFixed(2) : null;
+  const gy      = fi_arv > 0 && gross > 0 ? (gross * 12 / fi_arv * 100).toFixed(2) : null;
+  const ptr     = fi_arv > 0 && gross > 0 ? (fi_arv / (gross * 12)).toFixed(1) : null;
+
+  // DSCR Loan
+  const dscrRate = g('rn-in-dscr-rate') || 8.0;
+  const dscrLtv  = (g('rn-in-dscr-ltv') || 75) / 100;
+  const dscrLoan = Math.round(fi_arv * dscrLtv);
+  const dscrMo   = dscrRate / 100 / 12;
+  const dscrPmt  = dscrLoan > 0 ? Math.round(dscrLoan * dscrMo / (1 - Math.pow(1 + dscrMo, -360))) : 0;
+  const dscrCf   = Math.round(noi - dscrPmt);
+  const dscrRat  = dscrPmt > 0 ? (noi / dscrPmt).toFixed(2) : null;
+
+  // Conventional
+  const convRate = g('rn-in-conv-rate') || 7.25;
+  const convLtv  = (g('rn-in-conv-ltv') || 80) / 100;
+  const convLoan = Math.round(fi_arv * convLtv);
+  const convMo   = convRate / 100 / 12;
+  const convPmt  = convLoan > 0 ? Math.round(convLoan * convMo / (1 - Math.pow(1 + convMo, -360))) : 0;
+  const convCf   = Math.round(noi - convPmt);
+  const convDp   = Math.round(fi_arv * (1 - convLtv));
+
+  // BRRRR
+  const refiLtv  = (g('rn-in-refi-ltv') || 75) / 100;
+  const refiRate = g('rn-in-refi-rate') || 7.5;
+  const refiLoan = Math.round(fi_arv * refiLtv);
+  const cashIn   = fi_ask + fi_reh;
+  const cashOut  = Math.round(refiLoan); // cash pulled out at refi (covers purchase)
+  const cashLeft = Math.round(cashIn - refiLoan);
+  const infinite = cashLeft <= 0;
+  const refiMo   = refiRate / 100 / 12;
+  const refiPmt  = refiLoan > 0 ? Math.round(refiLoan * refiMo / (1 - Math.pow(1 + refiMo, -360))) : 0;
+  const bCf      = Math.round(noi - refiPmt);
+  const bDscr    = refiPmt > 0 ? (noi / refiPmt).toFixed(2) : null;
+  const bCoc     = (!infinite && cashLeft > 0) ? (bCf * 12 / cashLeft * 100).toFixed(1) : null;
+
+  // Determine strategy
+  let strat = 'FLIP ONLY';
+  if (fi_arv > 0 && refiLoan > 0) {
+    if (infinite && bCf >= 100) strat = 'FULL BRRRR ♾️';
+    else if (cashLeft < cashIn * 0.35 && bCf >= 0) strat = 'STRONG BRRRR';
+    else if (cashLeft < cashIn * 0.60 && bCf >= 0) strat = 'PARTIAL BRRRR';
+    else if (bCf >= 0) strat = 'POSSIBLE HOLD';
+  }
+
+  // ── UPDATE UI ──────────────────────────────────────────────────────────────
+  const setEl = (id, val, cls) => { const el = document.getElementById(id); if (el) { el.textContent = val; if (cls) el.className = cls; } };
+  const fmtN = n => n != null ? '$' + Math.abs(n).toLocaleString() : '—';
+  const signedFmt = n => (n >= 0 ? '+' : '-') + fmtN(n);
+  const cfColor = n => n >= 200 ? 'var(--buy)' : n >= 0 ? 'var(--review)' : 'var(--red)';
+
+  // Hero numbers
+  setEl('rn-hero-rent', gross > 0 ? fmtN(gross) + '/mo' : '—');
+  if (units > 1) setEl('rn-hero-rent-note', fmtN(rentPU) + '/unit × ' + units + ' units');
+  else document.getElementById('rn-hero-rent-note') && (document.getElementById('rn-hero-rent-note').textContent = '/month');
+
+  const heroCf = document.getElementById('rn-hero-cf');
+  if (heroCf) { heroCf.textContent = dscrCf !== 0 ? signedFmt(dscrCf) + '/mo' : '—'; heroCf.style.color = cfColor(dscrCf); }
+  const heroLeft = document.getElementById('rn-hero-left');
+  if (heroLeft) { heroLeft.textContent = infinite ? '♾️ Full recycle' : fmtN(cashLeft); heroLeft.style.color = infinite ? 'var(--buy)' : cashLeft < cashIn * 0.35 ? 'var(--buy)' : 'var(--text)'; }
+
+  // Income
+  setEl('rn-calc-gross', gross > 0 ? fmtN(gross) + '/mo' : '—');
+  setEl('rn-calc-egi',   egi > 0   ? fmtN(egi)   + '/mo' : '—');
+  setEl('rn-calc-exp',   totExp > 0 ? '−' + fmtN(totExp) + '/mo' : '—');
+
+  // NOI
+  const noiEl = document.getElementById('rn-calc-noi');
+  if (noiEl) { noiEl.textContent = noi !== 0 ? signedFmt(noi) + '/mo' : '—'; noiEl.style.color = noi > 0 ? 'var(--buy)' : noi < 0 ? 'var(--red)' : 'var(--muted)'; }
+  setEl('rn-calc-cap', capRate ? capRate + '%' : '—');
+  setEl('rn-calc-gy',  gy  ? gy  + '%' : '—');
+  setEl('rn-calc-ptr', ptr ? ptr + 'x' : '—');
+
+  // DSCR Loan
+  setEl('rn-calc-dscr-pmt', dscrPmt ? fmtN(dscrPmt) : '—');
+  const dCfEl = document.getElementById('rn-calc-dscr-cf');
+  if (dCfEl) { dCfEl.textContent = dscrCf !== 0 ? signedFmt(dscrCf) + '/mo' : '—'; dCfEl.style.color = cfColor(dscrCf); }
+  const dRatEl = document.getElementById('rn-calc-dscr-ratio');
+  if (dRatEl) { dRatEl.textContent = dscrRat ? dscrRat + 'x ' + (parseFloat(dscrRat)>=1.25?'✅':'⚠️') : '—'; dRatEl.style.color = parseFloat(dscrRat)>=1.25?'var(--buy)':parseFloat(dscrRat)>=1.0?'var(--review)':'var(--red)'; }
+
+  // Conventional
+  setEl('rn-calc-conv-pmt', convPmt ? fmtN(convPmt) : '—');
+  const cCfEl = document.getElementById('rn-calc-conv-cf');
+  if (cCfEl) { cCfEl.textContent = convCf !== 0 ? signedFmt(convCf) + '/mo' : '—'; cCfEl.style.color = cfColor(convCf); }
+  setEl('rn-calc-conv-dp', convDp > 0 ? fmtN(convDp) + ' down' : '—');
+
+  // BRRRR
+  setEl('rn-b-cashin',   fmtN(cashIn));
+  setEl('rn-b-arv',      fmtN(fi_arv));
+  setEl('rn-b-refi-loan', fmtN(refiLoan));
+  const coEl = document.getElementById('rn-b-cashout');
+  if (coEl) { coEl.textContent = fmtN(cashOut); coEl.style.color = 'var(--buy)'; }
+  const clEl = document.getElementById('rn-b-left');
+  if (clEl) { clEl.textContent = infinite ? '~$0' : fmtN(cashLeft); clEl.style.color = infinite ? 'var(--buy)' : cashLeft < cashIn*0.35 ? 'var(--buy)' : 'var(--text)'; }
+  const infEl = document.getElementById('rn-b-infinite');
+  if (infEl) infEl.style.display = infinite ? '' : 'none';
+  setEl('rn-b-pmt', refiPmt ? fmtN(refiPmt) : '—');
+  const bCfEl = document.getElementById('rn-b-cf');
+  if (bCfEl) { bCfEl.textContent = bCf !== 0 ? signedFmt(bCf) + '/mo' : '—'; bCfEl.style.color = cfColor(bCf); }
+  const bDEl = document.getElementById('rn-b-dscr');
+  if (bDEl) { bDEl.textContent = bDscr ? bDscr + 'x ' + (parseFloat(bDscr)>=1.25?'✅':'⚠️') : '—'; bDEl.style.color = parseFloat(bDscr)>=1.25?'var(--buy)':parseFloat(bDscr)>=1.0?'var(--review)':'var(--red)'; }
+  setEl('rn-b-coc', bCoc ? bCoc + '% annual' : infinite ? '♾️' : '—');
+
+  // Strategy pill
+  const sEl = document.getElementById('rn-brrrr-strat-pill');
+  if (sEl) {
+    sEl.textContent = strat;
+    const isGood = strat.includes('FULL') || strat.includes('STRONG');
+    const isMed  = strat.includes('PARTIAL') || strat.includes('POSSIBLE');
+    sEl.style.background = isGood ? 'rgba(60,200,130,.15)' : isMed ? 'rgba(255,160,32,.12)' : 'rgba(120,120,140,.1)';
+    sEl.style.color = isGood ? 'var(--buy)' : isMed ? 'var(--review)' : 'var(--muted)';
+    sEl.style.border = '1px solid ' + (isGood ? 'rgba(60,200,130,.3)' : isMed ? 'rgba(255,160,32,.25)' : 'var(--border)');
+    sEl.style.padding = '2px 10px';
+    sEl.style.borderRadius = '10px';
+    sEl.style.fontSize = '10px';
+    sEl.style.fontWeight = '700';
+  }
+}
+
+function rnReset() {
+  ['rn-in-rent-pu','rn-in-units','rn-in-vac','rn-in-pm','rn-in-tax','rn-in-ins','rn-in-maint','rn-in-capex','rn-in-other','rn-in-dscr-rate','rn-in-dscr-ltv','rn-in-conv-rate','rn-in-conv-ltv','rn-in-refi-ltv','rn-in-refi-rate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el._userEdited = false;
+  });
+  if (typeof curUW !== 'undefined' && curUW) renderUW(curUW);
 }
 
 // ── HARD NO ACTION ───────────────────────────────────────────────────────────
