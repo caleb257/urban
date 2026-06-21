@@ -264,6 +264,56 @@ a{color:var(--accent)}
       <button id="ref-btn" style="flex:1">↻ Pull from Derek's Sheet</button>
       <button id="rewrite-all-btn" onclick="doRewriteAll()" title="Re-underwrite all deals with updated brain" style="padding:8px 10px;font-size:10px;background:rgba(255,160,32,.1);border-color:rgba(255,160,32,.3);color:rgba(255,160,32,.8)">⚡ All</button>
     </div>
+
+    <!-- WHOLESALER SCORECARDS -->
+    <div id="ws-scorecards" style="padding:10px 12px;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:6px" onclick="toggleWsPanel()">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px">🏆 WHOLESALER SCORES</div>
+        <span id="ws-toggle-icon" style="font-size:10px;color:var(--muted)">▼</span>
+      </div>
+      <div id="ws-panel" style="display:none">
+        <div id="ws-list" style="display:flex;flex-direction:column;gap:4px"></div>
+        <div style="font-size:9px;color:var(--muted);margin-top:6px;opacity:.6">Hit rate = deals scored BUY or HOT</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PURCHASED OUTCOME MODAL -->
+  <div id="purchased-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center">
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:24px;width:340px;max-width:90vw">
+      <div style="font-size:14px;font-weight:700;margin-bottom:16px">🏠 Log Purchase Outcome</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">This trains Urban — it learns from the difference between its estimates and reality.</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Actual purchase price</div>
+          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-purchase" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:14px;font-weight:600"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Actual rehab spend</div>
+          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-rehab" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:14px;font-weight:600"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Expected sale / refi ARV</div>
+          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-arv" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:14px;font-weight:600"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Strategy</div>
+          <select id="oc-strategy" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:13px">
+            <option value="flip">Flip</option>
+            <option value="brrrr">BRRRR / Hold</option>
+            <option value="wholesale">Wholesale out</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Notes (optional)</div>
+          <input id="oc-notes" type="text" placeholder="What Urban got right or wrong..." style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:12px;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button onclick="closePurchasedForm()" style="flex:1;padding:9px;background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--muted);cursor:pointer;font-size:12px">Cancel</button>
+        <button onclick="savePurchasedOutcome()" style="flex:2;padding:9px;background:rgba(60,200,130,.15);border:1px solid rgba(60,200,130,.4);border-radius:5px;color:var(--buy);font-weight:700;cursor:pointer;font-size:13px">✓ Log Outcome</button>
+      </div>
+    </div>
   </div>
 
   <div id="main">
@@ -288,6 +338,7 @@ a{color:var(--accent)}
         <button class="btn" id="btn-chat">💬 Chat</button>
         <button class="btn" id="btn-sheet">📊 Sheet</button>
         <button class="btn" id="btn-hard-no" onclick="doMarkHardNo()" title="Mark this deal as Hard No — removes from pipeline" style="display:none;background:rgba(255,60,60,.12);border-color:rgba(255,60,60,.3);color:rgba(255,100,100,.9)">⛔ Hard No</button>
+        <button class="btn" id="btn-purchased" onclick="showPurchasedForm()" title="Mark as purchased — log actual numbers for brain training" style="display:none;background:rgba(60,200,130,.1);border-color:rgba(60,200,130,.3);color:rgba(60,200,130,.9)">🏠 Purchased</button>
         <button class="btn" id="btn-photos" style="display:none;background:rgba(180,140,255,.12);border-color:rgba(180,140,255,.3);color:rgba(180,140,255,.9)" onclick="openPhotos()">📸 See Photos</button>
       </div>
 
@@ -536,6 +587,32 @@ a{color:var(--accent)}
             </div>
           </div>
         </div>
+
+          <!-- OFFER LADDER CARD -->
+          <div class="card" style="margin-top:14px" id="offer-ladder-card">
+            <div class="ct" style="display:flex;align-items:center;justify-content:space-between">
+              <span>📋 Negotiation Ladder</span>
+              <button onclick="copyOfferLadder()" style="font-size:10px;padding:2px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Copy</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+              <div style="background:var(--bg2);border-radius:6px;padding:10px;text-align:center;border:1px solid var(--border)">
+                <div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;margin-bottom:6px">OPENING OFFER</div>
+                <div id="ol-open" style="font-size:18px;font-weight:800;color:var(--buy)">—</div>
+                <div style="font-size:9px;color:var(--muted);margin-top:3px">Start here</div>
+              </div>
+              <div style="background:var(--bg2);border-radius:6px;padding:10px;text-align:center;border:1px solid var(--border)">
+                <div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;margin-bottom:6px">COUNTER / HOLD</div>
+                <div id="ol-counter" style="font-size:18px;font-weight:800;color:var(--review)">—</div>
+                <div style="font-size:9px;color:var(--muted);margin-top:3px">Don't go higher</div>
+              </div>
+              <div style="background:rgba(200,60,60,.06);border-radius:6px;padding:10px;text-align:center;border:1px solid rgba(200,60,60,.2)">
+                <div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;margin-bottom:6px">WALK PRICE</div>
+                <div id="ol-walk" style="font-size:18px;font-weight:800;color:var(--red)">—</div>
+                <div style="font-size:9px;color:var(--muted);margin-top:3px">Hard stop = MAO</div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.6;padding:8px;background:var(--bg2);border-radius:5px" id="ol-script"></div>
+          </div>
 
         <!-- RENTAL -->
         <div class="tc" id="t-rental">
@@ -1304,6 +1381,16 @@ async function selectDeal(d) {
   const hardNoBtn = document.getElementById('btn-hard-no');
   if (hardNoBtn) hardNoBtn.style.display = (d.underwriteStatus !== 'HARD NO') ? '' : 'none';
 
+  // PURCHASED button — show when deal has been underwritten
+  const purchBtn = document.getElementById('btn-purchased');
+  if (purchBtn) {
+    const hasUW = underwrites[d.uid || ''];
+    purchBtn.style.display = hasUW ? '' : 'none';
+    const alreadyPurchased = hasUW?.outcome?.purchased;
+    purchBtn.textContent = alreadyPurchased ? '✅ Purchased' : '🏠 Purchased';
+    purchBtn.style.background = alreadyPurchased ? 'rgba(60,200,130,.2)' : 'rgba(60,200,130,.1)';
+  }
+
   // Price sanity warning banner
   const sanityBanner = document.getElementById('price-sanity-banner');
   const sanityMsg = document.getElementById('price-sanity-msg');
@@ -1773,6 +1860,8 @@ function renderUW(uw) {
   set('rehab-notes', uw.rehab?.notes || '');
   set('rehab-miss', uw.rehab?.missingInfo ? `⚠️ Missing: ${uw.rehab.missingInfo}` : '');
   set('rh-ws', uw.rehab?.wholesalerEstimate ? fmt(uw.rehab.wholesalerEstimate) : 'Not provided');
+  // Offer ladder — render in financials tab
+  setTimeout(() => renderOfferLadder(uw), 50);
   set('rh-ur', fmt(uw.rehab?.urbanEstimate));
   const rc = uw.rehab?.confidence || 'MEDIUM';
   { const _e_rh_conf = $('rh-conf'); if (_e_rh_conf) _e_rh_conf.innerHTML = `<span class="conf conf-${rc}">${rc}</span>`; }
@@ -2623,6 +2712,139 @@ function rnReset() {
   });
   if (typeof curUW !== 'undefined' && curUW) renderUW(curUW);
 }
+
+// ── FEATURE 1: OUTCOME TRACKING ───────────────────────────────────────────────
+function showPurchasedForm() {
+  if (!curDeal) return;
+  const modal = document.getElementById('purchased-modal');
+  if (!modal) return;
+  // Pre-fill with deal data
+  const fi_ask = parseFloat(curDeal?.askingPrice) || 0;
+  const fi_reh = curUW?.rehab?.urbanEstimate || 0;
+  const fi_arv = curUW?.arv?.urbanARV || 0;
+  const ocP = document.getElementById('oc-purchase'); if (ocP) ocP.value = fi_ask || '';
+  const ocR = document.getElementById('oc-rehab');   if (ocR) ocR.value = fi_reh || '';
+  const ocA = document.getElementById('oc-arv');     if (ocA) ocA.value = fi_arv || '';
+  modal.style.display = 'flex';
+}
+function closePurchasedForm() {
+  const m = document.getElementById('purchased-modal');
+  if (m) m.style.display = 'none';
+}
+async function savePurchasedOutcome() {
+  if (!curUW) return;
+  const purchase  = parseFloat(document.getElementById('oc-purchase')?.value) || 0;
+  const rehab     = parseFloat(document.getElementById('oc-rehab')?.value)    || 0;
+  const arv       = parseFloat(document.getElementById('oc-arv')?.value)      || 0;
+  const strategy  = document.getElementById('oc-strategy')?.value || 'flip';
+  const notes     = document.getElementById('oc-notes')?.value    || '';
+  if (!purchase) { alert('Enter the actual purchase price'); return; }
+  try {
+    const r = await fetch('/api/outcome/' + encodeURIComponent(curUW.uid), {
+      method: 'POST',
+      headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ purchase, rehab, arv, strategy, notes, address: curDeal.address, author })
+    });
+    if (r.ok) {
+      curUW = await r.json();
+      closePurchasedForm();
+      renderUW(curUW);
+      // Show purchased badge
+      const btn = document.getElementById('btn-purchased');
+      if (btn) { btn.textContent = '✅ Purchased'; btn.style.background = 'rgba(60,200,130,.2)'; }
+    }
+  } catch(e) { console.error('outcome save:', e); }
+}
+
+// ── FEATURE 2: OFFER LADDER ────────────────────────────────────────────────────
+function renderOfferLadder(uw) {
+  const card = document.getElementById('offer-ladder-card');
+  if (!card || !uw) return;
+  const arv   = uw.arv?.urbanARV || 0;
+  const rehab = uw.rehab?.urbanEstimate || 0;
+  const ask   = parseFloat(curDeal?.askingPrice) || 0;
+  if (!arv || !rehab) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const mao     = Math.round(arv * 0.70 - rehab);
+  const opening = Math.round(mao * 0.88);   // ~12% below MAO — room to negotiate
+  const counter = Math.round(mao * 0.94);   // ~6% below MAO
+  const walk    = mao;                        // hard stop = MAO
+  const fmtN = n => '$' + Math.round(n).toLocaleString();
+  const setEl = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  setEl('ol-open',    fmtN(opening));
+  setEl('ol-counter', fmtN(counter));
+  setEl('ol-walk',    fmtN(walk));
+  // Script line
+  const gap = ask > 0 ? ' (asking ' + fmtN(ask) + ', gap: ' + fmtN(ask - opening) + ')' : '';
+  const scriptEl = document.getElementById('ol-script');
+  if (scriptEl) {
+    scriptEl.innerHTML =
+      '<span style="color:var(--muted)">Script: </span>"We can do <strong style="color:var(--buy)">' + fmtN(opening) + '</strong>' + gap + '. ' +
+      'If you need more we can go to <strong style="color:var(--review)">' + fmtN(counter) + '</strong> — that\'s our ceiling. ' +
+      'Anything over <strong style="color:var(--red)">' + fmtN(walk) + '</strong> and we\'re out."';
+  }
+  // Color the walk button vs ask
+  if (ask > walk) {
+    const walkEl = document.getElementById('ol-walk');
+    if (walkEl) walkEl.title = 'Asking ' + fmtN(ask) + ' — over MAO by ' + fmtN(ask - walk);
+  }
+}
+function copyOfferLadder() {
+  const open    = document.getElementById('ol-open')?.textContent    || '—';
+  const counter = document.getElementById('ol-counter')?.textContent || '—';
+  const walk    = document.getElementById('ol-walk')?.textContent    || '—';
+  const script  = document.getElementById('ol-script')?.innerText    || '';
+  const text = `Negotiation Ladder — ${curDeal?.address || ''}\nOpen: ${open}\nCounter: ${counter}\nWalk: ${walk}\n\n${script}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyOfferLadder()"]');
+    if (btn) { btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = 'Copy', 2000); }
+  });
+}
+
+// ── FEATURE 3: WHOLESALER SCORECARDS ──────────────────────────────────────────
+let wsPanelOpen = false;
+function toggleWsPanel() {
+  wsPanelOpen = !wsPanelOpen;
+  const panel = document.getElementById('ws-panel');
+  const icon  = document.getElementById('ws-toggle-icon');
+  if (panel) panel.style.display = wsPanelOpen ? '' : 'none';
+  if (icon)  icon.textContent = wsPanelOpen ? '▲' : '▼';
+  if (wsPanelOpen) renderWholesalerScores();
+}
+function renderWholesalerScores() {
+  const list = document.getElementById('ws-list');
+  if (!list || !deals?.length) return;
+  // Tally by wholesaler (from curDeal.source or deal.wholesalerName)
+  const scores = {};
+  deals.forEach(d => {
+    const ws = d.wholesalerName || d.source || 'Unknown';
+    if (!scores[ws]) scores[ws] = { total: 0, buys: 0, profit: [] };
+    scores[ws].total++;
+    const uw = underwrites?.[d.uid || ''];
+    const v  = uw?.verdict || d.underwriteStatus || '';
+    if (v === 'BUY' || v === 'HOT') {
+      scores[ws].buys++;
+      if (uw?.financials?.projectedProfit) scores[ws].profit.push(uw.financials.projectedProfit);
+    }
+  });
+  const sorted = Object.entries(scores).sort((a, b) => b[1].total - a[1].total).slice(0, 8);
+  list.innerHTML = '';
+  sorted.forEach(([ws, s]) => {
+    const rate = s.total > 0 ? Math.round(s.buys / s.total * 100) : 0;
+    const grade = rate >= 20 ? 'A' : rate >= 10 ? 'B' : 'C';
+    const gradeColor = grade === 'A' ? 'var(--buy)' : grade === 'B' ? 'var(--review)' : 'var(--muted)';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)';
+    row.innerHTML =
+      '<div style="width:18px;height:18px;border-radius:50%;background:' + gradeColor + ';color:var(--bg);font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center">' + grade + '</div>' +
+      '<div style="flex:1;overflow:hidden"><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + ws + '</div>' +
+        '<div style="font-size:9px;color:var(--muted)">' + s.buys + ' buy / ' + s.total + ' total</div></div>' +
+      '<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:' + gradeColor + '">' + rate + '%</div></div>';
+    list.appendChild(row);
+  });
+  if (!sorted.length) list.innerHTML = '<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">No deals loaded</div>';
+}
+
 
 // ── HARD NO ACTION ───────────────────────────────────────────────────────────
 async function doMarkHardNo() {
