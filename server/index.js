@@ -1152,9 +1152,7 @@ async function fetchRentalComps(city, county, zip, beds, sqft) {
     const texts = results.map(r => {
       if (!r || !r.content) return '';
       return r.content.filter(b => b.type === 'text').map(b => b.text).join(' ');
-    }).filter(Boolean).join('
-
-');
+    }).filter(Boolean).join('\n\n');
 
     return texts.length > 50 ? texts.slice(0, 2000) : null;
   } catch(e) {
