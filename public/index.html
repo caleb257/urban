@@ -540,218 +540,246 @@ a{color:var(--accent)}
         <!-- RENTAL -->
         <div class="tc" id="t-rental">
 
-          <!-- ── RENTAL VERDICT + SUMMARY BANNER ───────────────────────── -->
-          <div id="rn-verdict-banner" style="display:none;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;border:1px solid">
-            <span id="rn-verdict-icon" style="font-size:26px"></span>
-            <div style="flex:1">
-              <div id="rn-verdict-label" style="font-size:13px;font-weight:800;letter-spacing:.8px;margin-bottom:3px"></div>
-              <div id="rn-verdict-note" style="font-size:12px;opacity:.8;line-height:1.5" id="rn-verdict-note"></div>
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <div id="rn-brrrr-badge" style="display:none;font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:rgba(60,200,130,.2);color:var(--buy);border:1px solid rgba(60,200,130,.3)">♻️ BRRRR CANDIDATE</div>
-            </div>
-          </div>
+<!-- ═══ VERDICT ════════════════════════════════════════════════════════════ -->
+<div id="rn-verdict-banner" style="display:none;border-radius:8px;padding:11px 16px;margin-bottom:14px;border:1px solid;align-items:center;gap:12px">
+  <span id="rn-verdict-icon" style="font-size:20px"></span>
+  <div style="flex:1">
+    <div id="rn-verdict-label" style="font-size:12px;font-weight:800;letter-spacing:.7px"></div>
+    <div id="rn-verdict-note" style="font-size:11px;opacity:.7;margin-top:1px;line-height:1.4"></div>
+  </div>
+  <div id="rn-brrrr-badge" style="display:none;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(60,200,130,.15);color:var(--buy);border:1px solid rgba(60,200,130,.3)">BRRRR ✅</div>
+</div>
 
-          <!-- ── 3 KEY NUMBERS UP TOP ────────────────────────────────────── -->
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
-              <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:6px">MARKET RENT</div>
-              <div style="font-size:22px;font-weight:800;color:var(--gold)" id="rn-hero-rent">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:3px" id="rn-hero-rent-note">/month</div>
-            </div>
-            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
-              <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:6px">NET CASH FLOW</div>
-              <div style="font-size:22px;font-weight:800" id="rn-hero-cf">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:3px">after DSCR loan</div>
-            </div>
-            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
-              <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:6px">CASH LEFT IN DEAL</div>
-              <div style="font-size:22px;font-weight:800" id="rn-hero-left">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:3px">after BRRRR refi</div>
-            </div>
-          </div>
+<!-- ═══ STEP 1 — INCOME ════════════════════════════════════════════════════ -->
+<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:10px">
+  <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.6px;margin-bottom:12px">① RENTAL INCOME</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+    <div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:5px">Rent per unit / mo</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="color:var(--muted);font-size:12px">$</span>
+        <input id="rn-in-rent-pu" type="number" placeholder="0" oninput="rnCalc()"
+          style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:7px 8px;font-size:15px;font-weight:700">
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:5px">Units</div>
+      <input id="rn-in-units" type="number" min="1" max="20" placeholder="1" oninput="rnCalc()"
+        style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:7px 8px;font-size:15px;font-weight:700">
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:5px">Vacancy</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input id="rn-in-vac" type="number" min="0" max="30" step="0.5" placeholder="7" oninput="rnCalc()"
+          style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:7px 8px;font-size:15px;font-weight:700">
+        <span style="color:var(--muted);font-size:12px">%</span>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg2);border-radius:6px">
+    <span style="font-size:12px;color:var(--muted)">Monthly gross rent</span>
+    <span id="rn-calc-gross" style="font-size:18px;font-weight:800;color:var(--gold)">—</span>
+  </div>
+  <div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7" id="rn-rent-source-note"></div>
+</div>
 
-          <!-- ── EDITABLE CALCULATOR ──────────────────────────────────────── -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+<!-- ═══ STEP 2 — EXPENSES ══════════════════════════════════════════════════ -->
+<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:10px">
+  <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.6px;margin-bottom:12px">② MONTHLY EXPENSES</div>
+  <div style="display:flex;flex-direction:column;gap:6px">
 
-            <!-- LEFT: INCOME INPUTS -->
-            <div class="card">
-              <div class="ct" style="display:flex;align-items:center;justify-content:space-between">
-                <span>💰 Income</span>
-                <span id="rn-unit-pill" style="display:none;font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,160,32,.12);color:var(--review);border:1px solid rgba(255,160,32,.25)"></span>
-              </div>
-              <div class="fr"><span class="fl">Rent per Unit / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-rent-pu" style="width:90px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:13px;font-weight:600;text-align:right" placeholder="0" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr"><span class="fl">Number of Units</span>
-                <input type="number" id="rn-in-units" style="width:60px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:13px;font-weight:600;text-align:right" min="1" max="20" placeholder="1" oninput="rnCalc()">
-              </div>
-              <div class="fr tot"><span class="fl" style="font-weight:700">Gross Rent / mo</span><span class="fv y" id="rn-calc-gross" style="font-weight:800">—</span></div>
-              <div class="fr"><span class="fl" style="font-size:11px;opacity:.7">Vacancy</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <input type="number" id="rn-in-vac" style="width:55px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" min="0" max="30" step="0.5" placeholder="7" oninput="rnCalc()">
-                  <span style="color:var(--muted);font-size:11px">%</span>
-                </span>
-              </div>
-              <div class="fr"><span class="fl" style="font-weight:600">Effective Gross Income</span><span class="fv" id="rn-calc-egi" style="font-weight:700">—</span></div>
-              <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)" id="rn-rent-source-note">Source: AI estimate — edit above to override</div>
-            </div>
+    <div style="display:flex;align-items:center">
+      <span style="font-size:12px;color:var(--muted);flex:1">Property management</span>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input id="rn-in-pm" type="number" min="0" max="20" step="0.5" placeholder="10" oninput="rnCalc()"
+          style="width:42px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:center">
+        <span style="color:var(--muted);font-size:11px">%</span>
+        <span id="rn-pm-calc" style="font-size:12px;font-weight:600;color:var(--red);width:60px;text-align:right"></span>
+      </div>
+    </div>
 
-            <!-- RIGHT: EXPENSE INPUTS -->
-            <div class="card">
-              <div class="ct">🏦 Monthly Expenses</div>
-              <div class="fr"><span class="fl">Mgmt Fee</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <input type="number" id="rn-in-pm" style="width:55px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" min="0" max="20" step="0.5" placeholder="9" oninput="rnCalc()">
-                  <span style="color:var(--muted);font-size:11px">%</span>
-                </span>
-              </div>
-              <div class="fr"><span class="fl">Taxes / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-tax" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="0" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr"><span class="fl">Insurance / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-ins" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="250" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr"><span class="fl">Maintenance / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-maint" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="100" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr"><span class="fl">CapEx Reserve / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-capex" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="100" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr"><span class="fl">HOA / Other / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-other" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="80" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr tot"><span class="fl" style="font-weight:700">Total Expenses / mo</span><span class="fv r" id="rn-calc-exp" style="font-weight:800">—</span></div>
-            </div>
-          </div>
+    <div style="display:flex;align-items:center">
+      <span style="font-size:12px;color:var(--muted);flex:1">Property taxes / mo</span>
+      <div style="display:flex;align-items:center;gap:3px">
+        <span style="color:var(--muted);font-size:11px">$</span>
+        <input id="rn-in-tax" type="number" placeholder="auto" oninput="rnCalc()"
+          style="width:70px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right">
+      </div>
+    </div>
 
-          <!-- ── NOI + LOAN OPTIONS SIDE BY SIDE ─────────────────────────── -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center">
+      <span style="font-size:12px;color:var(--muted);flex:1">Insurance / mo <span style="font-size:10px;opacity:.5">(FL varies)</span></span>
+      <div style="display:flex;align-items:center;gap:3px">
+        <span style="color:var(--muted);font-size:11px">$</span>
+        <input id="rn-in-ins" type="number" placeholder="enter" oninput="rnCalc()"
+          style="width:70px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right">
+      </div>
+    </div>
 
-            <!-- NOI + METRICS -->
-            <div class="card">
-              <div class="ct">📊 Net Operating Income</div>
-              <div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:12px">
-                <div style="font-size:30px;font-weight:800" id="rn-calc-noi">—</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:4px">per month</div>
-              </div>
-              <div class="fr"><span class="fl">Cap Rate</span><span class="fv" id="rn-calc-cap">—</span></div>
-              <div class="fr"><span class="fl">Gross Yield</span><span class="fv" id="rn-calc-gy">—</span></div>
-              <div class="fr"><span class="fl">Price-to-Rent</span><span class="fv" id="rn-calc-ptr">—</span></div>
-              <div class="fr"><span class="fl">HUD Fair Market Rent</span><span class="fv mu" id="rn-calc-hud" style="font-size:11px">—</span></div>
-            </div>
+    <div style="display:flex;align-items:center">
+      <span style="font-size:12px;color:var(--muted);flex:1">Maintenance / mo</span>
+      <div style="display:flex;align-items:center;gap:3px">
+        <span style="color:var(--muted);font-size:11px">$</span>
+        <input id="rn-in-maint" type="number" placeholder="125" oninput="rnCalc()"
+          style="width:70px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right">
+      </div>
+    </div>
 
-            <!-- LOAN SELECTOR + RESULTS -->
-            <div class="card">
-              <div class="ct">🏦 Financing</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-                <div style="background:var(--bg2);border-radius:6px;padding:8px">
-                  <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:6px">DSCR LOAN</div>
-                  <div style="display:flex;align-items:center;gap:3px;margin-bottom:4px">
-                    <input type="number" id="rn-in-dscr-rate" style="width:45px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="0.25" placeholder="8.0" oninput="rnCalc()">
-                    <span style="font-size:10px;color:var(--muted)">% · </span>
-                    <input type="number" id="rn-in-dscr-ltv" style="width:40px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="5" placeholder="75" oninput="rnCalc()">
-                    <span style="font-size:10px;color:var(--muted)">% LTV</span>
-                  </div>
-                  <div style="font-size:11px;color:var(--muted)">Pmt: <span id="rn-calc-dscr-pmt" style="color:var(--text);font-weight:600">—</span></div>
-                  <div style="font-size:14px;font-weight:800;margin-top:4px" id="rn-calc-dscr-cf">—</div>
-                  <div style="font-size:9px;color:var(--muted)">cash flow/mo</div>
-                  <div style="font-size:10px;margin-top:4px">DSCR: <span id="rn-calc-dscr-ratio" style="font-weight:700">—</span></div>
-                </div>
-                <div style="background:var(--bg2);border-radius:6px;padding:8px">
-                  <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:6px">CONVENTIONAL</div>
-                  <div style="display:flex;align-items:center;gap:3px;margin-bottom:4px">
-                    <input type="number" id="rn-in-conv-rate" style="width:45px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="0.25" placeholder="7.25" oninput="rnCalc()">
-                    <span style="font-size:10px;color:var(--muted)">% · </span>
-                    <input type="number" id="rn-in-conv-ltv" style="width:40px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="5" placeholder="80" oninput="rnCalc()">
-                    <span style="font-size:10px;color:var(--muted)">% LTV</span>
-                  </div>
-                  <div style="font-size:11px;color:var(--muted)">Pmt: <span id="rn-calc-conv-pmt" style="color:var(--text);font-weight:600">—</span></div>
-                  <div style="font-size:14px;font-weight:800;margin-top:4px" id="rn-calc-conv-cf">—</div>
-                  <div style="font-size:9px;color:var(--muted)">cash flow/mo</div>
-                  <div style="font-size:10px;margin-top:4px">Down: <span id="rn-calc-conv-dp" style="font-weight:700">—</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div style="display:flex;align-items:center">
+      <span style="font-size:12px;color:var(--muted);flex:1">CapEx reserve / mo <span style="font-size:10px;opacity:.5">(roof/HVAC)</span></span>
+      <div style="display:flex;align-items:center;gap:3px">
+        <span style="color:var(--muted);font-size:11px">$</span>
+        <input id="rn-in-capex" type="number" placeholder="100" oninput="rnCalc()"
+          style="width:70px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right">
+      </div>
+    </div>
 
-          <!-- ── BRRRR CALCULATOR ─────────────────────────────────────────── -->
-          <div class="card" style="margin-bottom:14px">
-            <div class="ct" style="display:flex;align-items:center;justify-content:space-between">
-              <span>♻️ BRRRR Calculator</span>
-              <span id="rn-brrrr-strat-pill" style="font-size:10px;padding:2px 10px;border-radius:10px;font-weight:700"></span>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:14px">
-              <!-- Step 1 -->
-              <div style="padding:12px;border-right:1px solid var(--border)">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">① BUY + REHAB</div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Purchase</span><span class="fv" id="rn-b-purchase" style="font-size:11px">—</span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Rehab</span><span class="fv" id="rn-b-rehab" style="font-size:11px">—</span></div>
-                <div class="fr" style="padding:4px 0;border-top:1px solid var(--border);margin-top:4px"><span class="fl" style="font-size:11px;font-weight:700">Total Cash In</span><span class="fv y" id="rn-b-cashin" style="font-size:12px;font-weight:800">—</span></div>
-              </div>
-              <!-- Step 2 -->
-              <div style="padding:12px;border-right:1px solid var(--border)">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">② REFI AT ARV</div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">ARV</span><span class="fv" id="rn-b-arv" style="font-size:11px">—</span></div>
-                <div style="display:flex;align-items:center;gap:4px;margin:4px 0">
-                  <span style="font-size:11px;color:var(--muted)">LTV</span>
-                  <input type="number" id="rn-in-refi-ltv" style="width:45px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="5" placeholder="75" oninput="rnCalc()">
-                  <span style="font-size:10px;color:var(--muted)">%</span>
-                  <span style="font-size:10px;color:var(--muted);margin-left:4px">@</span>
-                  <input type="number" id="rn-in-refi-rate" style="width:45px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="0.25" placeholder="7.5" oninput="rnCalc()">
-                  <span style="font-size:10px;color:var(--muted)">%</span>
-                </div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Refi Loan</span><span class="fv" id="rn-b-refi-loan" style="font-size:11px">—</span></div>
-              </div>
-              <!-- Step 3 -->
-              <div style="padding:12px;border-right:1px solid var(--border)">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">③ CASH BACK</div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Cash Returned</span><span class="fv g" id="rn-b-cashout" style="font-size:13px;font-weight:800">—</span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px;font-weight:700">Cash Left In</span><span class="fv" id="rn-b-left" style="font-size:13px;font-weight:800">—</span></div>
-                <div id="rn-b-infinite" style="display:none;margin-top:6px;font-size:10px;color:var(--buy);font-weight:700;text-align:center">♾️ Full cash recycle</div>
-              </div>
-              <!-- Step 4 -->
-              <div style="padding:12px">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">④ HOLD &amp; CASH FLOW</div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Refi Payment</span><span class="fv" id="rn-b-pmt" style="font-size:11px">—</span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px;font-weight:700">Cash Flow / mo</span><span class="fv" id="rn-b-cf" style="font-size:14px;font-weight:800">—</span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">DSCR</span><span class="fv" id="rn-b-dscr" style="font-size:11px;font-weight:700">—</span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">CoC Return</span><span class="fv" id="rn-b-coc" style="font-size:11px;font-weight:700">—</span></div>
-              </div>
-            </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
-              <button onclick="rnReset()" style="font-size:10px;padding:4px 12px;border-radius:4px;background:rgba(100,100,140,.15);border:1px solid var(--border2);color:var(--muted);cursor:pointer">↺ Reset to AI estimates</button>
-            </div>
-          </div>
+    <div style="display:flex;align-items:center">
+      <span style="font-size:12px;color:var(--muted);flex:1">HOA / other / mo</span>
+      <div style="display:flex;align-items:center;gap:3px">
+        <span style="color:var(--muted);font-size:11px">$</span>
+        <input id="rn-in-other" type="number" placeholder="0" oninput="rnCalc()"
+          style="width:70px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right">
+      </div>
+    </div>
 
-          <!-- ── AI ASSESSMENT ────────────────────────────────────────────── -->
-          <div class="card">
-            <div class="ct">Urban's Rental Assessment</div>
-            <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px" id="rn-notes">—</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              <div class="m"><div class="ml">Worth Holding?</div><div class="mv" id="rn-worth">—</div></div>
-              <div class="ml"><div class="ml">Worth BRRRR?</div><div class="mv" id="rn-worth-brrrr">—</div></div>
-            </div>
-          </div>
+    <!-- Hidden inputs to keep rnCalc happy -->
+    <input id="rn-in-conv-rate" type="hidden" value="7.25">
+    <input id="rn-in-conv-ltv" type="hidden" value="80">
+
+  </div>
+  <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:12px;font-weight:700">Total expenses / mo</span>
+    <span id="rn-calc-exp" style="font-size:16px;font-weight:800;color:var(--red)">—</span>
+  </div>
+</div>
+
+<!-- ═══ STEP 3 — NET OPERATING INCOME + LOAN ══════════════════════════════ -->
+<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:10px">
+  <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.6px;margin-bottom:12px">③ CASH FLOW</div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <span style="font-size:13px;font-weight:600">Net operating income</span>
+    <span id="rn-calc-noi" style="font-size:18px;font-weight:800">—</span>
+  </div>
+
+  <div style="background:var(--bg2);border-radius:6px;padding:10px 12px;margin-bottom:10px">
+    <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px">DSCR LOAN</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:4px">
+        <input id="rn-in-dscr-rate" type="number" step="0.125" placeholder="6.75" oninput="rnCalc()"
+          style="width:55px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:5px 7px;font-size:13px;font-weight:600;text-align:center">
+        <span style="color:var(--muted);font-size:12px">% rate</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input id="rn-in-dscr-ltv" type="number" step="5" min="60" max="80" placeholder="75" oninput="rnCalc()"
+          style="width:50px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:5px 7px;font-size:13px;font-weight:600;text-align:center">
+        <span style="color:var(--muted);font-size:12px">% LTV</span>
+      </div>
+      <span style="font-size:11px;color:var(--muted)">→ pmt <span id="rn-calc-dscr-pmt" style="color:var(--text);font-weight:600"></span></span>
+      <span style="font-size:10px;color:var(--muted)">DSCR: <span id="rn-calc-dscr-ratio" style="font-weight:700"></span></span>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg2);border-radius:6px;border:2px solid var(--border2)" id="rn-cf-result-row">
+    <div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:2px">Monthly cash flow</div>
+      <div style="font-size:10px;color:var(--muted)">after loan payment</div>
+    </div>
+    <span id="rn-calc-dscr-cf" style="font-size:26px;font-weight:900">—</span>
+  </div>
+
+  <!-- Hidden for rnCalc -->
+  <span id="rn-calc-conv-cf" style="display:none"></span>
+  <span id="rn-calc-conv-pmt" style="display:none"></span>
+  <span id="rn-calc-conv-dp" style="display:none"></span>
+</div>
+
+<!-- ═══ STEP 4 — BRRRR ════════════════════════════════════════════════════ -->
+<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:10px" id="rn-brrrr-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.6px">④ BRRRR — GET YOUR MONEY BACK</div>
+    <span id="rn-brrrr-strat-pill" style="font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px"></span>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;color:var(--muted)">💰 You put in (purchase + rehab)</span>
+      <span id="rn-b-cashin" style="font-size:14px;font-weight:700;color:var(--review)">—</span>
+    </div>
+
+    <div style="border-left:2px solid var(--border2);margin-left:8px;padding-left:12px;display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:11px;color:var(--muted)">After repair value: <span id="rn-b-arv" style="color:var(--gold);font-weight:700"></span></div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--muted)">Refinance at</span>
+        <input id="rn-in-refi-ltv" type="number" step="5" min="60" max="80" placeholder="75" oninput="rnCalc()"
+          style="width:44px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:3px 5px;font-size:12px;font-weight:700;text-align:center">
+        <span style="font-size:11px;color:var(--muted)">% LTV @</span>
+        <input id="rn-in-refi-rate" type="number" step="0.125" placeholder="6.75" oninput="rnCalc()"
+          style="width:50px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:3px 5px;font-size:12px;font-weight:700;text-align:center">
+        <span style="font-size:11px;color:var(--muted)">%</span>
+        <span style="font-size:11px;color:var(--muted)">→ loan <span id="rn-b-refi-loan" style="color:var(--text);font-weight:700"></span></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--muted)">💵 Cash returned at refi</span>
+        <span id="rn-b-cashout" style="font-size:14px;font-weight:700;color:var(--buy)">—</span>
+      </div>
+    </div>
+
+    <div style="border-top:2px solid var(--border2);padding-top:12px;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center" id="rn-cash-left-row">
+        <div>
+          <div style="font-size:12px;font-weight:700">Cash left in deal</div>
+          <div style="font-size:10px;color:var(--muted)">Goal: $0 or less ↓</div>
         </div>
+        <span id="rn-b-left" style="font-size:22px;font-weight:900">—</span>
+      </div>
+      <div id="rn-b-infinite" style="display:none;margin-top:8px;text-align:center;font-size:13px;font-weight:700;color:var(--buy);background:rgba(60,200,130,.1);border:1px solid rgba(60,200,130,.3);border-radius:6px;padding:8px">
+        ♾️ FULL BRRRR — GOAL HIT. All cash out, property cash flows free.
+      </div>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:6px;padding:10px;margin-top:4px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Refi payment</div>
+        <div id="rn-b-pmt" style="font-size:13px;font-weight:700">—</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Cash flow / mo</div>
+        <div id="rn-b-cf" style="font-size:13px;font-weight:700">—</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">DSCR</div>
+        <div id="rn-b-dscr" style="font-size:13px;font-weight:700">—</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Cash-on-cash</div>
+        <div id="rn-b-coc" style="font-size:13px;font-weight:700">—</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+    <div style="font-size:10px;color:var(--muted)">Cap rate: <span id="rn-calc-cap">—</span> · HUD FMR ref: <span id="rn-calc-hud">—</span></div>
+    <button onclick="rnReset()" style="font-size:10px;padding:3px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">↺ Reset</button>
+  </div>
+</div>
+
+<!-- ═══ URBAN'S TAKE ═══════════════════════════════════════════════════════ -->
+<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px">
+  <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">URBAN'S TAKE</div>
+  <p id="rn-notes" style="font-size:12px;line-height:1.7;color:var(--text);margin-bottom:10px">—</p>
+  <div style="display:flex;gap:20px">
+    <div><span style="font-size:11px;color:var(--muted)">Hold? </span><span id="rn-worth" style="font-weight:700;font-size:12px">—</span></div>
+    <div><span style="font-size:11px;color:var(--muted)">BRRRR? </span><span id="rn-worth-brrrr" style="font-weight:700;font-size:12px">—</span></div>
+  </div>
+</div>
+
+
+
+</div>
 
                 <!-- NEW CONSTRUCTION -->
         <div class="tc" id="t-newconstruction">
@@ -2460,7 +2488,7 @@ function rnCalc() {
 
   // NOI
   const noiEl = document.getElementById('rn-calc-noi');
-  if (noiEl) { noiEl.textContent = noi !== 0 ? signedFmt(noi) + '/mo' : '—'; noiEl.style.color = noi > 0 ? 'var(--buy)' : noi < 0 ? 'var(--red)' : 'var(--muted)'; }
+  if (noiEl) { noiEl.textContent = noi !== 0 ? signedFmt(noi) + '/mo' : '—'; noiEl.style.color = noi >= 0 ? 'var(--buy)' : 'var(--red)'; }
   setEl('rn-calc-cap', capRate ? capRate + '%' : '—');
   setEl('rn-calc-gy',  gy  ? gy  + '%' : '—');
   setEl('rn-calc-ptr', ptr ? ptr + 'x' : '—');
@@ -2469,6 +2497,9 @@ function rnCalc() {
   setEl('rn-calc-dscr-pmt', dscrPmt ? fmtN(dscrPmt) : '—');
   const dCfEl = document.getElementById('rn-calc-dscr-cf');
   if (dCfEl) { dCfEl.textContent = dscrCf !== 0 ? signedFmt(dscrCf) + '/mo' : '—'; dCfEl.style.color = cfColor(dscrCf); }
+  // Cash flow row border highlight
+  const cfRow = document.getElementById('rn-cf-result-row');
+  if (cfRow) { cfRow.style.borderColor = cfColor(dscrCf).replace('var(--', '').replace(')', '') === 'red' ? 'rgba(200,60,60,.4)' : dscrCf >= 100 ? 'rgba(60,200,130,.4)' : 'var(--border2)'; }
   const dRatEl = document.getElementById('rn-calc-dscr-ratio');
   if (dRatEl) { dRatEl.textContent = dscrRat ? dscrRat + 'x ' + (parseFloat(dscrRat)>=1.25?'✅':'⚠️') : '—'; dRatEl.style.color = parseFloat(dscrRat)>=1.25?'var(--buy)':parseFloat(dscrRat)>=1.0?'var(--review)':'var(--red)'; }
 
