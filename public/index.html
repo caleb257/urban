@@ -276,6 +276,50 @@ a{color:var(--accent)}
     </div>
   </div>
 
+  <div id="sold-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center">
+    <div style="background:var(--bg3);border:1px solid rgba(255,215,0,.3);border-radius:10px;padding:24px;width:340px;max-width:90vw">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;color:var(--gold)">🤝 Mark as Sold</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">This archives the deal and trains Urban's brain.</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Sale price (required)</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="color:var(--muted)">$</span>
+            <input id="sold-price" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:15px;font-weight:700">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Buyer type</div>
+          <select id="sold-buyer" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:13px">
+            <option value="retail">Retail buyer (MLS flip)</option>
+            <option value="investor">Investor / cash buyer</option>
+            <option value="wholesale">Wholesaled out</option>
+            <option value="brrrr">Kept — BRRRR / rental</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Actual all-in cost (optional)</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="color:var(--muted)">$</span>
+            <input id="sold-cost" type="number" placeholder="purchase + rehab + holding" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:13px">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Notes</div>
+          <input id="sold-notes" type="text" placeholder="What Urban got right or wrong..." style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:12px;box-sizing:border-box">
+        </div>
+      </div>
+      <div id="sold-profit-preview" style="display:none;margin-top:10px;padding:10px;background:var(--bg2);border-radius:6px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Actual profit</div>
+        <div id="sold-profit-num" style="font-size:22px;font-weight:800"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="closeSoldForm()" style="flex:1;padding:9px;background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--muted);cursor:pointer">Cancel</button>
+        <button onclick="saveSold()" id="sold-submit-btn" style="flex:2;padding:9px;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.4);border-radius:5px;color:var(--gold);font-weight:700;cursor:pointer;font-size:13px">Archive Deal</button>
+      </div>
+    </div>
+  </div>
+
   <div id="purchased-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center">
     <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:24px;width:320px;max-width:90vw">
       <div style="font-size:14px;font-weight:700;margin-bottom:12px">🏠 Log Purchase</div>
@@ -335,6 +379,7 @@ a{color:var(--accent)}
         <button class="btn" id="btn-sheet">📊 Sheet</button>
         <button class="btn" id="btn-hard-no" onclick="doMarkHardNo()" title="Mark this deal as Hard No — removes from pipeline" style="display:none;background:rgba(255,60,60,.12);border-color:rgba(255,60,60,.3);color:rgba(255,100,100,.9)">⛔ Hard No</button>
         <button class="btn" id="btn-purchased" onclick="showPurchasedForm()" style="display:none;background:rgba(60,200,130,.1);border-color:rgba(60,200,130,.3);color:rgba(60,200,130,.9)">🏠 Purchased</button>
+        <button class="btn" id="btn-sold" onclick="showSoldForm()" style="display:none;background:rgba(255,215,0,.1);border-color:rgba(255,215,0,.35);color:rgba(255,215,0,.9);font-weight:700">🤝 Mark as Sold</button>
         <button class="btn" id="btn-photos" style="display:none;background:rgba(180,140,255,.12);border-color:rgba(180,140,255,.3);color:rgba(180,140,255,.9)" onclick="openPhotos()">📸 See Photos</button>
       </div>
 
@@ -963,7 +1008,7 @@ const pct = n => n != null ? parseFloat(n).toFixed(1) + '%' : '—';
 let TOKEN = '', deals = [], curDeal = null, curUW = null, curFilter = 'ALL', author = 'caleb';
 let autoUnderwriteRunning = false;
 
-// ── LOGIN ──────────────────────────────────────────────────────────────────────
+// -- LOGIN ----------------------------------------------------------------------
 $('pw').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
 $('login-btn').addEventListener('click', doLogin);
 // URL token support
@@ -995,7 +1040,7 @@ async function doLogin() {
   }
 }
 
-// ── STATS ──────────────────────────────────────────────────────────────────────
+// -- STATS ----------------------------------------------------------------------
 async function doLoadStats() {
   try {
     const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
@@ -1039,7 +1084,7 @@ async function doLoadStats() {
   } catch {}
 }
 
-// ── DEALS ──────────────────────────────────────────────────────────────────────
+// -- DEALS ----------------------------------------------------------------------
 async function doLoadDeals(skipAuto = false) {
   $('ref-btn').textContent = '↻ Loading...';
   try {
@@ -1196,7 +1241,7 @@ $('ref-btn').addEventListener('click', () => {
 });
 $('search-input').addEventListener('input', renderList);
 document.getElementById('sort-select')?.addEventListener('change', renderList);
-// ── REVIEW CHATS (Urban learns from all conversations) ────────────────────────
+// -- REVIEW CHATS (Urban learns from all conversations) ------------------------
 async function doReviewChat() {
   const btn = $('review-btn');
   btn.disabled = true;
@@ -1222,7 +1267,7 @@ async function doReviewChat() {
   btn.textContent = '📚 Review Chats';
 }
 
-// ── KEEP DEAL (reset 7-day expiry) ───────────────────────────────────────────
+// -- KEEP DEAL (reset 7-day expiry) -------------------------------------------
 async function keepDeal(uid, address) {
   try {
     const r = await fetch('/api/keep-deal/' + encodeURIComponent(uid), {
@@ -1341,7 +1386,7 @@ function renderList() {
   });
 }
 
-// ── SELECT DEAL ────────────────────────────────────────────────────────────────
+// -- SELECT DEAL ----------------------------------------------------------------
 async function selectDeal(d) {
   curDeal = d;
   // Update chat header to show which deal is active
@@ -1377,6 +1422,8 @@ async function selectDeal(d) {
   if (hardNoBtn) hardNoBtn.style.display = (d.underwriteStatus !== 'HARD NO') ? '' : 'none';
   const purchBtn = document.getElementById('btn-purchased');
   if (purchBtn) purchBtn.style.display = (d.underwriteStatus && d.underwriteStatus !== 'PENDING') ? '' : 'none';
+  const soldBtn = document.getElementById('btn-sold');
+  if (soldBtn) soldBtn.style.display = (d.underwriteStatus && d.underwriteStatus !== 'PENDING') ? '' : 'none';
 
   // Price sanity warning banner
   const sanityBanner = document.getElementById('price-sanity-banner');
@@ -1482,7 +1529,7 @@ function showPending(partialUW) {
   if (n) n.remove();
 }
 
-// ── TABS ───────────────────────────────────────────────────────────────────────
+// -- TABS -----------------------------------------------------------------------
 let curTab = 'overview'; // tracks which tab is active for chat context
 function switchTab(name) {
   curTab = name;
@@ -1496,7 +1543,7 @@ document.querySelectorAll('.stab').forEach(t => {
   t.addEventListener('click', () => switchTab(t.dataset.t));
 });
 
-// ── UNDERWRITE ─────────────────────────────────────────────────────────────────
+// -- UNDERWRITE -----------------------------------------------------------------
 $('btn-uw').addEventListener('click', () => doUnderwrite(false, false));
 $('btn-uw-now').addEventListener('click', () => doUnderwrite(false, false));
 $('btn-deep').addEventListener('click', () => doUnderwrite(true, true));
@@ -1601,8 +1648,8 @@ async function doUnderwrite(force, deep) {
   }
 }
 
-// ── RENDER UNDERWRITE ──────────────────────────────────────────────────────────
-// ── GLOBAL SAFE DOM HELPERS ──────────────────────────────────────────────────
+// -- RENDER UNDERWRITE ----------------------------------------------------------
+// -- GLOBAL SAFE DOM HELPERS --------------------------------------------------
 const set = (id, val, prop = 'textContent') => { const el = document.getElementById(id); if (el) el[prop] = val; };
 const cls = (id, c) => { const el = document.getElementById(id); if (el) el.className = c; };
 const show = (id, visible, displayVal) => { const el = document.getElementById(id); if (el) el.style.display = visible ? (displayVal || 'block') : 'none'; };
@@ -2157,7 +2204,7 @@ function renderUW(uw) {
   renderChat(uw.chatHistory || []);
 }
 
-// ── PROPERTY TAB — ALL SHEET DATA ─────────────────────────────────────────────
+// -- PROPERTY TAB — ALL SHEET DATA ---------------------------------------------
 function fillPropTab(d) {
   const el = $('deal-full-info');
   if (!el) return;
@@ -2289,7 +2336,7 @@ function fillPropTab(d) {
   ].join('');
 }
 
-// ── OVERRIDES ─────────────────────────────────────────────────────────────────
+// -- OVERRIDES -----------------------------------------------------------------
 $('btn-ov-arv').addEventListener('click', async () => {
   if (!curUW) return;
   const val = $('ov-arv-in').value;
@@ -2313,7 +2360,7 @@ $('btn-ov-rehab').addEventListener('click', async () => {
   if (r.ok) { curUW = await r.json(); renderUW(curUW); }
 });
 
-// ── CHAT ──────────────────────────────────────────────────────────────────────
+// -- CHAT ----------------------------------------------------------------------
 $('btn-chat').addEventListener('click', () => $('chat-panel').classList.add('open'));
 $('chat-x').addEventListener('click', () => $('chat-panel').classList.remove('open'));
 document.addEventListener('keydown', e => { if (e.key==='Escape') $('chat-panel').classList.remove('open'); });
@@ -2443,12 +2490,12 @@ function addMsg(role, content, ts) {
   msgs.scrollTop = msgs.scrollHeight;
 }
 
-// ── SHEET LINK ─────────────────────────────────────────────────────────────────
+// -- SHEET LINK -----------------------------------------------------------------
 $('btn-sheet').addEventListener('click', () => {
   window.open('https://docs.google.com/spreadsheets/d/1las1OYRL2ZgIZjq5_K4bcMM9dAhGxgMOBghfyR29ynU', '_blank');
 });
 
-// ── HARD NO TOGGLE ───────────────────────────────────────────────────────────
+// -- HARD NO TOGGLE -----------------------------------------------------------
 let hideHardNo = false;
 function toggleHardNo() {
   hideHardNo = !hideHardNo;
@@ -2462,7 +2509,7 @@ function toggleHardNo() {
   doLoadStats();
 }
 
-// ── RE-UNDERWRITE ALL ────────────────────────────────────────────────────────
+// -- RE-UNDERWRITE ALL --------------------------------------------------------
 let rewriteAllRunning = false;
 async function doRewriteAll() {
   if (rewriteAllRunning) return;
@@ -2492,7 +2539,7 @@ async function doRewriteAll() {
   setTimeout(() => { if (btn) btn.textContent = '⚡ All'; }, 3000);
 }
 
-// ── UNIT COUNT HELPER (matches server-side) ─────────────────────────────────
+// -- UNIT COUNT HELPER (matches server-side) ---------------------------------
 function getUnitCount(propertyType) {
   if (!propertyType) return 1;
   const t = propertyType.toLowerCase();
@@ -2505,7 +2552,7 @@ function getUnitCount(propertyType) {
   return 1;
 }
 
-// ── RENTAL LIVE CALCULATOR ────────────────────────────────────────────────────
+// -- RENTAL LIVE CALCULATOR ----------------------------------------------------
 function rnCalc() {
   const g = id => parseFloat(document.getElementById(id)?.value) || 0;
   const fi_arv = (typeof curUW !== 'undefined' && curUW?.arv?.urbanARV) || 0;
@@ -2578,7 +2625,7 @@ function rnCalc() {
     else if (bCf >= 0) strat = 'POSSIBLE HOLD';
   }
 
-  // ── UPDATE UI ──────────────────────────────────────────────────────────────
+  // -- UPDATE UI --------------------------------------------------------------
   const setEl = (id, val, cls) => { const el = document.getElementById(id); if (el) { el.textContent = val; if (cls) el.className = cls; } };
   const fmtN = n => n != null ? '$' + Math.abs(n).toLocaleString() : '—';
   const signedFmt = n => (n >= 0 ? '+' : '-') + fmtN(n);
@@ -2699,7 +2746,7 @@ function rnReset() {
   if (typeof curUW !== 'undefined' && curUW) renderUW(curUW);
 }
 
-// ── OFFER LADDER ──────────────────────────────────────────────────────────────
+// -- OFFER LADDER --------------------------------------------------------------
 function renderOfferLadder(uw) {
   const card = document.getElementById('offer-ladder-card');
   if (!card) return;
@@ -2728,7 +2775,7 @@ function copyOfferLadder() {
   }
 }
 
-// ── WHOLESALER SCORECARDS ─────────────────────────────────────────────────────
+// -- WHOLESALER SCORECARDS -----------------------------------------------------
 var _wsPanelOpen = false;
 function toggleWsPanel() {
   _wsPanelOpen = !_wsPanelOpen;
@@ -2764,7 +2811,7 @@ function renderWholesalerScores() {
   if (!sorted.length) list.innerHTML = '<div style="font-size:10px;color:var(--muted);padding:6px">No deals loaded yet</div>';
 }
 
-// ── OUTCOME TRACKING ─────────────────────────────────────────────────────────
+// -- OUTCOME TRACKING ---------------------------------------------------------
 function showPurchasedForm() {
   if (!curDeal || !curUW) return;
   var m = document.getElementById('purchased-modal');
@@ -2800,7 +2847,88 @@ async function savePurchasedOutcome() {
   } catch(e) { console.error('outcome save error:', e.message); }
 }
 
-// ── HARD NO ACTION ───────────────────────────────────────────────────────────
+// -- SOLD / ARCHIVE ------------------------------------------------------------
+function showSoldForm() {
+  if (!curDeal) return;
+  var m = document.getElementById('sold-modal');
+  if (!m) return;
+  // Pre-fill with estimated sale price (ARV * 96%)
+  var arv = curUW && curUW.arv && curUW.arv.urbanARV || 0;
+  var sp = document.getElementById('sold-price');
+  if (sp && arv) sp.value = Math.round(arv * 0.96);
+  var sc = document.getElementById('sold-cost');
+  if (sc) {
+    var ask = parseFloat(curDeal.askingPrice) || 0;
+    var rehab = curUW && curUW.rehab && curUW.rehab.urbanEstimate || 0;
+    sc.value = ask + rehab > 0 ? Math.round(ask + rehab) : '';
+  }
+  // Live profit preview
+  ['sold-price','sold-cost'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.oninput = updateSoldPreview;
+  });
+  updateSoldPreview();
+  m.style.display = 'flex';
+}
+function updateSoldPreview() {
+  var price = parseFloat(document.getElementById('sold-price') && document.getElementById('sold-price').value) || 0;
+  var cost  = parseFloat(document.getElementById('sold-cost')  && document.getElementById('sold-cost').value)  || 0;
+  var prev = document.getElementById('sold-profit-preview');
+  var num  = document.getElementById('sold-profit-num');
+  if (price > 0 && cost > 0 && prev && num) {
+    var profit = price - cost;
+    prev.style.display = '';
+    num.textContent = (profit >= 0 ? '+' : '') + '$' + Math.round(profit).toLocaleString();
+    num.style.color = profit >= 0 ? 'var(--buy)' : 'var(--red)';
+  } else if (prev) {
+    prev.style.display = 'none';
+  }
+}
+function closeSoldForm() {
+  var m = document.getElementById('sold-modal');
+  if (m) m.style.display = 'none';
+}
+async function saveSold() {
+  if (!curUW || !curDeal) return;
+  var price = parseFloat(document.getElementById('sold-price') && document.getElementById('sold-price').value) || 0;
+  if (!price) { alert('Enter the sale price'); return; }
+  var cost    = parseFloat(document.getElementById('sold-cost')  && document.getElementById('sold-cost').value)  || 0;
+  var buyer   = document.getElementById('sold-buyer')  && document.getElementById('sold-buyer').value  || 'retail';
+  var notes   = document.getElementById('sold-notes')  && document.getElementById('sold-notes').value  || '';
+  var btn = document.getElementById('sold-submit-btn');
+  if (btn) { btn.textContent = 'Archiving...'; btn.disabled = true; }
+  try {
+    var r = await fetch('/api/sold/' + encodeURIComponent(curUW.uid), {
+      method: 'POST',
+      headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ salePrice: price, allInCost: cost, buyerType: buyer, notes: notes, address: curDeal.address, author: author })
+    });
+    if (r.ok) {
+      closeSoldForm();
+      // Remove from local deals array
+      deals = deals.filter(function(d) { return d.address !== curDeal.address; });
+      // Clear current deal view
+      curDeal = null; curUW = null;
+      document.getElementById('dv').style.display = 'none';
+      document.getElementById('main-empty').style.display = '';
+      renderList();
+      doLoadStats();
+      // Flash success banner
+      var banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(60,200,130,.9);color:#000;padding:12px 24px;border-radius:8px;font-weight:700;font-size:14px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+      banner.textContent = 'Deal archived! Brain updated.';
+      document.body.appendChild(banner);
+      setTimeout(function() { document.body.removeChild(banner); }, 3000);
+    } else {
+      if (btn) { btn.textContent = 'Archive Deal'; btn.disabled = false; }
+    }
+  } catch(e) {
+    console.error('sold save:', e);
+    if (btn) { btn.textContent = 'Archive Deal'; btn.disabled = false; }
+  }
+}
+
+// -- HARD NO ACTION -----------------------------------------------------------
 async function doMarkHardNo() {
   if (!curDeal) return;
   const uid = curUW?.uid || curDeal?.uid;
@@ -2831,7 +2959,7 @@ async function doMarkHardNo() {
   }
 }
 
-// ── PHOTOS ───────────────────────────────────────────────────────────────────
+// -- PHOTOS -------------------------------------------------------------------
 function openPhotos() {
   const url = curDeal?.photoLinks || curDeal?.driveLink || curDeal?.allOtherLinks;
   if (url) window.open(url, '_blank', 'noopener');
@@ -2877,7 +3005,7 @@ function updatePhotosUI(deal) {
   }
 }
 
-// ── POSTMESSAGE BRIDGE (for testing) ─────────────────────────────────────────
+// -- POSTMESSAGE BRIDGE (for testing) -----------------------------------------
 window.addEventListener('message', e => {
   if (e.data?.action === 'selectDeal' && e.data.index >= 0 && deals[e.data.index]) selectDeal(deals[e.data.index]);
   if (e.data?.action === 'underwrite') doUnderwrite(true, false);

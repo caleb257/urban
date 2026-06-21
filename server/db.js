@@ -31,6 +31,10 @@ async function initDB() {
       );
       -- Add columns if upgrading existing DB
       ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS county TEXT;
+      ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS sold_at TIMESTAMPTZ;
+      ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS sale_price INTEGER;
+      ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS actual_profit INTEGER;
+      ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS buyer_type TEXT;
       ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS zip TEXT;
       ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS beds SMALLINT;
       ALTER TABLE underwrites ADD COLUMN IF NOT EXISTS sqft INTEGER;
