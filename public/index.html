@@ -539,19 +539,115 @@ a{color:var(--accent)}
 
         <!-- RENTAL -->
         <div class="tc" id="t-rental">
-          <div class="grid">
-            <div class="card">
-              <div class="ct">Rental Metrics</div>
-              <div class="m"><div class="ml">Market Rent</div><div class="mv big" id="rn-rent"></div></div>
-              <div class="m"><div class="ml">Gross Yield</div><div class="mv" id="rn-gy"></div></div>
-              <div class="m"><div class="ml">Net Yield</div><div class="mv" id="rn-ny"></div></div>
-              <div class="m"><div class="ml">Monthly Cash Flow</div><div class="mv" id="rn-cf"></div></div>
-              <div class="m"><div class="ml">Cap Rate</div><div class="mv" id="rn-cap"></div></div>
+
+          <!-- RENTAL VERDICT BANNER -->
+          <div id="rn-verdict-banner" style="display:none;border-radius:6px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;gap:14px;border:1px solid">
+            <span id="rn-verdict-icon" style="font-size:22px"></span>
+            <div style="flex:1">
+              <div id="rn-verdict-label" style="font-size:11px;font-weight:700;letter-spacing:.8px;margin-bottom:2px"></div>
+              <div id="rn-verdict-note" style="font-size:12px;opacity:.8;line-height:1.5"></div>
             </div>
+            <div style="text-align:right">
+              <div id="rn-brrrr-badge" style="display:none;font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;background:rgba(60,200,130,.2);color:var(--buy);border:1px solid rgba(60,200,130,.3)">BRRRR CANDIDATE</div>
+            </div>
+          </div>
+
+          <div class="grid">
+
+            <!-- CARD 1: Market Rent -->
             <div class="card">
-              <div class="ct">Urban's Rental Take</div>
-              <p style="font-size:13px;color:var(--text);line-height:1.7" id="rn-notes"></p>
-              <div style="margin-top:14px"><div class="ml">Worth Considering?</div><div class="mv" id="rn-worth"></div></div>
+              <div class="ct">Market Rent Analysis</div>
+              <div style="text-align:center;padding:8px 0 14px">
+                <div style="font-size:28px;font-weight:700;color:var(--gold)" id="rn-rent">—</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">/month estimated gross rent</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:4px" id="rn-rent-range"></div>
+              </div>
+              <div class="fr"><span class="fl">HUD Fair Market Rent</span><span class="fv" id="rn-hud"></span></div>
+              <div class="fr"><span class="fl">Rent / Sqft</span><span class="fv" id="rn-psf"></span></div>
+              <div class="fr"><span class="fl">Price-to-Rent Ratio</span><span class="fv" id="rn-ptr"></span></div>
+              <div class="fr"><span class="fl">Data Source</span><span class="fv mu" id="rn-source" style="font-size:10px"></span></div>
+              <div class="fr"><span class="fl">Confidence</span><span class="fv" id="rn-conf"></span></div>
+              <div id="rn-rent-comps" style="margin-top:10px;font-size:11px;color:var(--muted)"></div>
+            </div>
+
+            <!-- CARD 2: Income & Expenses -->
+            <div class="card">
+              <div class="ct">Income &amp; Expenses <span style="font-size:10px;font-weight:400;opacity:.5" id="rn-exp-mo-label">(monthly)</span></div>
+              <div style="background:rgba(60,200,130,.06);border-radius:4px;padding:6px 10px;margin-bottom:8px">
+                <div class="fr" style="padding:0"><span class="fl" style="color:var(--buy);font-weight:600">Gross Rent</span><span class="fv g" id="rn-gross"></span></div>
+                <div class="fr" style="padding:0;margin-top:2px"><span class="fl" style="font-size:11px;opacity:.7">Vacancy <span id="rn-vac-rate"></span></span><span class="fv mu" id="rn-vac-loss"></span></div>
+                <div class="fr" style="padding:0;margin-top:2px"><span class="fl" style="font-weight:600">Effective Gross Income</span><span class="fv" id="rn-egi" style="font-weight:700"></span></div>
+              </div>
+              <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:4px">OPERATING EXPENSES</div>
+              <div class="fr"><span class="fl">Property Mgmt <span id="rn-pm-rate" style="font-size:9px;opacity:.6"></span></span><span class="fv r" id="rn-pm"></span></div>
+              <div class="fr"><span class="fl">Property Taxes</span><span class="fv r" id="rn-tax"></span></div>
+              <div class="fr"><span class="fl">Insurance <span style="font-size:9px;opacity:.6">(FL windstorm incl.)</span></span><span class="fv r" id="rn-ins"></span></div>
+              <div class="fr"><span class="fl">Maintenance <span id="rn-maint-note" style="font-size:9px;opacity:.6"></span></span><span class="fv r" id="rn-maint"></span></div>
+              <div class="fr"><span class="fl">CapEx Reserve <span style="font-size:9px;opacity:.6">(roof/HVAC/appliances)</span></span><span class="fv r" id="rn-capex"></span></div>
+              <div class="fr"><span class="fl">HOA</span><span class="fv r" id="rn-hoa"></span></div>
+              <div class="fr"><span class="fl">Lawn / Trash / Utilities</span><span class="fv r" id="rn-util"></span></div>
+              <div class="fr tot"><span class="fl">Total Monthly Expenses</span><span class="fv r" id="rn-exp-tot" style="font-weight:700"></span></div>
+              <hr class="d">
+              <div class="fr" style="padding:6px 0"><span class="fl" style="font-weight:700">Net Operating Income</span><span class="fv" id="rn-noi" style="font-size:16px;font-weight:700"></span></div>
+            </div>
+
+            <!-- CARD 3: Performance -->
+            <div class="card">
+              <div class="ct">Performance Metrics</div>
+              <div class="fr"><span class="fl">Cap Rate</span><span class="fv" id="rn-cap"></span></div>
+              <div class="fr"><span class="fl">Gross Yield</span><span class="fv" id="rn-gy"></span></div>
+              <div class="fr"><span class="fl">Net Yield</span><span class="fv" id="rn-ny"></span></div>
+              <hr class="d">
+              <div class="ct" style="margin-top:8px;font-size:11px">Financing Options</div>
+              <div style="background:rgba(60,120,255,.06);border-radius:4px;padding:8px 10px;margin-top:6px">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">DSCR LOAN <span id="rn-dscr-rate" style="font-weight:400"></span> · 75% LTV</div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Loan Amount</span><span class="fv" id="rn-dscr-loan" style="font-size:11px"></span></div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Monthly Payment</span><span class="fv" id="rn-dscr-pmt" style="font-size:11px"></span></div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px;font-weight:600">Monthly Cash Flow</span><span class="fv" id="rn-dscr-cf" style="font-size:13px;font-weight:700"></span></div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">DSCR</span><span class="fv" id="rn-dscr-ratio" style="font-size:13px;font-weight:700"></span></div>
+              </div>
+              <div style="background:rgba(100,140,255,.05);border-radius:4px;padding:8px 10px;margin-top:6px">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">CONVENTIONAL 30YR <span id="rn-conv-rate" style="font-weight:400"></span> · 80% LTV</div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Down Payment</span><span class="fv" id="rn-conv-dp" style="font-size:11px"></span></div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Monthly Payment</span><span class="fv" id="rn-conv-pmt" style="font-size:11px"></span></div>
+                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px;font-weight:600">Monthly Cash Flow</span><span class="fv" id="rn-conv-cf" style="font-size:13px;font-weight:700"></span></div>
+              </div>
+            </div>
+
+            <!-- CARD 4: BRRRR Analysis -->
+            <div class="card" id="rn-brrrr-card">
+              <div class="ct">BRRRR Analysis</div>
+              <div style="margin-bottom:10px">
+                <div id="rn-brrrr-strategy" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px;display:inline-block"></div>
+              </div>
+              <div class="fr"><span class="fl">ARV (Refi Value)</span><span class="fv y" id="rn-b-arv"></span></div>
+              <div class="fr"><span class="fl">Refi @ 75% LTV</span><span class="fv" id="rn-b-loan"></span></div>
+              <div class="fr"><span class="fl">Total Cash In <span style="font-size:9px;opacity:.6">(purchase+rehab)</span></span><span class="fv" id="rn-b-cashin"></span></div>
+              <div class="fr tot"><span class="fl" style="font-weight:700">Cash Returned at Refi</span><span class="fv" id="rn-b-cashout" style="font-size:16px;font-weight:700"></span></div>
+              <div class="fr" style="background:rgba(60,200,130,.08);border-radius:4px;padding:4px 8px;margin-top:4px">
+                <span class="fl" style="font-weight:700">Cash Left in Deal</span>
+                <span class="fv" id="rn-b-left" style="font-size:14px;font-weight:700"></span>
+              </div>
+              <div id="rn-b-infinite" style="display:none;text-align:center;margin:8px 0;font-size:11px;color:var(--buy);font-weight:700">♾️ INFINITE RETURN — Full cash recycle</div>
+              <hr class="d">
+              <div class="fr"><span class="fl">Refi Payment <span style="font-size:9px;opacity:.6">(30yr @ 7.5%)</span></span><span class="fv" id="rn-b-pmt"></span></div>
+              <div class="fr"><span class="fl" style="font-weight:600">Cash Flow After Refi</span><span class="fv" id="rn-b-cf" style="font-size:14px;font-weight:700"></span></div>
+              <div class="fr"><span class="fl">DSCR After Refi</span><span class="fv" id="rn-b-dscr"></span></div>
+              <div class="fr"><span class="fl">Equity at Refi</span><span class="fv" id="rn-b-equity"></span></div>
+              <div class="fr"><span class="fl">Cash-on-Cash Return</span><span class="fv" id="rn-b-coc"></span></div>
+              <div style="margin-top:10px;font-size:11px;color:var(--muted);font-style:italic;line-height:1.5" id="rn-b-notes"></div>
+              <div style="margin-top:8px;font-size:10px;opacity:.5">⏱ Typical seasoning: 6-12 months before refi</div>
+            </div>
+
+          </div>
+
+          <!-- Urban's Rental Assessment -->
+          <div class="card" style="margin-top:14px">
+            <div class="ct">Urban&#39;s Rental Assessment</div>
+            <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:10px" id="rn-notes"></p>
+            <div class="grid" style="gap:12px">
+              <div class="m"><div class="ml">Worth Holding?</div><div class="mv" id="rn-worth"></div></div>
+              <div class="m"><div class="ml">Worth BRRRR?</div><div class="mv" id="rn-worth-brrrr"></div></div>
             </div>
           </div>
         </div>
@@ -983,17 +1079,6 @@ function renderList() {
       : null;
     const ageLabel = ageDays === null ? '' : ageDays === 0 ? '🟢 Today' : ageDays === 1 ? '🟡 1d' : ageDays <= 3 ? `🟡 ${ageDays}d` : ageDays <= 7 ? `🟠 ${ageDays}d` : `🔴 ${ageDays}d`;
     const staleLabel = d.isStale ? '<span class="stale-badge">⏰ STALE</span>' : '';
-    // Price sanity warning badge
-    let priceSanityBadge = '';
-    if (d.priceSanityFlag) {
-      const msgs = {
-        'ASK_NEAR_OR_ABOVE_ARV': '⚠️ Ask ≈ ARV',
-        'ASK_VS_WS_ARV_MISMATCH': '⚠️ Price?',
-        'PRICE_HIGH_FOR_SQFT': '⚠️ High/sf',
-        'PRICE_TOO_LOW': '⚠️ Price?'
-      };
-      priceSanityBadge = '<span title="' + d.priceSanityFlag + '" style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(255,200,0,.15);color:#ffcc00;border:1px solid rgba(255,200,0,.35)">' + (msgs[d.priceSanityFlag] || '⚠️') + '</span>';
-    }
     // Expiration warning — show if expires within 7 days
     let expiresLabel = '';
     if (d.expires && !d.isStale) {
@@ -1021,7 +1106,6 @@ function renderList() {
         ${ageLabel ? `<span class="di-age">${ageLabel}</span>` : ''}
         ${staleLabel}
         ${expiresLabel}
-        ${priceSanityBadge}
       </div>`;
     el.addEventListener('click', () => selectDeal(d));
     list.appendChild(el);
@@ -1619,53 +1703,171 @@ function renderUW(uw) {
   set('fi-min', _meets ? ('\u2705 YES ('+_m3+')') : ('\u274c NO ('+_m3+' needed)'));
   cls('fi-min', 'fv ' + (_meets ? 'g' : 'r'));
 
-  // RENTAL TAB
+  // RENTAL TAB — full BRRRR analysis
   const rn = uw.rental || {};
-  set('rn-rent', rn.marketRent ? fmt(rn.marketRent)+'/mo' : '—');
-  set('rn-gy', pct(rn.grossYield));
-  set('rn-ny', pct(rn.netYield));
-  const cf = rn.cashFlow;
-  set('rn-cf', cf != null ? fmt(cf)+'/mo' : '—');
-  cls('rn-cf', `mv ${cf>=0?'g':'r'}`);
-  set('rn-cap', pct(rn.capRate));
-  set('rn-notes', rn.notes || '');
-  set('rn-worth', rn.worthConsidering ? '✅ Worth considering as rental' : '❌ Flip is stronger exit');
-  cls('rn-worth', `mv ${rn.worthConsidering?'g':'mu'}`);
+  const rnMR = rn.marketRent || {};
+  const rnInc = rn.income || {};
+  const rnExp = rn.expenses || {};
+  const rnNoi = rn.noi || {};
+  const rnPerf = rn.performance || {};
+  const rnDebt = rn.debtService || {};
+  const rnDscr = rnDebt.dscrLoan || {};
+  const rnConv = rnDebt.conventional30 || {};
+  const rnB = rn.brrrr || {};
+  const fi_arv2 = uw.arv?.urbanARV || 0;
+  const fi_ask2 = parseFloat(curDeal?.askingPrice) || 0;
+  const fi_rehab2 = uw.rehab?.urbanEstimate || 0;
 
-  // NEW CONSTRUCTION TAB
-  const nc = uw.newConstruction || {};
-  const ncNaCard2 = document.getElementById('nc-na-card');
-  const ncAppCard2 = document.getElementById('nc-applicable-card');
-  const ncEmptyCard2 = document.getElementById('nc-empty-card');
-  const _ncNA = nc.applicable === false || nc.notApplicableReason;
-  const _ncHasData = nc.lotValue || nc.estimatedBuildCost || nc.estimatedNewARV;
-  if (_ncNA && ncNaCard2) {
-    ncNaCard2.style.display = '';
-    if (ncAppCard2) ncAppCard2.style.display = 'none';
-    if (ncEmptyCard2) ncEmptyCard2.style.display = 'none';
-    const naR = document.getElementById('nc-na-reason');
-    if (naR) naR.textContent = nc.notApplicableReason || 'Existing structure fix-and-flip — not a teardown or infill lot candidate. New construction analysis not applicable to this deal.';
-    const nbEl = document.getElementById('nc-nearby');
-    if (nbEl) nbEl.textContent = nc.nearbyNewConstruction || 'Not analyzed. Verify active new builds in zip code on Zillow/MLS — competing new inventory affects pricing and DOM for flips.';
-  } else if (_ncHasData && ncAppCard2) {
-    ncAppCard2.style.display = '';
-    if (ncNaCard2) ncNaCard2.style.display = 'none';
-    if (ncEmptyCard2) ncEmptyCard2.style.display = 'none';
-    set('nc-lot', fmt(nc.lotValue));
-    set('nc-equity', nc.lotEquityRequired ? fmt(nc.lotEquityRequired)+' cash' : nc.lotValue ? fmt(Math.round(nc.lotValue*0.5))+' cash (est.)' : '—');
-    set('nc-build', nc.estimatedBuildCost ? fmt(nc.estimatedBuildCost)+(nc.buildCostPerSqft?' ($'+nc.buildCostPerSqft+'/sf)':'') : '—');
-    set('nc-loan', nc.constructionLoanAmount ? fmt(nc.constructionLoanAmount)+' @ 11.5%' : '—');
-    set('nc-interest', fmt(nc.estimatedInterestCost));
-    set('nc-arv', fmt(nc.estimatedNewARV));
-    if (document.getElementById('nc-profit')) { const _p=nc.netProfitNewBuild; const el=document.getElementById('nc-profit'); if(el){ el.textContent=_p!==undefined?fmt(_p):'—'; if(_p!==undefined) el.className='mv '+(_p>50000?'g':_p>0?'y':'r'); } }
-    set('nc-notes', nc.notes || '');
-  } else {
-    if (ncEmptyCard2) ncEmptyCard2.style.display = '';
-    if (ncNaCard2) ncNaCard2.style.display = 'none';
-    if (ncAppCard2) ncAppCard2.style.display = 'none';
+  // Market rent fields
+  const estRent = rnMR.estimated || rn.marketRent || 0;
+  set('rn-rent', estRent ? fmt(estRent) + '/mo' : '—');
+  set('rn-rent-range', (rnMR.lowEnd && rnMR.highEnd) ? 'Range: ' + fmt(rnMR.lowEnd) + ' – ' + fmt(rnMR.highEnd) : '');
+  set('rn-hud', rnMR.hudFMR ? fmt(rnMR.hudFMR) + '/mo (HUD FMR)' : 'Not retrieved');
+  set('rn-psf', rnMR.rentPerSqft ? '$' + parseFloat(rnMR.rentPerSqft).toFixed(2) + '/sf' : '—');
+  const ptr = rnPerf.priceToRentRatio || (fi_arv2 && estRent ? (fi_arv2 / (estRent * 12)).toFixed(1) : null);
+  if (ptr) { set('rn-ptr', ptr + 'x'); const el = document.getElementById('rn-ptr'); if(el) el.className = 'fv ' + (parseFloat(ptr) < 15 ? 'g' : parseFloat(ptr) < 20 ? 'y' : 'r'); }
+  set('rn-source', rnMR.source || 'Estimated');
+  const conf = rnMR.confidence || '';
+  set('rn-conf', conf); if (document.getElementById('rn-conf')) document.getElementById('rn-conf').className = 'fv ' + (conf==='HIGH'?'g':conf==='MEDIUM'?'y':'mu');
+  // Rent comps
+  if (rnMR.comps && rnMR.comps.length && document.getElementById('rn-rent-comps')) {
+    document.getElementById('rn-rent-comps').innerHTML = '<div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px">RENTAL COMPS</div>' +
+      rnMR.comps.slice(0,4).map(c => '<div style="padding:2px 0">' + (c.address||'Nearby') + ' · ' + (c.beds||'?') + 'br · ' + fmt(c.rent) + '/mo</div>').join('');
   }
 
-  // FLAGS TAB
+  // Income
+  set('rn-gross', fmt(rnInc.monthlyGrossRent || estRent));
+  set('rn-vac-rate', rnInc.vacancyRate ? '(' + Math.round(rnInc.vacancyRate * 100) + '% vacancy)' : '(7%)');
+  const vacLoss = rnInc.vacancyLoss || (estRent * (rnInc.vacancyRate || 0.07));
+  set('rn-vac-loss', '− ' + fmt(Math.round(vacLoss)));
+  const egi = rnInc.effectiveGrossIncome || (estRent - vacLoss);
+  set('rn-egi', fmt(Math.round(egi)));
+
+  // Expenses
+  set('rn-pm-rate', rnExp.propertyManagement?.rate ? '(' + Math.round(rnExp.propertyManagement.rate * 100) + '%)' : '(9%)');
+  set('rn-pm', fmt(rnExp.propertyManagement?.monthly || Math.round(estRent * 0.09)));
+  set('rn-tax', fmt(rnExp.propertyTaxes?.monthly || (fi_arv2 ? Math.round(fi_arv2 * 0.012 / 12) : 0)));
+  set('rn-ins', fmt(rnExp.insurance?.monthly || 250));
+  set('rn-maint-note', rnExp.maintenance?.annual ? '' : '($1/sf/yr)');
+  set('rn-maint', fmt(rnExp.maintenance?.monthly || Math.round((parseFloat(curDeal?.sqft)||1200) / 12)));
+  set('rn-capex', fmt(rnExp.capexReserve?.monthly || Math.round(estRent * 0.06)));
+  set('rn-hoa', fmt(rnExp.hoa?.monthly || parseFloat(curDeal?.hoaFee) || 0));
+  set('rn-util', fmt((rnExp.utilities?.monthly || 0) + (rnExp.lawnTrash?.monthly || 80)));
+  const totalExp = rnExp.totalMonthly || (
+    (rnExp.propertyManagement?.monthly || Math.round(estRent * 0.09)) +
+    (rnExp.propertyTaxes?.monthly || (fi_arv2 ? Math.round(fi_arv2 * 0.012 / 12) : 0)) +
+    (rnExp.insurance?.monthly || 250) +
+    (rnExp.maintenance?.monthly || Math.round((parseFloat(curDeal?.sqft)||1200) / 12)) +
+    (rnExp.capexReserve?.monthly || Math.round(estRent * 0.06)) +
+    (rnExp.hoa?.monthly || parseFloat(curDeal?.hoaFee) || 0) +
+    (rnExp.utilities?.monthly || 0) + 80
+  );
+  set('rn-exp-tot', '− ' + fmt(Math.round(totalExp)));
+
+  // NOI
+  const noi = rnNoi.monthly || Math.round(egi - totalExp);
+  set('rn-noi', (noi >= 0 ? '+' : '') + fmt(noi) + '/mo');
+  document.getElementById('rn-noi').style.color = noi > 0 ? 'var(--buy)' : 'var(--red)';
+
+  // Performance
+  const noiAnnual = noi * 12;
+  const capRate = rnPerf.capRate || (fi_arv2 ? (noiAnnual / fi_arv2 * 100).toFixed(2) : null);
+  const gy = rnPerf.grossYield || (fi_arv2 && estRent ? (estRent * 12 / fi_arv2 * 100).toFixed(2) : null);
+  const ny = rnPerf.netYield || (fi_arv2 ? (noiAnnual / fi_arv2 * 100).toFixed(2) : null);
+  set('rn-cap', capRate ? capRate + '%' : '—');
+  if (document.getElementById('rn-cap')) document.getElementById('rn-cap').className = 'fv ' + (parseFloat(capRate) >= 7 ? 'g' : parseFloat(capRate) >= 5 ? 'y' : 'r');
+  set('rn-gy', gy ? gy + '%' : '—');
+  set('rn-ny', ny ? ny + '%' : '—');
+
+  // DSCR Loan
+  const dscrRate = rnDscr.rate || 8.0;
+  set('rn-dscr-rate', '@ ' + dscrRate + '%');
+  const dscrLoan = rnDscr.loanAmount || (fi_arv2 * 0.75);
+  set('rn-dscr-loan', fmt(Math.round(dscrLoan)));
+  const dscrPmt = rnDscr.monthlyPayment || Math.round(dscrLoan * (dscrRate/100/12) / (1 - Math.pow(1 + dscrRate/100/12, -360)));
+  set('rn-dscr-pmt', fmt(dscrPmt));
+  const dscrCf = rnDscr.cashFlow != null ? rnDscr.cashFlow : Math.round(noi - dscrPmt);
+  set('rn-dscr-cf', (dscrCf >= 0 ? '+' : '') + fmt(dscrCf) + '/mo');
+  document.getElementById('rn-dscr-cf').style.color = dscrCf >= 0 ? 'var(--buy)' : 'var(--red)';
+  const dscrRatio = rnDscr.dscr || (dscrPmt > 0 ? (noi / dscrPmt).toFixed(2) : null);
+  set('rn-dscr-ratio', dscrRatio ? dscrRatio + 'x' + (parseFloat(dscrRatio) >= 1.25 ? ' ✅' : ' ⚠️ <1.25') : '—');
+  document.getElementById('rn-dscr-ratio').style.color = parseFloat(dscrRatio) >= 1.25 ? 'var(--buy)' : parseFloat(dscrRatio) >= 1.0 ? 'var(--review)' : 'var(--red)';
+
+  // Conventional
+  const convRate = rnConv.rate || 7.25;
+  set('rn-conv-rate', '@ ' + convRate + '%');
+  const convLoan = rnConv.loanAmount || (fi_arv2 * 0.80);
+  set('rn-conv-dp', fmt(Math.round(fi_arv2 * 0.20)));
+  const convPmt = rnConv.monthlyPayment || Math.round(convLoan * (convRate/100/12) / (1 - Math.pow(1 + convRate/100/12, -360)));
+  set('rn-conv-pmt', fmt(convPmt));
+  const convCf = rnConv.cashFlow != null ? rnConv.cashFlow : Math.round(noi - convPmt);
+  set('rn-conv-cf', (convCf >= 0 ? '+' : '') + fmt(convCf) + '/mo');
+  document.getElementById('rn-conv-cf').style.color = convCf >= 0 ? 'var(--buy)' : 'var(--red)';
+
+  // BRRRR
+  const totalCashIn = rnB.totalCashInvested || (fi_ask2 + fi_rehab2);
+  const refiLoan = rnB.refiLoanAmount || (fi_arv2 * 0.75);
+  const cashOut = rnB.cashReturnedAtRefi || Math.round(refiLoan - (totalCashIn - fi_rehab2)); // rough: refi covers purchase
+  const cashLeft = rnB.cashLeftInDeal != null ? rnB.cashLeftInDeal : Math.round(totalCashIn - refiLoan);
+  const infiniteReturn = rnB.infiniteReturn || cashLeft <= 0;
+  const refiPmt = rnB.refiMonthlyPayment || dscrPmt; // reuse DSCR payment
+  const bCf = rnB.cashFlowAfterRefi != null ? rnB.cashFlowAfterRefi : Math.round(noi - refiPmt);
+  const bDscr = rnB.dscrAfterRefi || (refiPmt > 0 ? (noi / refiPmt).toFixed(2) : null);
+  const bEquity = rnB.equityAtRefi || Math.round(fi_arv2 - refiLoan);
+  const bCoc = (infiniteReturn || cashLeft <= 0) ? '∞' : (bCf * 12 / cashLeft * 100).toFixed(1) + '%';
+
+  set('rn-b-arv', fmt(fi_arv2 || rnB.refiArv));
+  set('rn-b-loan', fmt(Math.round(refiLoan)));
+  set('rn-b-cashin', fmt(Math.round(totalCashIn)));
+  set('rn-b-cashout', '+' + fmt(Math.round(Math.max(0, cashOut))));
+  set('rn-b-left', infiniteReturn ? '~$0 (full recycle)' : fmt(Math.round(cashLeft)));
+  document.getElementById('rn-b-left').style.color = infiniteReturn || cashLeft <= 0 ? 'var(--buy)' : cashLeft < totalCashIn * 0.3 ? 'var(--review)' : 'var(--text)';
+  if (document.getElementById('rn-b-infinite')) document.getElementById('rn-b-infinite').style.display = infiniteReturn ? '' : 'none';
+  set('rn-b-pmt', fmt(refiPmt));
+  set('rn-b-cf', (bCf >= 0 ? '+' : '') + fmt(bCf) + '/mo');
+  document.getElementById('rn-b-cf').style.color = bCf >= 100 ? 'var(--buy)' : bCf >= 0 ? 'var(--review)' : 'var(--red)';
+  set('rn-b-dscr', bDscr ? bDscr + 'x' : '—');
+  set('rn-b-equity', fmt(bEquity));
+  set('rn-b-coc', bCoc);
+
+  // Strategy badge
+  const strategyEl = document.getElementById('rn-brrrr-strategy');
+  if (strategyEl) {
+    const strat = rnB.strategy || (infiniteReturn ? 'FULL BRRRR' : cashLeft < totalCashIn * 0.3 ? 'PARTIAL BRRRR' : 'NOT VIABLE');
+    const stratColor = strat.includes('FULL') ? 'rgba(60,200,130,.15)' : strat.includes('PARTIAL') ? 'rgba(255,160,32,.12)' : 'rgba(120,120,120,.1)';
+    const stratBorder = strat.includes('FULL') ? 'var(--buy)' : strat.includes('PARTIAL') ? 'var(--review)' : 'var(--muted)';
+    strategyEl.textContent = strat;
+    strategyEl.style.background = stratColor;
+    strategyEl.style.color = strat.includes('FULL') ? 'var(--buy)' : strat.includes('PARTIAL') ? 'var(--review)' : 'var(--muted)';
+    strategyEl.style.border = '1px solid ' + stratBorder;
+  }
+  set('rn-b-notes', rnB.notes || '');
+
+  // Verdict banner
+  const rnVerdict = rn.rentalVerdict || (rn.worthConsidering ? 'POSSIBLE HOLD' : 'FLIP ONLY');
+  const vBanner = document.getElementById('rn-verdict-banner');
+  if (vBanner) {
+    vBanner.style.display = 'flex';
+    const vColors = {'STRONG HOLD': {bg:'rgba(60,200,130,.1)',border:'var(--buy)'}, 'BRRRR CANDIDATE': {bg:'rgba(60,200,130,.08)',border:'var(--buy)'}, 'POSSIBLE HOLD': {bg:'rgba(255,160,32,.08)',border:'var(--review)'}, 'FLIP ONLY': {bg:'rgba(120,120,120,.06)',border:'var(--muted)'}};
+    const vc = vColors[rnVerdict] || vColors['FLIP ONLY'];
+    vBanner.style.background = vc.bg; vBanner.style.borderColor = vc.border;
+    const icons = {'STRONG HOLD':'🏠','BRRRR CANDIDATE':'♻️','POSSIBLE HOLD':'🤔','FLIP ONLY':'🔨'};
+    set('rn-verdict-icon', icons[rnVerdict] || '📊');
+    set('rn-verdict-label', rnVerdict);
+    document.getElementById('rn-verdict-label').style.color = vc.border;
+    set('rn-verdict-note', rn.notes || '');
+    const brrrrBadge = document.getElementById('rn-brrrr-badge');
+    if (brrrrBadge) brrrrBadge.style.display = (rn.worthBRRRR || rnVerdict.includes('BRRRR')) ? '' : 'none';
+  }
+
+  // Worth
+  set('rn-worth', rn.worthConsidering ? '✅ YES' : '❌ NO');
+  if (document.getElementById('rn-worth')) document.getElementById('rn-worth').className = 'mv ' + (rn.worthConsidering ? 'g' : 'r');
+  set('rn-worth-brrrr', rn.worthBRRRR ? '✅ YES' : '❌ NO');
+  if (document.getElementById('rn-worth-brrrr')) document.getElementById('rn-worth-brrrr').className = 'mv ' + (rn.worthBRRRR ? 'g' : 'r');
+  set('rn-notes', rn.notes || '');
+
+// FLAGS TAB
   const flagEl = $('flags-list');
   flagEl.innerHTML = '';
   const flagsEmpty = $('flags-empty');
