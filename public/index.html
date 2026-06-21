@@ -1845,8 +1845,15 @@ function renderUW(uw) {
   if (_srcNote) {
     const _src = rnMR.source || 'AI estimate';
     const _conf = rnMR.confidence || '';
-    const hudStr = rnMR.hudFMR ? ' · HUD FMR: ' + (rnMR.hudFMR > 500 ? '$' + rnMR.hudFMR.toLocaleString() : rnMR.hudFMR) + '/mo' : '';
-    _srcNote.textContent = 'Source: ' + _src + (_conf ? ' · ' + _conf + ' confidence' : '') + hudStr + ' · Edit above to override';
+    // Show unit mix if available
+    let mixStr = '';
+    if (rnMR.unitMix && rnMR.rentByUnit && rnMR.unitMix.length > 1) {
+      const parts = rnMR.unitMix.map((br, i) => br + 'BR @ $' + (rnMR.rentByUnit[i]||'?').toLocaleString());
+      mixStr = ' · ' + parts.join(' + ') + ' = $' + (rnMR.estimated||0).toLocaleString() + ' total';
+    } else if (rnMR.hudFMR) {
+      mixStr = ' · HUD FMR: $' + rnMR.hudFMR.toLocaleString() + '/mo';
+    }
+    _srcNote.textContent = 'Source: ' + _src + (_conf ? ' (' + _conf + ')' : '') + mixStr + ' · Edit above to override';
   }
 
   // HUD FMR + assessment fields
@@ -2445,8 +2452,19 @@ function rnCalc() {
 
   // Hero numbers
   setEl('rn-hero-rent', gross > 0 ? fmtN(gross) + '/mo' : '—');
-  if (units > 1) setEl('rn-hero-rent-note', fmtN(rentPU) + '/unit × ' + units + ' units');
-  else document.getElementById('rn-hero-rent-note') && (document.getElementById('rn-hero-rent-note').textContent = '/month');
+  if (units > 1) {
+    // Show unit mix breakdown if available
+    const _mix = (typeof curUW !== 'undefined' && curUW?.rental?.marketRent?.unitMix);
+    const _rentsByUnit = (typeof curUW !== 'undefined' && curUW?.rental?.marketRent?.rentByUnit);
+    if (_mix && _rentsByUnit && _mix.length > 1) {
+      const _mixStr = _mix.map((br, i) => br + 'BR:$' + (_rentsByUnit[i]||0).toLocaleString()).join(' + ');
+      setEl('rn-hero-rent-note', _mixStr);
+    } else {
+      setEl('rn-hero-rent-note', fmtN(rentPU) + '/unit × ' + units + ' units');
+    }
+  } else {
+    document.getElementById('rn-hero-rent-note') && (document.getElementById('rn-hero-rent-note').textContent = '/month');
+  }
 
   const heroCf = document.getElementById('rn-hero-cf');
   if (heroCf) { heroCf.textContent = dscrCf !== 0 ? signedFmt(dscrCf) + '/mo' : '—'; heroCf.style.color = cfColor(dscrCf); }
