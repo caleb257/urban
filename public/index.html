@@ -448,10 +448,8 @@ a{color:var(--accent)}
             <div class="fr"><span class="fl">Urban's Estimate</span><span class="fv" id="rh-ur"></span></div>
             <div class="fr"><span class="fl">Confidence</span><span class="fv" id="rh-conf"></span></div>
           </div>
-          <div class="card">
-            <div class="ct">Override Rehab</div>
-            <div class="ov-row"><span class="ov-lbl">New Rehab: $</span><input type="number" class="ov-input" id="ov-rehab-in" placeholder="45000"><button class="ov-btn" id="btn-ov-rehab">Apply & Recalc</button></div>
-          </div>
+                 <!-- hidden inputs for back-compat -->
+          <input type="hidden" id="ov-rehab-in">
         </div>
 
         <!-- FINANCIALS -->
@@ -1724,21 +1722,50 @@ function renderUW(uw) {
       contingency: '(10% buffer on scoped work)',
       permits: '(required for any permitted work)'
     };
+    // Build editable line items — each row has an input so Caleb can adjust any line
+    const addRow = (key, label, val, hint) => {
+      const row = document.createElement('div');
+      row.className = 'rr';
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)';
+      row.innerHTML =
+        '<span class="rn" style="flex:1;font-size:12px">' + label +
+          (hint ? ' <span style="font-size:10px;opacity:.45;font-style:italic">' + hint + '</span>' : '') +
+        '</span>' +
+        '<span style="color:var(--muted);font-size:12px">$</span>' +
+        '<input type="number" data-key="' + key + '" value="' + Math.round(val) + '" min="0" step="500" ' +
+          'style="width:82px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);' +
+          'padding:4px 7px;font-size:13px;font-weight:600;text-align:right;font-family:var(--mono)" ' +
+          'oninput="rehabCalc()">';
+      liEl.appendChild(row);
+      tot += val;
+    };
+
     lineOrder.forEach(([k, label]) => {
       const vv = items[k];
-      if (!vv) return; tot += vv;
-      const ctx = contextMap[k] || '';
-      liEl.innerHTML += '<div class="rr"><span class="rn">' + label + (ctx ? ' <span style="font-size:10px;opacity:.5;font-style:italic">' + ctx + '</span>' : '') + '</span><span class="rv">' + fmt(vv) + '</span></div>';
+      if (!vv) return;
+      addRow(k, label, vv, contextMap[k] || '');
     });
-    // Catch any extra keys not in the order map
+    // Catch any extra keys
     Object.entries(items).forEach(([k, vv]) => {
       if (!vv) return;
-      const alreadyShown = lineOrder.some(([key]) => key === k);
-      if (!alreadyShown) { tot += vv; liEl.innerHTML += '<div class="rr"><span class="rn">' + k.replace(/_/g,' ') + '</span><span class="rv">' + fmt(vv) + '</span></div>'; }
+      if (!lineOrder.some(([key]) => key === k)) addRow(k, k.replace(/_/g,' '), vv, '');
     });
+
+    // TOTAL row with live-updating span
+    const totRow = document.createElement('div');
+    totRow.className = 'rt';
+    totRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-top:4px';
     const rng2 = uw.rehab?.urbanEstimateRange;
     const rngStr = rng2 ? ' <span style="font-size:10px;opacity:.5;font-style:italic">range ' + fmt(rng2.low) + ' – ' + fmt(rng2.high) + '</span>' : '';
-    liEl.innerHTML += '<div class="rt"><span class="rn">TOTAL' + rngStr + '</span><span class="rv">' + fmt(tot) + '</span></div>';
+    totRow.innerHTML = '<span class="rn" style="font-weight:700">TOTAL' + rngStr + '</span><span id="rh-live-total" style="font-size:16px;font-weight:800;color:var(--gold)">' + fmt(tot) + '</span>';
+    liEl.appendChild(totRow);
+
+    // Apply button — sends updated totals to server
+    const applyRow = document.createElement('div');
+    applyRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)';
+    applyRow.innerHTML = '<button onclick="rehabReset()" style="font-size:11px;padding:5px 12px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">↺ Reset</button>' +
+      '<button onclick="rehabApply()" id="rh-apply-btn" style="font-size:11px;padding:5px 14px;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.4);border-radius:4px;color:var(--gold);font-weight:700;cursor:pointer">✓ Apply Changes</button>';
+    liEl.appendChild(applyRow);
   }
   const rng = uw.rehab?.urbanEstimateRange;
   set('rehab-rng', rng ? `Range: ${fmt(rng.low)} – ${fmt(rng.high)}` : '');
@@ -2395,6 +2422,66 @@ function getUnitCount(propertyType) {
   if (n) return Math.min(parseInt(n[1]), 20);
   if (t.includes('multi')) return 2;
   return 1;
+}
+
+// ── REHAB LIVE CALCULATOR ─────────────────────────────────────────────────────
+function rehabCalc() {
+  const inputs = document.querySelectorAll('#rehab-li input[data-key]');
+  let tot = 0;
+  inputs.forEach(inp => { tot += parseFloat(inp.value) || 0; });
+  const totEl = document.getElementById('rh-live-total');
+  if (totEl) { totEl.textContent = '$' + Math.round(tot).toLocaleString(); }
+  // Also update the override input so Apply picks it up
+  const ovIn = document.getElementById('ov-rehab-in');
+  if (ovIn) ovIn.value = Math.round(tot);
+  // Update rh-ur display
+  const rhUr = document.getElementById('rh-ur');
+  if (rhUr) rhUr.textContent = '$' + Math.round(tot).toLocaleString();
+}
+
+async function rehabApply() {
+  if (!curUW) return;
+  const inputs = document.querySelectorAll('#rehab-li input[data-key]');
+  let tot = 0;
+  const newItems = {};
+  inputs.forEach(inp => {
+    const val = parseFloat(inp.value) || 0;
+    if (val > 0) { newItems[inp.dataset.key] = val; tot += val; }
+  });
+  const btn = document.getElementById('rh-apply-btn');
+  if (btn) { btn.textContent = '⏳ Saving...'; btn.style.opacity = '.6'; }
+  const uid = curUW.uid;
+  try {
+    const r = await fetch('/api/override/' + encodeURIComponent(uid), {
+      method: 'POST',
+      headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field: 'rehab', value: tot, lineItems: newItems, author })
+    });
+    if (r.ok) {
+      curUW = await r.json();
+      // Update brain if significantly different from AI estimate
+      const origEst = curUW.rehab?.urbanEstimate || tot;
+      if (Math.abs(tot - origEst) > 2000) {
+        const addr = curDeal?.address || '';
+        console.log('[REHAB] Manual override saved: $' + tot.toLocaleString() + ' for ' + addr);
+      }
+      renderUW(curUW);
+      if (btn) { btn.textContent = '✅ Saved'; setTimeout(() => { if(btn) btn.textContent = '✓ Apply Changes'; btn.style.opacity='1'; }, 2000); }
+    }
+  } catch(e) {
+    if (btn) { btn.textContent = '✓ Apply Changes'; btn.style.opacity = '1'; }
+  }
+}
+
+function rehabReset() {
+  if (!curUW) return;
+  // Repopulate from original AI estimates
+  const items = curUW.rehab?.lineItems || {};
+  document.querySelectorAll('#rehab-li input[data-key]').forEach(inp => {
+    const orig = items[inp.dataset.key];
+    if (orig != null) inp.value = Math.round(orig);
+  });
+  rehabCalc();
 }
 
 // ── RENTAL LIVE CALCULATOR ────────────────────────────────────────────────────
