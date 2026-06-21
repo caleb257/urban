@@ -706,9 +706,16 @@ a{color:var(--accent)}
 
     <div style="background:var(--bg2);border-radius:6px;padding:10px 12px">
       <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">💰 WHAT YOU PUT IN</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:12px;color:var(--muted)">Purchase price</span>
-        <span id="rn-b-purchase-2" style="font-size:13px;font-weight:600">—</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <div style="font-size:12px;color:var(--muted)">Purchase price</div>
+          <div style="font-size:10px;color:var(--muted);opacity:.6">Edit to model different offer</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="color:var(--muted);font-size:12px">$</span>
+          <input id="rn-in-purchase" type="number" placeholder="0" oninput="rnCalc()"
+            style="width:95px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--gold);padding:5px 8px;font-size:14px;font-weight:700;text-align:right">
+        </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div>
@@ -748,13 +755,16 @@ a{color:var(--accent)}
     <div style="border-top:2px solid var(--border2);padding-top:12px;margin-top:4px">
       <div style="display:flex;justify-content:space-between;align-items:center" id="rn-cash-left-row">
         <div>
-          <div style="font-size:12px;font-weight:700">Cash left in deal</div>
-          <div style="font-size:10px;color:var(--muted)">Goal: $0 or less ↓</div>
+          <div style="font-size:12px;font-weight:700" id="rn-left-label">Cash left in deal</div>
+          <div style="font-size:10px;color:var(--muted)" id="rn-left-sublabel">Goal: $0 or less ↓</div>
         </div>
         <span id="rn-b-left" style="font-size:22px;font-weight:900">—</span>
       </div>
       <div id="rn-b-infinite" style="display:none;margin-top:8px;text-align:center;font-size:13px;font-weight:700;color:var(--buy);background:rgba(60,200,130,.1);border:1px solid rgba(60,200,130,.3);border-radius:6px;padding:8px">
-        ♾️ FULL BRRRR — GOAL HIT. All cash out, property cash flows free.
+        ♾️ FULL BRRRR — All cash out + property cash flows free.
+      </div>
+      <div id="rn-b-profit" style="display:none;margin-top:8px;text-align:center;font-size:13px;font-weight:700;color:var(--buy);background:rgba(60,200,130,.12);border:1px solid rgba(60,200,130,.4);border-radius:6px;padding:10px">
+        🏆 BRRRR + PROFIT — You pull out <span id="rn-b-profit-amt" style="font-size:16px"></span> MORE than you put in.
       </div>
     </div>
 
@@ -1927,15 +1937,17 @@ function renderUW(uw) {
   }
 
   // Static BRRRR fields from ARV/deal
-  set('rn-b-purchase', fmt(fi_ask3));
   set('rn-b-arv', fmt(fi_arv3));
+  // Editable purchase price — lets Caleb model different offer prices
+  const _rnPurch = (id) => { const el = document.getElementById(id); if (el && !el._userEdited) el.value = fi_ask3 || ''; };
+  _rnPurch('rn-in-purchase');
   // Rental rehab default: 40% of flip — just make it rentable, not retail-ready
   const _rnRehabDef = rn.brrrr?.rentalRehab || Math.round(fi_reh3 * 0.40);
   const _rnEl = document.getElementById('rn-in-rehab');
   if (_rnEl && !_rnEl._userEdited) _rnEl.value = _rnRehabDef || '';
 
   // Track user edits so we don't overwrite them
-  ['rn-in-rent-pu','rn-in-units','rn-in-vac','rn-in-pm','rn-in-tax','rn-in-ins','rn-in-maint','rn-in-capex','rn-in-other','rn-in-dscr-rate','rn-in-dscr-ltv','rn-in-conv-rate','rn-in-conv-ltv','rn-in-refi-ltv','rn-in-refi-rate'].forEach(id => {
+  ['rn-in-rent-pu','rn-in-units','rn-in-vac','rn-in-pm','rn-in-tax','rn-in-ins','rn-in-maint','rn-in-capex','rn-in-other','rn-in-dscr-rate','rn-in-dscr-ltv','rn-in-conv-rate','rn-in-conv-ltv','rn-in-refi-ltv','rn-in-refi-rate','rn-in-rehab','rn-in-purchase'].forEach(id => {
     const el = document.getElementById(id);
     if (el && !el._hasListener) {
       el._hasListener = true;
@@ -2470,8 +2482,9 @@ function rnCalc() {
   const refiLtv  = (g('rn-in-refi-ltv') || 75) / 100;
   const refiRate = g('rn-in-refi-rate') || 7.5;
   const refiLoan = Math.round(fi_arv * refiLtv);
+  const rnPurchase = g('rn-in-purchase') || fi_ask;
   const rnRehab  = g('rn-in-rehab') || Math.round(fi_reh * 0.40);
-  const cashIn   = fi_ask + rnRehab;
+  const cashIn   = rnPurchase + rnRehab;
   const cashOut  = Math.round(refiLoan); // cash pulled out at refi (covers purchase)
   const cashLeft = Math.round(cashIn - refiLoan);
   const infinite = cashLeft <= 0;
@@ -2537,16 +2550,49 @@ function rnCalc() {
   // BRRRR
   setEl('rn-b-cashin',   fmtN(cashIn));
   setEl('rn-b-arv',      fmtN(fi_arv));
+  // Keep purchase input in sync if user hasn't edited it
+  const _piEl = document.getElementById('rn-in-purchase');
+  if (_piEl && !_piEl._userEdited && rnPurchase > 0) _piEl.value = rnPurchase;
   setEl('rn-b-refi-loan', fmtN(refiLoan));
   const coEl = document.getElementById('rn-b-cashout');
   if (coEl) { coEl.textContent = fmtN(cashOut); coEl.style.color = 'var(--buy)'; }
   const clEl = document.getElementById('rn-b-left');
   if (clEl) {
-    clEl.textContent = infinite ? '♾️  $0 — GOAL ✅' : fmtN(Math.max(0, cashLeft));
-    clEl.style.color = infinite ? 'var(--buy)' : cashLeft < cashIn*0.25 ? 'var(--buy)' : cashLeft < cashIn*0.5 ? 'var(--review)' : 'var(--red)';
+    if (profit) {
+      clEl.textContent = '+' + fmtN(profitAmt);
+      clEl.style.color = 'var(--buy)';
+    } else if (infinite) {
+      clEl.textContent = '♾️  $0';
+      clEl.style.color = 'var(--buy)';
+    } else {
+      clEl.textContent = fmtN(Math.max(0, cashLeft));
+      clEl.style.color = cashLeft < cashIn*0.25 ? 'var(--buy)' : cashLeft < cashIn*0.5 ? 'var(--review)' : 'var(--red)';
+    }
   }
+  const profit = cashIn > 0 && refiLoan > cashIn; // pulled out MORE than put in
+  const profitAmt = profit ? Math.round(refiLoan - cashIn) : 0;
+
   const infEl = document.getElementById('rn-b-infinite');
-  if (infEl) infEl.style.display = infinite ? '' : 'none';
+  if (infEl) infEl.style.display = (infinite && !profit) ? '' : 'none';
+
+  const profEl = document.getElementById('rn-b-profit');
+  const profAmtEl = document.getElementById('rn-b-profit-amt');
+  if (profEl) profEl.style.display = profit ? '' : 'none';
+  if (profAmtEl) profAmtEl.textContent = profit ? fmtN(profitAmt) : '';
+
+  // Update cash-left labels
+  const leftLabel = document.getElementById('rn-left-label');
+  const leftSub   = document.getElementById('rn-left-sublabel');
+  if (profit) {
+    if (leftLabel) leftLabel.textContent = 'Profit pulled out';
+    if (leftSub)   leftSub.textContent   = 'Refi pays back more than you put in 🏆';
+  } else if (infinite) {
+    if (leftLabel) leftLabel.textContent = 'Cash left in deal';
+    if (leftSub)   leftSub.textContent   = '♾️ Goal hit — full cash recycle';
+  } else {
+    if (leftLabel) leftLabel.textContent = 'Cash left in deal';
+    if (leftSub)   leftSub.textContent   = 'Goal: $0 or less ↓';
+  }
   setEl('rn-b-pmt', refiPmt ? fmtN(refiPmt) : '—');
   const bCfEl = document.getElementById('rn-b-cf');
   if (bCfEl) { bCfEl.textContent = bCf !== 0 ? signedFmt(bCf) + '/mo' : '—'; bCfEl.style.color = cfColor(bCf); }
@@ -2571,7 +2617,7 @@ function rnCalc() {
 }
 
 function rnReset() {
-  ['rn-in-rent-pu','rn-in-units','rn-in-vac','rn-in-pm','rn-in-tax','rn-in-ins','rn-in-maint','rn-in-capex','rn-in-other','rn-in-dscr-rate','rn-in-dscr-ltv','rn-in-conv-rate','rn-in-conv-ltv','rn-in-refi-ltv','rn-in-refi-rate'].forEach(id => {
+  ['rn-in-rent-pu','rn-in-units','rn-in-vac','rn-in-pm','rn-in-tax','rn-in-ins','rn-in-maint','rn-in-capex','rn-in-other','rn-in-dscr-rate','rn-in-dscr-ltv','rn-in-conv-rate','rn-in-conv-ltv','rn-in-refi-ltv','rn-in-refi-rate','rn-in-rehab','rn-in-purchase'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el._userEdited = false;
   });
