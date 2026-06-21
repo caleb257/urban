@@ -704,9 +704,27 @@ a{color:var(--accent)}
 
   <div style="display:flex;flex-direction:column;gap:8px">
 
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:12px;color:var(--muted)">💰 You put in (purchase + rehab)</span>
-      <span id="rn-b-cashin" style="font-size:14px;font-weight:700;color:var(--review)">—</span>
+    <div style="background:var(--bg2);border-radius:6px;padding:10px 12px">
+      <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">💰 WHAT YOU PUT IN</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:12px;color:var(--muted)">Purchase price</span>
+        <span id="rn-b-purchase-2" style="font-size:13px;font-weight:600">—</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <div style="font-size:12px;color:var(--muted)">Rental rehab</div>
+          <div style="font-size:10px;color:var(--muted);opacity:.6">Less than flip — just make it rentable</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="color:var(--muted);font-size:12px">$</span>
+          <input id="rn-in-rehab" type="number" placeholder="0" oninput="rnCalc()"
+            style="width:85px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:5px 8px;font-size:14px;font-weight:700;text-align:right">
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;font-weight:700">Total cash in</span>
+        <span id="rn-b-cashin" style="font-size:16px;font-weight:800;color:var(--review)">—</span>
+      </div>
     </div>
 
     <div style="border-left:2px solid var(--border2);margin-left:8px;padding-left:12px;display:flex;flex-direction:column;gap:6px">
@@ -1908,10 +1926,13 @@ function renderUW(uw) {
     if (_bBadge) _bBadge.style.display = (rn.worthBRRRR || _vrd.includes('BRRRR')) ? '' : 'none';
   }
 
-  // Static BRRRR fields from ARV/deal (don't change with calculator)
+  // Static BRRRR fields from ARV/deal
   set('rn-b-purchase', fmt(fi_ask3));
-  set('rn-b-rehab', fmt(fi_reh3));
   set('rn-b-arv', fmt(fi_arv3));
+  // Rental rehab default: 40% of flip — just make it rentable, not retail-ready
+  const _rnRehabDef = rn.brrrr?.rentalRehab || Math.round(fi_reh3 * 0.40);
+  const _rnEl = document.getElementById('rn-in-rehab');
+  if (_rnEl && !_rnEl._userEdited) _rnEl.value = _rnRehabDef || '';
 
   // Track user edits so we don't overwrite them
   ['rn-in-rent-pu','rn-in-units','rn-in-vac','rn-in-pm','rn-in-tax','rn-in-ins','rn-in-maint','rn-in-capex','rn-in-other','rn-in-dscr-rate','rn-in-dscr-ltv','rn-in-conv-rate','rn-in-conv-ltv','rn-in-refi-ltv','rn-in-refi-rate'].forEach(id => {
@@ -2449,7 +2470,8 @@ function rnCalc() {
   const refiLtv  = (g('rn-in-refi-ltv') || 75) / 100;
   const refiRate = g('rn-in-refi-rate') || 7.5;
   const refiLoan = Math.round(fi_arv * refiLtv);
-  const cashIn   = fi_ask + fi_reh;
+  const rnRehab  = g('rn-in-rehab') || Math.round(fi_reh * 0.40);
+  const cashIn   = fi_ask + rnRehab;
   const cashOut  = Math.round(refiLoan); // cash pulled out at refi (covers purchase)
   const cashLeft = Math.round(cashIn - refiLoan);
   const infinite = cashLeft <= 0;
