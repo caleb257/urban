@@ -264,6 +264,39 @@ a{color:var(--accent)}
       <button id="ref-btn" style="flex:1">↻ Pull from Derek's Sheet</button>
       <button id="rewrite-all-btn" onclick="doRewriteAll()" title="Re-underwrite all deals with updated brain" style="padding:8px 10px;font-size:10px;background:rgba(255,160,32,.1);border-color:rgba(255,160,32,.3);color:rgba(255,160,32,.8)">⚡ All</button>
     </div>
+    <div id="ws-scorecards" style="padding:8px 12px;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 0" onclick="toggleWsPanel()">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px">🏆 WHOLESALER SCORES</div>
+        <span id="ws-toggle-icon" style="font-size:10px;color:var(--muted)">▼</span>
+      </div>
+      <div id="ws-panel" style="display:none;margin-top:6px">
+        <div id="ws-list" style="display:flex;flex-direction:column;gap:3px"></div>
+        <div style="font-size:9px;color:var(--muted);margin-top:5px;opacity:.6">Hit rate = BUY or HOT deals</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="purchased-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center">
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:24px;width:320px;max-width:90vw">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px">🏠 Log Purchase</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">Actual purchase price</div>
+          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-purchase" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:14px;font-weight:600"></div></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">Actual rehab spend</div>
+          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-rehab" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:14px;font-weight:600"></div></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">Expected ARV</div>
+          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-arv" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:14px;font-weight:600"></div></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">Strategy</div>
+          <select id="oc-strategy" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:13px">
+            <option value="flip">Flip</option><option value="brrrr">BRRRR / Hold</option><option value="wholesale">Wholesale out</option></select></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">Notes</div>
+          <input id="oc-notes" type="text" placeholder="What Urban got right or wrong..." style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:12px;box-sizing:border-box"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="closePurchasedForm()" style="flex:1;padding:8px;background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--muted);cursor:pointer">Cancel</button>
+        <button onclick="savePurchasedOutcome()" style="flex:2;padding:8px;background:rgba(60,200,130,.15);border:1px solid rgba(60,200,130,.4);border-radius:5px;color:var(--buy);font-weight:700;cursor:pointer">✓ Log Outcome</button>
+      </div>
+    </div>
   </div>
 
   <div id="main">
@@ -288,6 +321,7 @@ a{color:var(--accent)}
         <button class="btn" id="btn-chat">💬 Chat</button>
         <button class="btn" id="btn-sheet">📊 Sheet</button>
         <button class="btn" id="btn-hard-no" onclick="doMarkHardNo()" title="Mark this deal as Hard No — removes from pipeline" style="display:none;background:rgba(255,60,60,.12);border-color:rgba(255,60,60,.3);color:rgba(255,100,100,.9)">⛔ Hard No</button>
+        <button class="btn" id="btn-purchased" onclick="showPurchasedForm()" style="display:none;background:rgba(60,200,130,.1);border-color:rgba(60,200,130,.3);color:rgba(60,200,130,.9)">🏠 Purchased</button>
         <button class="btn" id="btn-photos" style="display:none;background:rgba(180,140,255,.12);border-color:rgba(180,140,255,.3);color:rgba(180,140,255,.9)" onclick="openPhotos()">📸 See Photos</button>
       </div>
 
@@ -536,6 +570,31 @@ a{color:var(--accent)}
             </div>
           </div>
         </div>
+
+          <div class="card" style="margin-top:14px" id="offer-ladder-card" style="display:none">
+            <div class="ct" style="display:flex;align-items:center;justify-content:space-between">
+              <span>📋 Negotiation Ladder</span>
+              <button onclick="copyOfferLadder()" style="font-size:10px;padding:2px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Copy</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+              <div style="background:var(--bg2);border-radius:6px;padding:10px;text-align:center">
+                <div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;margin-bottom:6px">OPEN OFFER</div>
+                <div id="ol-open" style="font-size:18px;font-weight:800;color:var(--buy)">—</div>
+                <div style="font-size:9px;color:var(--muted);margin-top:3px">Start here</div>
+              </div>
+              <div style="background:var(--bg2);border-radius:6px;padding:10px;text-align:center">
+                <div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;margin-bottom:6px">HOLD FIRM</div>
+                <div id="ol-counter" style="font-size:18px;font-weight:800;color:var(--review)">—</div>
+                <div style="font-size:9px;color:var(--muted);margin-top:3px">Don't go higher</div>
+              </div>
+              <div style="background:rgba(200,60,60,.06);border-radius:6px;padding:10px;text-align:center;border:1px solid rgba(200,60,60,.2)">
+                <div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;margin-bottom:6px">WALK PRICE</div>
+                <div id="ol-walk" style="font-size:18px;font-weight:800;color:var(--red)">—</div>
+                <div style="font-size:9px;color:var(--muted);margin-top:3px">Hard stop = MAO</div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.6;padding:8px;background:var(--bg2);border-radius:5px" id="ol-script"></div>
+          </div>
 
         <!-- RENTAL -->
         <div class="tc" id="t-rental">
@@ -1303,6 +1362,12 @@ async function selectDeal(d) {
   // HARD NO button
   const hardNoBtn = document.getElementById('btn-hard-no');
   if (hardNoBtn) hardNoBtn.style.display = (d.underwriteStatus !== 'HARD NO') ? '' : 'none';
+  // Purchased button — show when deal has been underwritten (check status not underwrites map)
+  const purchBtn = document.getElementById('btn-purchased');
+  if (purchBtn) {
+    const hasUW = d.underwriteStatus && d.underwriteStatus !== 'PENDING';
+    purchBtn.style.display = hasUW ? '' : 'none';
+  }
 
   // Price sanity warning banner
   const sanityBanner = document.getElementById('price-sanity-banner');
@@ -1773,6 +1838,7 @@ function renderUW(uw) {
   set('rehab-notes', uw.rehab?.notes || '');
   set('rehab-miss', uw.rehab?.missingInfo ? `⚠️ Missing: ${uw.rehab.missingInfo}` : '');
   set('rh-ws', uw.rehab?.wholesalerEstimate ? fmt(uw.rehab.wholesalerEstimate) : 'Not provided');
+  setTimeout(() => renderOfferLadder(uw), 10);
   set('rh-ur', fmt(uw.rehab?.urbanEstimate));
   const rc = uw.rehab?.confidence || 'MEDIUM';
   { const _e_rh_conf = $('rh-conf'); if (_e_rh_conf) _e_rh_conf.innerHTML = `<span class="conf conf-${rc}">${rc}</span>`; }
@@ -2622,6 +2688,103 @@ function rnReset() {
     if (el) el._userEdited = false;
   });
   if (typeof curUW !== 'undefined' && curUW) renderUW(curUW);
+}
+
+// ── OFFER LADDER ──────────────────────────────────────────────────────────────
+function renderOfferLadder(uw) {
+  const card = document.getElementById('offer-ladder-card');
+  if (!card) return;
+  const arv   = uw?.arv?.urbanARV || 0;
+  const rehab = uw?.rehab?.urbanEstimate || 0;
+  if (!arv || !rehab) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const mao     = Math.round(arv * 0.70 - rehab);
+  const opening = Math.round(mao * 0.88);
+  const counter = Math.round(mao * 0.94);
+  const ask     = parseFloat(curDeal?.askingPrice) || 0;
+  const fN = n => '$' + Math.round(n).toLocaleString();
+  const sE = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  sE('ol-open', fN(opening)); sE('ol-counter', fN(counter)); sE('ol-walk', fN(mao));
+  const gap = ask > 0 ? ' (asking ' + fN(ask) + ', spread: ' + fN(ask - opening) + ')' : '';
+  const sc = document.getElementById('ol-script');
+  if (sc) sc.innerHTML = '<span style="color:var(--muted)">Script: </span>"We can do <strong style="color:var(--buy)">' + fN(opening) + '</strong>' + gap + '. Ceiling is <strong style="color:var(--review)">' + fN(counter) + '</strong>. Over <strong style="color:var(--red)">' + fN(mao) + '</strong> we're out."';
+}
+function copyOfferLadder() {
+  const t = 'Negotiation Ladder — ' + (curDeal?.address || '') + '\nOpen: ' + (document.getElementById('ol-open')?.textContent || '') + '\nHold: ' + (document.getElementById('ol-counter')?.textContent || '') + '\nWalk: ' + (document.getElementById('ol-walk')?.textContent || '');
+  navigator.clipboard.writeText(t).then(() => {
+    const b = document.querySelector('[onclick="copyOfferLadder()"]');
+    if (b) { b.textContent = '✓ Copied'; setTimeout(() => b.textContent = 'Copy', 2000); }
+  });
+}
+
+// ── WHOLESALER SCORECARDS ─────────────────────────────────────────────────────
+let _wsPanelOpen = false;
+function toggleWsPanel() {
+  _wsPanelOpen = !_wsPanelOpen;
+  const p = document.getElementById('ws-panel');
+  const i = document.getElementById('ws-toggle-icon');
+  if (p) p.style.display = _wsPanelOpen ? '' : 'none';
+  if (i) i.textContent = _wsPanelOpen ? '▲' : '▼';
+  if (_wsPanelOpen) renderWholesalerScores();
+}
+function renderWholesalerScores() {
+  const list = document.getElementById('ws-list');
+  if (!list || !deals?.length) return;
+  const scores = {};
+  deals.forEach(d => {
+    const ws = d.wholesalerName || d.source || 'Unknown';
+    if (!scores[ws]) scores[ws] = { total: 0, buys: 0 };
+    scores[ws].total++;
+    const v = d.underwriteStatus || '';
+    if (v === 'BUY' || v === 'HOT') scores[ws].buys++;
+  });
+  const sorted = Object.entries(scores).sort((a, b) => b[1].total - a[1].total).slice(0, 8);
+  list.innerHTML = '';
+  sorted.forEach(([ws, s]) => {
+    const rate = s.total > 0 ? Math.round(s.buys / s.total * 100) : 0;
+    const grade = rate >= 20 ? 'A' : rate >= 10 ? 'B' : 'C';
+    const clr = grade === 'A' ? 'var(--buy)' : grade === 'B' ? 'var(--review)' : 'var(--muted)';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)';
+    row.innerHTML = '<div style="width:16px;height:16px;border-radius:50%;background:' + clr + ';color:var(--bg);font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + grade + '</div>' +
+      '<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + ws + '</div><div style="font-size:9px;color:var(--muted)">' + s.buys + ' buy / ' + s.total + ' total</div></div>' +
+      '<div style="font-size:12px;font-weight:700;color:' + clr + '">' + rate + '%</div>';
+    list.appendChild(row);
+  });
+  if (!sorted.length) list.innerHTML = '<div style="font-size:10px;color:var(--muted);padding:6px">No deals loaded</div>';
+}
+
+// ── OUTCOME TRACKING ─────────────────────────────────────────────────────────
+function showPurchasedForm() {
+  if (!curDeal || !curUW) return;
+  const m = document.getElementById('purchased-modal');
+  if (!m) return;
+  const ocP = document.getElementById('oc-purchase'); if (ocP) ocP.value = parseFloat(curDeal.askingPrice) || '';
+  const ocR = document.getElementById('oc-rehab');   if (ocR) ocR.value = curUW.rehab?.urbanEstimate || '';
+  const ocA = document.getElementById('oc-arv');     if (ocA) ocA.value = curUW.arv?.urbanARV || '';
+  m.style.display = 'flex';
+}
+function closePurchasedForm() {
+  const m = document.getElementById('purchased-modal'); if (m) m.style.display = 'none';
+}
+async function savePurchasedOutcome() {
+  if (!curUW) return;
+  const purchase = parseFloat(document.getElementById('oc-purchase')?.value) || 0;
+  const rehab    = parseFloat(document.getElementById('oc-rehab')?.value)    || 0;
+  const arv      = parseFloat(document.getElementById('oc-arv')?.value)      || 0;
+  const strategy = document.getElementById('oc-strategy')?.value || 'flip';
+  const notes    = document.getElementById('oc-notes')?.value    || '';
+  if (!purchase) return;
+  try {
+    const r = await fetch('/api/outcome/' + encodeURIComponent(curUW.uid), {
+      method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ purchase, rehab, arv, strategy, notes, address: curDeal?.address, author })
+    });
+    if (r.ok) { curUW = await r.json(); closePurchasedForm(); renderUW(curUW);
+      const b = document.getElementById('btn-purchased');
+      if (b) { b.textContent = '✅ Purchased'; b.style.background = 'rgba(60,200,130,.2)'; }
+    }
+  } catch(e) { console.error('outcome:', e); }
 }
 
 // ── HARD NO ACTION ───────────────────────────────────────────────────────────
