@@ -557,10 +557,20 @@ a{color:var(--accent)}
             <!-- CARD 1: Market Rent -->
             <div class="card">
               <div class="ct">Market Rent Analysis</div>
-              <div style="text-align:center;padding:8px 0 14px">
+              <!-- Unit count badge — only shows for multi-unit -->
+              <div id="rn-unit-badge" style="display:none;text-align:center;margin-bottom:8px">
+                <span id="rn-unit-label" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;background:rgba(255,160,32,.12);color:var(--review);border:1px solid rgba(255,160,32,.3)"></span>
+              </div>
+              <div style="text-align:center;padding:8px 0 4px">
                 <div style="font-size:28px;font-weight:700;color:var(--gold)" id="rn-rent">—</div>
-                <div style="font-size:10px;color:var(--muted);margin-top:2px">/month estimated gross rent</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:4px" id="rn-rent-range"></div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px" id="rn-rent-sublabel">/month estimated gross rent</div>
+              </div>
+              <!-- Per-unit breakdown for multi-unit -->
+              <div id="rn-per-unit-row" style="display:none;text-align:center;padding:2px 0 10px">
+                <span style="font-size:12px;color:var(--muted)">(<span id="rn-rent-per-unit"></span>/unit × <span id="rn-unit-count-label"></span> units)</span>
+              </div>
+              <div style="text-align:center;margin-bottom:10px" id="rn-rent-range-row">
+                <span style="font-size:11px;color:var(--muted)" id="rn-rent-range"></span>
               </div>
               <div class="fr"><span class="fl">HUD Fair Market Rent</span><span class="fv" id="rn-hud"></span></div>
               <div class="fr"><span class="fl">Rent / Sqft</span><span class="fv" id="rn-psf"></span></div>
@@ -574,7 +584,7 @@ a{color:var(--accent)}
             <div class="card">
               <div class="ct">Income &amp; Expenses <span style="font-size:10px;font-weight:400;opacity:.5" id="rn-exp-mo-label">(monthly)</span></div>
               <div style="background:rgba(60,200,130,.06);border-radius:4px;padding:6px 10px;margin-bottom:8px">
-                <div class="fr" style="padding:0"><span class="fl" style="color:var(--buy);font-weight:600">Gross Rent</span><span class="fv g" id="rn-gross"></span></div>
+                <div class="fr" style="padding:0"><span class="fl" style="color:var(--buy);font-weight:600">Gross Rent <span id="rn-gross-units-note" style="font-size:9px;font-weight:400;opacity:.7"></span></span><span class="fv g" id="rn-gross"></span></div>
                 <div class="fr" style="padding:0;margin-top:2px"><span class="fl" style="font-size:11px;opacity:.7">Vacancy <span id="rn-vac-rate"></span></span><span class="fv mu" id="rn-vac-loss"></span></div>
                 <div class="fr" style="padding:0;margin-top:2px"><span class="fl" style="font-weight:600">Effective Gross Income</span><span class="fv" id="rn-egi" style="font-weight:700"></span></div>
               </div>
@@ -1720,8 +1730,29 @@ function renderUW(uw) {
 
   // Market rent fields
   const estRent = rnMR.estimated || rn.marketRent || 0;
+  // Unit count awareness — show per-unit breakdown for multi-unit
+  const _unitCount = rnMR.unitCount || getUnitCount(curDeal?.propertyType) || 1;
+  const _rentPerUnit = rnMR.rentPerUnit || (estRent && _unitCount > 1 ? Math.round(estRent / _unitCount) : 0);
+  const unitBadge = document.getElementById('rn-unit-badge');
+  const perUnitRow = document.getElementById('rn-per-unit-row');
+  const rentSublabel = document.getElementById('rn-rent-sublabel');
+  if (_unitCount > 1) {
+    if (unitBadge) unitBadge.style.display = '';
+    if (document.getElementById('rn-unit-label')) document.getElementById('rn-unit-label').textContent = ['','','Duplex — 2 Units','Triplex — 3 Units','Quadplex — 4 Units'][_unitCount] || (_unitCount + '-Unit Property');
+    if (perUnitRow) perUnitRow.style.display = '';
+    if (document.getElementById('rn-rent-per-unit')) document.getElementById('rn-rent-per-unit').textContent = fmt(_rentPerUnit);
+    if (document.getElementById('rn-unit-count-label')) document.getElementById('rn-unit-count-label').textContent = _unitCount;
+    if (rentSublabel) rentSublabel.textContent = '/month TOTAL gross rent (all units)';
+  } else {
+    if (unitBadge) unitBadge.style.display = 'none';
+    if (perUnitRow) perUnitRow.style.display = 'none';
+    if (rentSublabel) rentSublabel.textContent = '/month estimated gross rent';
+  }
   set('rn-rent', estRent ? fmt(estRent) + '/mo' : '—');
   set('rn-rent-range', (rnMR.lowEnd && rnMR.highEnd) ? 'Range: ' + fmt(rnMR.lowEnd) + ' – ' + fmt(rnMR.highEnd) : '');
+  // Gross units note
+  const gnEl = document.getElementById('rn-gross-units-note');
+  if (gnEl) gnEl.textContent = _unitCount > 1 ? '(' + _unitCount + ' units × ' + fmt(_rentPerUnit) + ')' : '';
   set('rn-hud', rnMR.hudFMR ? fmt(rnMR.hudFMR) + '/mo (HUD FMR)' : 'Not retrieved');
   set('rn-psf', rnMR.rentPerSqft ? '$' + parseFloat(rnMR.rentPerSqft).toFixed(2) + '/sf' : '—');
   const ptr = rnPerf.priceToRentRatio || (fi_arv2 && estRent ? (fi_arv2 / (estRent * 12)).toFixed(1) : null);
@@ -2323,6 +2354,19 @@ async function doRewriteAll() {
   if (btn) { btn.textContent = '✅ Done'; btn.style.opacity = '1'; btn.style.pointerEvents = ''; }
   await doLoadDeals();
   setTimeout(() => { if (btn) btn.textContent = '⚡ All'; }, 3000);
+}
+
+// ── UNIT COUNT HELPER (matches server-side) ─────────────────────────────────
+function getUnitCount(propertyType) {
+  if (!propertyType) return 1;
+  const t = propertyType.toLowerCase();
+  if (t.includes('duplex') || t.includes('2-unit') || t.includes('two unit')) return 2;
+  if (t.includes('triplex') || t.includes('3-unit') || t.includes('three unit')) return 3;
+  if (t.includes('quadplex') || t.includes('4-unit') || t.includes('four unit') || t.includes('quad')) return 4;
+  const n = t.match(/(\d+)[-\s]?unit/);
+  if (n) return Math.min(parseInt(n[1]), 20);
+  if (t.includes('multi')) return 2;
+  return 1;
 }
 
 // ── HARD NO ACTION ───────────────────────────────────────────────────────────
