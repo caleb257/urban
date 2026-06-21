@@ -540,218 +540,273 @@ a{color:var(--accent)}
         <!-- RENTAL -->
         <div class="tc" id="t-rental">
 
-          <!-- ── RENTAL VERDICT + SUMMARY BANNER ───────────────────────── -->
-          <div id="rn-verdict-banner" style="display:none;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;border:1px solid">
-            <span id="rn-verdict-icon" style="font-size:26px"></span>
-            <div style="flex:1">
-              <div id="rn-verdict-label" style="font-size:13px;font-weight:800;letter-spacing:.8px;margin-bottom:3px"></div>
-              <div id="rn-verdict-note" style="font-size:12px;opacity:.8;line-height:1.5" id="rn-verdict-note"></div>
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <div id="rn-brrrr-badge" style="display:none;font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:rgba(60,200,130,.2);color:var(--buy);border:1px solid rgba(60,200,130,.3)">♻️ BRRRR CANDIDATE</div>
-            </div>
-          </div>
+  <!-- ══ VERDICT PILL ══════════════════════════════════════════════════ -->
+  <div id="rn-verdict-banner" style="display:none;border-radius:8px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;border:1px solid">
+    <span id="rn-verdict-icon" style="font-size:24px"></span>
+    <div style="flex:1">
+      <div id="rn-verdict-label" style="font-size:13px;font-weight:800;letter-spacing:.7px"></div>
+      <div id="rn-verdict-note" style="font-size:12px;opacity:.75;margin-top:2px;line-height:1.5"></div>
+    </div>
+  </div>
 
-          <!-- ── 3 KEY NUMBERS UP TOP ────────────────────────────────────── -->
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
-              <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:6px">MARKET RENT</div>
-              <div style="font-size:22px;font-weight:800;color:var(--gold)" id="rn-hero-rent">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:3px" id="rn-hero-rent-note">/month</div>
-            </div>
-            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
-              <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:6px">NET CASH FLOW</div>
-              <div style="font-size:22px;font-weight:800" id="rn-hero-cf">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:3px">after DSCR loan</div>
-            </div>
-            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
-              <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:6px">CASH LEFT IN DEAL</div>
-              <div style="font-size:22px;font-weight:800" id="rn-hero-left">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:3px">after BRRRR refi</div>
-            </div>
-          </div>
+  <!-- ══ 3 BIG NUMBERS ═════════════════════════════════════════════════ -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:8px">TOTAL RENT / MO</div>
+      <div id="rn-hero-rent" style="font-size:24px;font-weight:800;color:var(--gold)">—</div>
+      <div id="rn-hero-rent-note" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:8px">MONTHLY CASH FLOW</div>
+      <div id="rn-hero-cf" style="font-size:24px;font-weight:800">—</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">after refi payment</div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.6px;margin-bottom:8px">CASH LEFT IN DEAL</div>
+      <div id="rn-hero-left" style="font-size:24px;font-weight:800">—</div>
+      <div id="rn-hero-left-note" style="font-size:10px;color:var(--muted);margin-top:4px">after BRRRR refi</div>
+    </div>
+  </div>
 
-          <!-- ── EDITABLE CALCULATOR ──────────────────────────────────────── -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+  <!-- ══ INCOME + EXPENSES SIDE BY SIDE ═══════════════════════════════ -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
 
-            <!-- LEFT: INCOME INPUTS -->
-            <div class="card">
-              <div class="ct" style="display:flex;align-items:center;justify-content:space-between">
-                <span>💰 Income</span>
-                <span id="rn-unit-pill" style="display:none;font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,160,32,.12);color:var(--review);border:1px solid rgba(255,160,32,.25)"></span>
-              </div>
-              <div class="fr"><span class="fl">Rent per Unit / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-rent-pu" style="width:90px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:13px;font-weight:600;text-align:right" placeholder="0" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr"><span class="fl">Number of Units</span>
-                <input type="number" id="rn-in-units" style="width:60px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:13px;font-weight:600;text-align:right" min="1" max="20" placeholder="1" oninput="rnCalc()">
-              </div>
-              <div class="fr tot"><span class="fl" style="font-weight:700">Gross Rent / mo</span><span class="fv y" id="rn-calc-gross" style="font-weight:800">—</span></div>
-              <div class="fr"><span class="fl" style="font-size:11px;opacity:.7">Vacancy</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <input type="number" id="rn-in-vac" style="width:55px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" min="0" max="30" step="0.5" placeholder="7" oninput="rnCalc()">
-                  <span style="color:var(--muted);font-size:11px">%</span>
-                </span>
-              </div>
-              <div class="fr"><span class="fl" style="font-weight:600">Effective Gross Income</span><span class="fv" id="rn-calc-egi" style="font-weight:700">—</span></div>
-              <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)" id="rn-rent-source-note">Source: AI estimate — edit above to override</div>
-            </div>
+    <!-- INCOME -->
+    <div class="card" style="padding:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:12px">💰 MONTHLY INCOME</div>
+      <div id="rn-unit-pill" style="display:none;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(255,160,32,.1);color:var(--review);border:1px solid rgba(255,160,32,.2);display:inline-block;margin-bottom:10px"></div>
 
-            <!-- RIGHT: EXPENSE INPUTS -->
-            <div class="card">
-              <div class="ct">🏦 Monthly Expenses</div>
-              <div class="fr"><span class="fl">Mgmt Fee</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <input type="number" id="rn-in-pm" style="width:55px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" min="0" max="20" step="0.5" placeholder="9" oninput="rnCalc()">
-                  <span style="color:var(--muted);font-size:11px">%</span>
-                </span>
-              </div>
-              <div class="fr"><span class="fl">Taxes / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-tax" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="0" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr"><span class="fl">Insurance / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-ins" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="250" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr"><span class="fl">Maintenance / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-maint" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="100" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr"><span class="fl">CapEx Reserve / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-capex" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="100" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr"><span class="fl">HOA / Other / mo</span>
-                <span style="display:flex;align-items:center;gap:4px">
-                  <span style="color:var(--muted);font-size:12px">$</span>
-                  <input type="number" id="rn-in-other" style="width:80px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:4px;font-size:12px;text-align:right" placeholder="80" oninput="rnCalc()">
-                </span>
-              </div>
-              <div class="fr tot"><span class="fl" style="font-weight:700">Total Expenses / mo</span><span class="fv r" id="rn-calc-exp" style="font-weight:800">—</span></div>
-            </div>
-          </div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Rent per unit / month</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="color:var(--muted)">$</span>
+          <input id="rn-in-rent-pu" type="number" placeholder="0"
+            style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:7px 10px;font-size:15px;font-weight:700"
+            oninput="rnCalc()">
+        </div>
+      </div>
 
-          <!-- ── NOI + LOAN OPTIONS SIDE BY SIDE ─────────────────────────── -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-
-            <!-- NOI + METRICS -->
-            <div class="card">
-              <div class="ct">📊 Net Operating Income</div>
-              <div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:12px">
-                <div style="font-size:30px;font-weight:800" id="rn-calc-noi">—</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:4px">per month</div>
-              </div>
-              <div class="fr"><span class="fl">Cap Rate</span><span class="fv" id="rn-calc-cap">—</span></div>
-              <div class="fr"><span class="fl">Gross Yield</span><span class="fv" id="rn-calc-gy">—</span></div>
-              <div class="fr"><span class="fl">Price-to-Rent</span><span class="fv" id="rn-calc-ptr">—</span></div>
-              <div class="fr"><span class="fl">HUD Fair Market Rent</span><span class="fv mu" id="rn-calc-hud" style="font-size:11px">—</span></div>
-            </div>
-
-            <!-- LOAN SELECTOR + RESULTS -->
-            <div class="card">
-              <div class="ct">🏦 Financing</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-                <div style="background:var(--bg2);border-radius:6px;padding:8px">
-                  <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:6px">DSCR LOAN</div>
-                  <div style="display:flex;align-items:center;gap:3px;margin-bottom:4px">
-                    <input type="number" id="rn-in-dscr-rate" style="width:45px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="0.25" placeholder="8.0" oninput="rnCalc()">
-                    <span style="font-size:10px;color:var(--muted)">% · </span>
-                    <input type="number" id="rn-in-dscr-ltv" style="width:40px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="5" placeholder="75" oninput="rnCalc()">
-                    <span style="font-size:10px;color:var(--muted)">% LTV</span>
-                  </div>
-                  <div style="font-size:11px;color:var(--muted)">Pmt: <span id="rn-calc-dscr-pmt" style="color:var(--text);font-weight:600">—</span></div>
-                  <div style="font-size:14px;font-weight:800;margin-top:4px" id="rn-calc-dscr-cf">—</div>
-                  <div style="font-size:9px;color:var(--muted)">cash flow/mo</div>
-                  <div style="font-size:10px;margin-top:4px">DSCR: <span id="rn-calc-dscr-ratio" style="font-weight:700">—</span></div>
-                </div>
-                <div style="background:var(--bg2);border-radius:6px;padding:8px">
-                  <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:6px">CONVENTIONAL</div>
-                  <div style="display:flex;align-items:center;gap:3px;margin-bottom:4px">
-                    <input type="number" id="rn-in-conv-rate" style="width:45px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="0.25" placeholder="7.25" oninput="rnCalc()">
-                    <span style="font-size:10px;color:var(--muted)">% · </span>
-                    <input type="number" id="rn-in-conv-ltv" style="width:40px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="5" placeholder="80" oninput="rnCalc()">
-                    <span style="font-size:10px;color:var(--muted)">% LTV</span>
-                  </div>
-                  <div style="font-size:11px;color:var(--muted)">Pmt: <span id="rn-calc-conv-pmt" style="color:var(--text);font-weight:600">—</span></div>
-                  <div style="font-size:14px;font-weight:800;margin-top:4px" id="rn-calc-conv-cf">—</div>
-                  <div style="font-size:9px;color:var(--muted)">cash flow/mo</div>
-                  <div style="font-size:10px;margin-top:4px">Down: <span id="rn-calc-conv-dp" style="font-weight:700">—</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ── BRRRR CALCULATOR ─────────────────────────────────────────── -->
-          <div class="card" style="margin-bottom:14px">
-            <div class="ct" style="display:flex;align-items:center;justify-content:space-between">
-              <span>♻️ BRRRR Calculator</span>
-              <span id="rn-brrrr-strat-pill" style="font-size:10px;padding:2px 10px;border-radius:10px;font-weight:700"></span>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:14px">
-              <!-- Step 1 -->
-              <div style="padding:12px;border-right:1px solid var(--border)">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">① BUY + REHAB</div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Purchase</span><span class="fv" id="rn-b-purchase" style="font-size:11px">—</span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Rehab</span><span class="fv" id="rn-b-rehab" style="font-size:11px">—</span></div>
-                <div class="fr" style="padding:4px 0;border-top:1px solid var(--border);margin-top:4px"><span class="fl" style="font-size:11px;font-weight:700">Total Cash In</span><span class="fv y" id="rn-b-cashin" style="font-size:12px;font-weight:800">—</span></div>
-              </div>
-              <!-- Step 2 -->
-              <div style="padding:12px;border-right:1px solid var(--border)">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">② REFI AT ARV</div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">ARV</span><span class="fv" id="rn-b-arv" style="font-size:11px">—</span></div>
-                <div style="display:flex;align-items:center;gap:4px;margin:4px 0">
-                  <span style="font-size:11px;color:var(--muted)">LTV</span>
-                  <input type="number" id="rn-in-refi-ltv" style="width:45px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="5" placeholder="75" oninput="rnCalc()">
-                  <span style="font-size:10px;color:var(--muted)">%</span>
-                  <span style="font-size:10px;color:var(--muted);margin-left:4px">@</span>
-                  <input type="number" id="rn-in-refi-rate" style="width:45px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:2px 4px;border-radius:3px;font-size:11px;text-align:right" step="0.25" placeholder="7.5" oninput="rnCalc()">
-                  <span style="font-size:10px;color:var(--muted)">%</span>
-                </div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Refi Loan</span><span class="fv" id="rn-b-refi-loan" style="font-size:11px">—</span></div>
-              </div>
-              <!-- Step 3 -->
-              <div style="padding:12px;border-right:1px solid var(--border)">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">③ CASH BACK</div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Cash Returned</span><span class="fv g" id="rn-b-cashout" style="font-size:13px;font-weight:800">—</span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px;font-weight:700">Cash Left In</span><span class="fv" id="rn-b-left" style="font-size:13px;font-weight:800">—</span></div>
-                <div id="rn-b-infinite" style="display:none;margin-top:6px;font-size:10px;color:var(--buy);font-weight:700;text-align:center">♾️ Full cash recycle</div>
-              </div>
-              <!-- Step 4 -->
-              <div style="padding:12px">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px">④ HOLD &amp; CASH FLOW</div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">Refi Payment</span><span class="fv" id="rn-b-pmt" style="font-size:11px">—</span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px;font-weight:700">Cash Flow / mo</span><span class="fv" id="rn-b-cf" style="font-size:14px;font-weight:800">—</span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">DSCR</span><span class="fv" id="rn-b-dscr" style="font-size:11px;font-weight:700">—</span></div>
-                <div class="fr" style="padding:2px 0"><span class="fl" style="font-size:11px">CoC Return</span><span class="fv" id="rn-b-coc" style="font-size:11px;font-weight:700">—</span></div>
-              </div>
-            </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
-              <button onclick="rnReset()" style="font-size:10px;padding:4px 12px;border-radius:4px;background:rgba(100,100,140,.15);border:1px solid var(--border2);color:var(--muted);cursor:pointer">↺ Reset to AI estimates</button>
-            </div>
-          </div>
-
-          <!-- ── AI ASSESSMENT ────────────────────────────────────────────── -->
-          <div class="card">
-            <div class="ct">Urban's Rental Assessment</div>
-            <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px" id="rn-notes">—</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              <div class="m"><div class="ml">Worth Holding?</div><div class="mv" id="rn-worth">—</div></div>
-              <div class="ml"><div class="ml">Worth BRRRR?</div><div class="mv" id="rn-worth-brrrr">—</div></div>
-            </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Units</div>
+          <input id="rn-in-units" type="number" min="1" max="20" placeholder="1"
+            style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:7px 10px;font-size:14px;font-weight:600"
+            oninput="rnCalc()">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Vacancy</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input id="rn-in-vac" type="number" min="0" max="30" step="0.5" placeholder="7"
+              style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:7px 8px;font-size:14px;font-weight:600"
+              oninput="rnCalc()">
+            <span style="color:var(--muted);font-size:12px">%</span>
           </div>
         </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;color:var(--muted)">Gross rent</span>
+          <span id="rn-calc-gross" style="font-size:14px;font-weight:700;color:var(--gold)">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+          <span style="font-size:11px;color:var(--muted)">After vacancy</span>
+          <span id="rn-calc-egi" style="font-size:13px;font-weight:600">—</span>
+        </div>
+      </div>
+
+      <div style="margin-top:8px;font-size:10px;color:var(--muted);opacity:.7" id="rn-rent-source-note"></div>
+    </div>
+
+    <!-- EXPENSES -->
+    <div class="card" style="padding:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:12px">🏦 MONTHLY EXPENSES</div>
+
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted);flex:1">Property mgmt</span>
+          <div style="display:flex;align-items:center;gap:3px">
+            <input id="rn-in-pm" type="number" min="0" max="20" step="0.5" placeholder="10"
+              style="width:44px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right"
+              oninput="rnCalc()">
+            <span style="font-size:11px;color:var(--muted)">%</span>
+            <span id="rn-pm-calc" style="font-size:12px;color:var(--muted);width:46px;text-align:right"></span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted);flex:1">Taxes / mo</span>
+          <div style="display:flex;align-items:center;gap:3px">
+            <span style="color:var(--muted);font-size:11px">$</span>
+            <input id="rn-in-tax" type="number" placeholder="auto"
+              style="width:70px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right"
+              oninput="rnCalc()">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted);flex:1">Insurance / mo</span>
+          <div style="display:flex;align-items:center;gap:3px">
+            <span style="color:var(--muted);font-size:11px">$</span>
+            <input id="rn-in-ins" type="number" placeholder="enter"
+              style="width:70px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right"
+              oninput="rnCalc()">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted);flex:1">Maintenance / mo</span>
+          <div style="display:flex;align-items:center;gap:3px">
+            <span style="color:var(--muted);font-size:11px">$</span>
+            <input id="rn-in-maint" type="number" placeholder="125"
+              style="width:70px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right"
+              oninput="rnCalc()">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted);flex:1">CapEx reserve / mo</span>
+          <div style="display:flex;align-items:center;gap:3px">
+            <span style="color:var(--muted);font-size:11px">$</span>
+            <input id="rn-in-capex" type="number" placeholder="100"
+              style="width:70px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right"
+              oninput="rnCalc()">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted);flex:1">HOA / other / mo</span>
+          <div style="display:flex;align-items:center;gap:3px">
+            <span style="color:var(--muted);font-size:11px">$</span>
+            <input id="rn-in-other" type="number" placeholder="0"
+              style="width:70px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;text-align:right"
+              oninput="rnCalc()">
+          </div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:600">Total expenses</span>
+          <span id="rn-calc-exp" style="font-size:14px;font-weight:700;color:var(--red)">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+          <span style="font-size:13px;font-weight:700">Net Operating Income</span>
+          <span id="rn-calc-noi" style="font-size:16px;font-weight:800">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BRRRR FLOW ════════════════════════════════════════════════════ -->
+  <div class="card" style="margin-bottom:12px;padding:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700">♻️ BRRRR — The Goal: Get All Your Money Back</div>
+      <span id="rn-brrrr-strat-pill" style="font-size:10px;padding:3px 10px;border-radius:10px;font-weight:700"></span>
+    </div>
+
+    <!-- 4-step flow -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-bottom:16px">
+
+      <!-- Step 1 -->
+      <div style="background:var(--bg2);border-radius:6px;padding:12px;border-right:none">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:10px">① BUY + REHAB</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Purchase price</div>
+        <div id="rn-b-purchase" style="font-size:13px;font-weight:600;margin-bottom:8px">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Rehab budget</div>
+        <div id="rn-b-rehab" style="font-size:13px;font-weight:600;margin-bottom:10px">—</div>
+        <div style="border-top:1px solid var(--border);padding-top:8px">
+          <div style="font-size:10px;color:var(--muted)">TOTAL CASH IN</div>
+          <div id="rn-b-cashin" style="font-size:16px;font-weight:800;color:var(--review)">—</div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div style="background:var(--bg2);border-radius:6px;padding:12px;margin-left:2px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:10px">② REFI AT ARV</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">After repair value</div>
+        <div id="rn-b-arv" style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:8px">—</div>
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
+          <input id="rn-in-refi-ltv" type="number" step="5" placeholder="75"
+            style="width:42px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text);padding:3px 5px;font-size:11px;text-align:center"
+            oninput="rnCalc()">
+          <span style="font-size:10px;color:var(--muted)">% LTV  @</span>
+          <input id="rn-in-refi-rate" type="number" step="0.125" placeholder="6.75"
+            style="width:42px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text);padding:3px 5px;font-size:11px;text-align:center"
+            oninput="rnCalc()">
+          <span style="font-size:10px;color:var(--muted)">%</span>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:8px">
+          <div style="font-size:10px;color:var(--muted)">REFI LOAN</div>
+          <div id="rn-b-refi-loan" style="font-size:16px;font-weight:800">—</div>
+        </div>
+      </div>
+
+      <!-- Step 3 — THE KEY NUMBER -->
+      <div style="border-radius:6px;padding:12px;margin-left:2px;border:2px solid var(--border2)" id="rn-step3-card">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:10px">③ CASH BACK</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Cash returned</div>
+        <div id="rn-b-cashout" style="font-size:16px;font-weight:800;color:var(--buy);margin-bottom:10px">—</div>
+        <div style="border-top:1px solid var(--border);padding-top:8px">
+          <div style="font-size:10px;color:var(--muted);font-weight:700">CASH LEFT IN DEAL</div>
+          <div id="rn-b-left" style="font-size:22px;font-weight:900">—</div>
+          <div id="rn-b-infinite" style="display:none;font-size:10px;color:var(--buy);font-weight:700;margin-top:4px">♾️ INFINITE RETURN</div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div style="background:var(--bg2);border-radius:6px;padding:12px;margin-left:2px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:10px">④ HOLD + CASH FLOW</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Refi payment / mo</div>
+        <div id="rn-b-pmt" style="font-size:13px;font-weight:600;margin-bottom:8px">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">DSCR</div>
+        <div id="rn-b-dscr" style="font-size:13px;font-weight:600;margin-bottom:10px">—</div>
+        <div style="border-top:1px solid var(--border);padding-top:8px">
+          <div style="font-size:10px;color:var(--muted)">CASH FLOW / MO</div>
+          <div id="rn-b-cf" style="font-size:22px;font-weight:900">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loan option quick-compare -->
+    <div style="background:var(--bg2);border-radius:6px;padding:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px">ADJUST FINANCING</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">DSCR rate</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input id="rn-in-dscr-rate" type="number" step="0.125" placeholder="6.75"
+              style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:5px 8px;font-size:13px;font-weight:600;text-align:center"
+              oninput="rnCalc()">
+            <span style="color:var(--muted)">%</span>
+            <span style="font-size:11px;color:var(--muted)">→ cf: <span id="rn-dscr-cf-preview" style="font-weight:700"></span></span>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">LTV (cash out lever)</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input id="rn-in-dscr-ltv" type="number" step="5" min="60" max="80" placeholder="75"
+              style="width:55px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:5px 8px;font-size:13px;font-weight:600;text-align:center"
+              oninput="rnCalc()">
+            <span style="color:var(--muted)">%</span>
+            <span style="font-size:10px;color:var(--muted);margin-left:4px">max 80%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+      <div style="font-size:10px;color:var(--muted)">Cap rate: <span id="rn-calc-cap" style="font-weight:700">—</span> · HUD FMR ref: <span id="rn-calc-hud" style="font-weight:700">—</span></div>
+      <button onclick="rnReset()" style="font-size:10px;padding:4px 12px;border-radius:4px;background:transparent;border:1px solid var(--border2);color:var(--muted);cursor:pointer">↺ Reset</button>
+    </div>
+  </div>
+
+  <!-- ══ AI TAKE ════════════════════════════════════════════════════════ -->
+  <div class="card" style="padding:16px">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:10px">URBAN'S TAKE</div>
+    <p id="rn-notes" style="font-size:13px;line-height:1.7;color:var(--text);margin-bottom:10px">—</p>
+    <div style="display:flex;gap:16px">
+      <div><span style="font-size:11px;color:var(--muted)">Hold? </span><span id="rn-worth" style="font-weight:700">—</span></div>
+      <div><span style="font-size:11px;color:var(--muted)">BRRRR? </span><span id="rn-worth-brrrr" style="font-weight:700">—</span></div>
+    </div>
+  </div>
+
+</div>
 
                 <!-- NEW CONSTRUCTION -->
         <div class="tc" id="t-newconstruction">
@@ -1804,101 +1859,91 @@ function renderUW(uw) {
   set('fi-min', _meets ? ('\u2705 YES ('+_m3+')') : ('\u274c NO ('+_m3+' needed)'));
   cls('fi-min', 'fv ' + (_meets ? 'g' : 'r'));
 
-  // RENTAL TAB — editable live calculator + AI defaults
-  const rn = uw.rental || {};
+  // RENTAL TAB — Caleb's real defaults: 10% PM, 6.75% DSCR, $125 maint, 75-80% LTV
+  const rn   = uw.rental || {};
   const rnMR = rn.marketRent || {};
-  const rnInc = rn.income || {};
+  const rnInc = rn.income   || {};
   const rnExp = rn.expenses || {};
-  const fi_arv3  = uw.arv?.urbanARV || 0;
-  const fi_ask3  = parseFloat(curDeal?.askingPrice) || 0;
-  const fi_reh3  = uw.rehab?.urbanEstimate || 0;
+  const fi_arv = uw.arv?.urbanARV            || 0;
+  const fi_ask = parseFloat(curDeal?.askingPrice) || 0;
+  const fi_reh = uw.rehab?.urbanEstimate     || 0;
 
-  // Unit count
-  const _uc = rnMR.unitCount || getUnitCount(curDeal?.propertyType) || 1;
+  // Unit count + mix
+  const _uc     = rnMR.unitCount || getUnitCount(curDeal?.propertyType) || 1;
   const _rentPU = rnMR.rentPerUnit || (rnMR.estimated ? Math.round(rnMR.estimated / _uc) : 0);
 
-  // Populate editable inputs with AI estimates as defaults
-  const setIn = (id, val) => { const el = document.getElementById(id); if (el && !el._userEdited) el.value = val || ''; };
-  setIn('rn-in-rent-pu', _rentPU || Math.round((rnMR.estimated || 0) / Math.max(_uc, 1)));
-  setIn('rn-in-units', _uc);
-  setIn('rn-in-vac', Math.round((rnInc.vacancyRate || 0.07) * 100));
-  setIn('rn-in-pm',  Math.round((rnExp.propertyManagement?.rate || 0.09) * 100));
-  const _tax = rnExp.propertyTaxes?.monthly || (fi_arv3 ? Math.round(fi_arv3 * 0.012 / 12) : 0);
-  setIn('rn-in-tax', _tax);
-  setIn('rn-in-ins',   rnExp.insurance?.monthly    || 250);
-  setIn('rn-in-maint', rnExp.maintenance?.monthly  || Math.round((parseFloat(curDeal?.sqft)||1200)/12));
-  setIn('rn-in-capex', rnExp.capexReserve?.monthly || 100);
-  setIn('rn-in-other', (rnExp.hoa?.monthly || parseFloat(curDeal?.hoaFee) || 0) + (rnExp.lawnTrash?.monthly || 80));
-  setIn('rn-in-dscr-rate',  rn.debtService?.dscrLoan?.rate    || 8.0);
-  setIn('rn-in-dscr-ltv',   75);
-  setIn('rn-in-conv-rate',  rn.debtService?.conventional30?.rate || 7.25);
-  setIn('rn-in-conv-ltv',   80);
-  setIn('rn-in-refi-ltv',   75);
-  setIn('rn-in-refi-rate',  rn.debtService?.dscrLoan?.rate || 7.5);
+  // Populate inputs — only if user hasn't edited them
+  const si = (id, val) => { const el = document.getElementById(id); if (el && !el._userEdited) el.value = val != null ? val : ''; };
+  si('rn-in-rent-pu', _rentPU || '');
+  si('rn-in-units',   _uc);
+  si('rn-in-vac',     Math.round((rnInc.vacancyRate || 0.07) * 100));
+  si('rn-in-pm',      10);   // Caleb's real: 10%
+  si('rn-in-tax',     rnExp.propertyTaxes?.monthly || (fi_arv ? Math.round(fi_arv * 0.012 / 12) : ''));
+  si('rn-in-ins',     rnExp.insurance?.monthly || '');   // Caleb said "depends" — leave blank
+  si('rn-in-maint',   125);  // Caleb's real: $125/mo
+  si('rn-in-capex',   rnExp.capexReserve?.monthly || 100);
+  si('rn-in-other',   (parseFloat(curDeal?.hoaFee) || 0));
+  si('rn-in-dscr-rate', 6.75); // Caleb's real rate
+  si('rn-in-dscr-ltv',  75);
+  si('rn-in-refi-ltv',  75);
+  si('rn-in-refi-rate', 6.75);
 
   // Unit pill
   const _pill = document.getElementById('rn-unit-pill');
-  if (_pill) { _pill.style.display = _uc > 1 ? '' : 'none'; _pill.textContent = ['','','2-Unit Duplex','3-Unit Triplex','4-Unit Quad'][_uc] || (_uc+'-Unit'); }
-
-  // Rent source note
-  const _srcNote = document.getElementById('rn-rent-source-note');
-  if (_srcNote) {
-    const _src = rnMR.source || 'AI estimate';
-    const _conf = rnMR.confidence || '';
-    // Show unit mix if available
-    let mixStr = '';
-    if (rnMR.unitMix && rnMR.rentByUnit && rnMR.unitMix.length > 1) {
-      const parts = rnMR.unitMix.map((br, i) => br + 'BR @ $' + (rnMR.rentByUnit[i]||'?').toLocaleString());
-      mixStr = ' · ' + parts.join(' + ') + ' = $' + (rnMR.estimated||0).toLocaleString() + ' total';
-    } else if (rnMR.hudFMR) {
-      mixStr = ' · HUD FMR: $' + rnMR.hudFMR.toLocaleString() + '/mo';
+  if (_pill) {
+    if (_uc > 1) {
+      _pill.style.display = 'inline-block';
+      const mixNames = (rnMR.unitMix || []).map(b => b + 'BR').join(' + ');
+      _pill.textContent = (['','','Duplex','Triplex','Quadplex'][_uc] || _uc+'-unit') + (mixNames ? ' · ' + mixNames : '');
+    } else {
+      _pill.style.display = 'none';
     }
-    _srcNote.textContent = 'Source: ' + _src + (_conf ? ' (' + _conf + ')' : '') + mixStr + ' · Edit above to override';
   }
 
-  // HUD FMR + assessment fields
-  const rn_hud = document.getElementById('rn-calc-hud');
-  if (rn_hud) rn_hud.textContent = rnMR.hudFMR ? '$' + rnMR.hudFMR.toLocaleString() + '/mo (' + (curDeal?.beds||'?') + 'BR ' + (curDeal?.county||'FL') + ')' : 'Not available';
+  // Rent source note
+  const _srcEl = document.getElementById('rn-rent-source-note');
+  if (_srcEl) {
+    if (rnMR.unitMix && rnMR.rentByUnit && rnMR.unitMix.length > 1) {
+      const parts = rnMR.unitMix.map((br, i) => br + 'BR=$' + (rnMR.rentByUnit[i]||0).toLocaleString());
+      _srcEl.textContent = 'HUD FMR: ' + parts.join(' + ') + ' = $' + (rnMR.estimated||0).toLocaleString() + '/mo total · Edit above to adjust';
+    } else if (rnMR.hudFMR) {
+      _srcEl.textContent = 'HUD FMR for ' + (curDeal?.beds||'?') + 'BR in ' + (curDeal?.county||'this county') + ': $' + rnMR.hudFMR.toLocaleString() + '/mo · Edit to adjust';
+    } else {
+      _srcEl.textContent = 'Source: ' + (rnMR.source || 'AI estimate') + ' · Edit above to adjust';
+    }
+  }
 
-  // AI assessment fields
+  // AI assessment
   set('rn-notes', rn.notes || '');
-  set('rn-worth', rn.worthConsidering ? '✅ YES' : '❌ NO');
-  if (document.getElementById('rn-worth')) document.getElementById('rn-worth').className = 'mv ' + (rn.worthConsidering ? 'g' : 'r');
-  set('rn-worth-brrrr', rn.worthBRRRR ? '✅ YES' : '❌ NO');
-  if (document.getElementById('rn-worth-brrrr')) document.getElementById('rn-worth-brrrr').className = 'mv ' + (rn.worthBRRRR ? 'g' : 'r');
-
-  // Verdict banner
   const _vrd = rn.rentalVerdict || (rn.worthConsidering ? 'POSSIBLE HOLD' : 'FLIP ONLY');
   const _vBanner = document.getElementById('rn-verdict-banner');
   if (_vBanner) {
     _vBanner.style.display = 'flex';
-    const _vC = {'STRONG HOLD':'rgba(60,200,130,.12)','BRRRR CANDIDATE':'rgba(60,200,130,.1)','POSSIBLE HOLD':'rgba(255,160,32,.08)','FLIP ONLY':'rgba(100,100,120,.06)'}[_vrd] || 'rgba(100,100,120,.06)';
-    const _vB = {'STRONG HOLD':'var(--buy)','BRRRR CANDIDATE':'var(--buy)','POSSIBLE HOLD':'var(--review)','FLIP ONLY':'var(--muted)'}[_vrd] || 'var(--muted)';
-    _vBanner.style.background = _vC; _vBanner.style.borderColor = _vB;
-    const _vIcons = {'STRONG HOLD':'🏠','BRRRR CANDIDATE':'♻️','POSSIBLE HOLD':'🤔','FLIP ONLY':'🔨'};
-    set('rn-verdict-icon', _vIcons[_vrd] || '📊');
+    const _vColors = {'STRONG HOLD':'rgba(60,200,130,.12)','BRRRR CANDIDATE':'rgba(60,200,130,.1)','POSSIBLE HOLD':'rgba(255,160,32,.08)','FLIP ONLY':'rgba(100,100,120,.06)'};
+    const _vBorders = {'STRONG HOLD':'var(--buy)','BRRRR CANDIDATE':'var(--buy)','POSSIBLE HOLD':'var(--review)','FLIP ONLY':'var(--muted)'};
+    _vBanner.style.background = _vColors[_vrd] || _vColors['FLIP ONLY'];
+    _vBanner.style.borderColor = _vBorders[_vrd] || 'var(--muted)';
+    set('rn-verdict-icon', {'STRONG HOLD':'🏠','BRRRR CANDIDATE':'♻️','POSSIBLE HOLD':'🤔','FLIP ONLY':'🔨'}[_vrd] || '📊');
     set('rn-verdict-label', _vrd);
-    if (document.getElementById('rn-verdict-label')) document.getElementById('rn-verdict-label').style.color = _vB;
+    if (document.getElementById('rn-verdict-label')) document.getElementById('rn-verdict-label').style.color = _vBorders[_vrd] || 'var(--muted)';
     set('rn-verdict-note', rn.notes || '');
-    const _bBadge = document.getElementById('rn-brrrr-badge');
-    if (_bBadge) _bBadge.style.display = (rn.worthBRRRR || _vrd.includes('BRRRR')) ? '' : 'none';
   }
+  set('rn-worth',       rn.worthConsidering ? '✅ Yes' : '❌ No');
+  set('rn-worth-brrrr', rn.worthBRRRR       ? '✅ Yes' : '❌ No');
+  if (document.getElementById('rn-worth'))       document.getElementById('rn-worth').style.color       = rn.worthConsidering ? 'var(--buy)' : 'var(--muted)';
+  if (document.getElementById('rn-worth-brrrr')) document.getElementById('rn-worth-brrrr').style.color = rn.worthBRRRR       ? 'var(--buy)' : 'var(--muted)';
 
-  // Static BRRRR fields from ARV/deal (don't change with calculator)
-  set('rn-b-purchase', fmt(fi_ask3));
-  set('rn-b-rehab', fmt(fi_reh3));
-  set('rn-b-arv', fmt(fi_arv3));
+  // Static BRRRR fields
+  set('rn-b-purchase', fmt(fi_ask));
+  set('rn-b-rehab',    fmt(fi_reh));
+  set('rn-b-arv',      fmt(fi_arv));
 
-  // Track user edits so we don't overwrite them
-  ['rn-in-rent-pu','rn-in-units','rn-in-vac','rn-in-pm','rn-in-tax','rn-in-ins','rn-in-maint','rn-in-capex','rn-in-other','rn-in-dscr-rate','rn-in-dscr-ltv','rn-in-conv-rate','rn-in-conv-ltv','rn-in-refi-ltv','rn-in-refi-rate'].forEach(id => {
+  // Track edits
+  ['rn-in-rent-pu','rn-in-units','rn-in-vac','rn-in-pm','rn-in-tax','rn-in-ins','rn-in-maint','rn-in-capex','rn-in-other','rn-in-dscr-rate','rn-in-dscr-ltv','rn-in-refi-ltv','rn-in-refi-rate'].forEach(id => {
     const el = document.getElementById(id);
-    if (el && !el._hasListener) {
-      el._hasListener = true;
-      el.addEventListener('change', () => { el._userEdited = true; });
-    }
+    if (el && !el._hasListener) { el._hasListener = true; el.addEventListener('change', () => { el._userEdited = true; }); }
   });
 
-  // Run calculator
   rnCalc();
 
 
@@ -2373,161 +2418,151 @@ function getUnitCount(propertyType) {
   return 1;
 }
 
-// ── RENTAL LIVE CALCULATOR ────────────────────────────────────────────────────
+// ── RENTAL LIVE CALCULATOR ─────────────────────────────────────────────────
 function rnCalc() {
-  const g = id => parseFloat(document.getElementById(id)?.value) || 0;
+  const g  = id => { const el = document.getElementById(id); return el ? (parseFloat(el.value) || 0) : 0; };
   const fi_arv = (typeof curUW !== 'undefined' && curUW?.arv?.urbanARV) || 0;
   const fi_ask = parseFloat(curDeal?.askingPrice) || 0;
   const fi_reh = (typeof curUW !== 'undefined' && curUW?.rehab?.urbanEstimate) || 0;
+  const fmtN   = n => n != null ? '$' + Math.abs(Math.round(n)).toLocaleString() : '—';
+  const signed = n => (n >= 0 ? '+' : '−') + fmtN(n);
+  const cfClr  = n => n >= 200 ? 'var(--buy)' : n >= 0 ? 'var(--review)' : 'var(--red)';
+  const setEl  = (id, val, color) => { const el = document.getElementById(id); if (!el) return; el.textContent = val; if (color) el.style.color = color; };
 
-  // Income
-  const rentPU  = g('rn-in-rent-pu');
-  const units   = Math.max(1, g('rn-in-units') || 1);
-  const gross   = Math.round(rentPU * units);
-  const vacPct  = g('rn-in-vac') / 100;
-  const egi     = Math.round(gross * (1 - vacPct));
+  // ── INCOME
+  const rentPU = g('rn-in-rent-pu');
+  const units  = Math.max(1, g('rn-in-units') || 1);
+  const gross  = Math.round(rentPU * units);
+  const vacPct = (g('rn-in-vac') || 7) / 100;
+  const egi    = Math.round(gross * (1 - vacPct));
 
-  // Expenses
-  const pmPct   = g('rn-in-pm') / 100;
-  const pm      = Math.round(gross * pmPct);
-  const tax     = g('rn-in-tax');
-  const ins     = g('rn-in-ins');
-  const maint   = g('rn-in-maint');
-  const capex   = g('rn-in-capex');
-  const other   = g('rn-in-other');
-  const totExp  = pm + tax + ins + maint + capex + other;
-  const noi     = Math.round(egi - totExp);
+  // ── EXPENSES (Caleb's real numbers as fallback)
+  const pmPct  = (g('rn-in-pm') || 10) / 100;
+  const pm     = Math.round(gross * pmPct);
+  const tax    = g('rn-in-tax') || (fi_arv ? Math.round(fi_arv * 0.012 / 12) : 0);
+  const ins    = g('rn-in-ins') || 0;   // user must enter — depends on property
+  const maint  = g('rn-in-maint') || 125; // Caleb's default
+  const capex  = g('rn-in-capex') || 100;
+  const other  = g('rn-in-other') || 0;
+  const totExp = pm + tax + ins + maint + capex + other;
+  const noi    = Math.round(egi - totExp);
 
-  // Metrics
-  const capRate = fi_arv > 0 ? (noi * 12 / fi_arv * 100).toFixed(2) : null;
-  const gy      = fi_arv > 0 && gross > 0 ? (gross * 12 / fi_arv * 100).toFixed(2) : null;
-  const ptr     = fi_arv > 0 && gross > 0 ? (fi_arv / (gross * 12)).toFixed(1) : null;
+  // ── METRICS
+  const capRate = fi_arv > 0 ? (noi * 12 / fi_arv * 100).toFixed(1) : null;
 
-  // DSCR Loan
-  const dscrRate = g('rn-in-dscr-rate') || 8.0;
+  // ── BRRRR / REFI (using DSCR settings as the refi loan)
+  const refiLtv  = (g('rn-in-refi-ltv')  || 75) / 100;
+  const refiRate = g('rn-in-refi-rate') || 6.75;
+  const refiLoan = Math.round(fi_arv * refiLtv);
+  const refiMo   = refiRate / 100 / 12;
+  const refiPmt  = refiLoan > 0 ? Math.round(refiLoan * refiMo / (1 - Math.pow(1 + refiMo, -360))) : 0;
+  const cashIn   = fi_ask + fi_reh;
+  const cashLeft = Math.round(cashIn - refiLoan);
+  const cashOut  = Math.round(refiLoan);
+  const infinite = cashLeft <= 0;
+  const bCf      = Math.round(noi - refiPmt);
+  const bDscr    = refiPmt > 0 ? (noi / refiPmt).toFixed(2) : null;
+
+  // ── DSCR loan compare (separate from refi)
+  const dscrRate = g('rn-in-dscr-rate') || 6.75;
   const dscrLtv  = (g('rn-in-dscr-ltv') || 75) / 100;
   const dscrLoan = Math.round(fi_arv * dscrLtv);
   const dscrMo   = dscrRate / 100 / 12;
   const dscrPmt  = dscrLoan > 0 ? Math.round(dscrLoan * dscrMo / (1 - Math.pow(1 + dscrMo, -360))) : 0;
   const dscrCf   = Math.round(noi - dscrPmt);
-  const dscrRat  = dscrPmt > 0 ? (noi / dscrPmt).toFixed(2) : null;
 
-  // Conventional
-  const convRate = g('rn-in-conv-rate') || 7.25;
-  const convLtv  = (g('rn-in-conv-ltv') || 80) / 100;
-  const convLoan = Math.round(fi_arv * convLtv);
-  const convMo   = convRate / 100 / 12;
-  const convPmt  = convLoan > 0 ? Math.round(convLoan * convMo / (1 - Math.pow(1 + convMo, -360))) : 0;
-  const convCf   = Math.round(noi - convPmt);
-  const convDp   = Math.round(fi_arv * (1 - convLtv));
-
-  // BRRRR
-  const refiLtv  = (g('rn-in-refi-ltv') || 75) / 100;
-  const refiRate = g('rn-in-refi-rate') || 7.5;
-  const refiLoan = Math.round(fi_arv * refiLtv);
-  const cashIn   = fi_ask + fi_reh;
-  const cashOut  = Math.round(refiLoan); // cash pulled out at refi (covers purchase)
-  const cashLeft = Math.round(cashIn - refiLoan);
-  const infinite = cashLeft <= 0;
-  const refiMo   = refiRate / 100 / 12;
-  const refiPmt  = refiLoan > 0 ? Math.round(refiLoan * refiMo / (1 - Math.pow(1 + refiMo, -360))) : 0;
-  const bCf      = Math.round(noi - refiPmt);
-  const bDscr    = refiPmt > 0 ? (noi / refiPmt).toFixed(2) : null;
-  const bCoc     = (!infinite && cashLeft > 0) ? (bCf * 12 / cashLeft * 100).toFixed(1) : null;
-
-  // Determine strategy
+  // ── STRATEGY
   let strat = 'FLIP ONLY';
-  if (fi_arv > 0 && refiLoan > 0) {
-    if (infinite && bCf >= 100) strat = 'FULL BRRRR ♾️';
-    else if (cashLeft < cashIn * 0.35 && bCf >= 0) strat = 'STRONG BRRRR';
-    else if (cashLeft < cashIn * 0.60 && bCf >= 0) strat = 'PARTIAL BRRRR';
-    else if (bCf >= 0) strat = 'POSSIBLE HOLD';
+  if (fi_arv > 0 && cashIn > 0) {
+    if (infinite && bCf >= 50)         strat = 'FULL BRRRR ♾️';
+    else if (cashLeft < cashIn * 0.20 && bCf >= 0) strat = 'STRONG BRRRR';
+    else if (cashLeft < cashIn * 0.50 && bCf >= 0) strat = 'PARTIAL BRRRR';
+    else if (bCf >= 0)                 strat = 'POSSIBLE HOLD';
   }
 
-  // ── UPDATE UI ──────────────────────────────────────────────────────────────
-  const setEl = (id, val, cls) => { const el = document.getElementById(id); if (el) { el.textContent = val; if (cls) el.className = cls; } };
-  const fmtN = n => n != null ? '$' + Math.abs(n).toLocaleString() : '—';
-  const signedFmt = n => (n >= 0 ? '+' : '-') + fmtN(n);
-  const cfColor = n => n >= 200 ? 'var(--buy)' : n >= 0 ? 'var(--review)' : 'var(--red)';
+  // ── UPDATE UI ─────────────────────────────────────────────────────────────
+
+  // Income section
+  setEl('rn-calc-gross', gross > 0 ? fmtN(gross) + '/mo' : '—', 'var(--gold)');
+  setEl('rn-calc-egi',   egi   > 0 ? fmtN(egi)   + '/mo' : '—');
+  setEl('rn-pm-calc', pm > 0 ? '= ' + fmtN(pm) : '');
+
+  // Expense total + NOI
+  setEl('rn-calc-exp', totExp > 0 ? '−' + fmtN(totExp) + '/mo' : '—', 'var(--red)');
+  setEl('rn-calc-noi', noi !== 0  ? signed(noi) + '/mo' : '—', noi > 0 ? 'var(--buy)' : 'var(--red)');
 
   // Hero numbers
-  setEl('rn-hero-rent', gross > 0 ? fmtN(gross) + '/mo' : '—');
+  setEl('rn-hero-rent', gross > 0 ? fmtN(gross) : '—', 'var(--gold)');
   if (units > 1) {
-    // Show unit mix breakdown if available
     const _mix = (typeof curUW !== 'undefined' && curUW?.rental?.marketRent?.unitMix);
-    const _rentsByUnit = (typeof curUW !== 'undefined' && curUW?.rental?.marketRent?.rentByUnit);
-    if (_mix && _rentsByUnit && _mix.length > 1) {
-      const _mixStr = _mix.map((br, i) => br + 'BR:$' + (_rentsByUnit[i]||0).toLocaleString()).join(' + ');
-      setEl('rn-hero-rent-note', _mixStr);
-    } else {
-      setEl('rn-hero-rent-note', fmtN(rentPU) + '/unit × ' + units + ' units');
+    const _rbu = (typeof curUW !== 'undefined' && curUW?.rental?.marketRent?.rentByUnit);
+    const _heroNote = document.getElementById('rn-hero-rent-note');
+    if (_heroNote) {
+      if (_mix && _rbu && _mix.length > 1) {
+        _heroNote.textContent = _mix.map((b,i) => b + 'BR $' + (_rbu[i]||0).toLocaleString()).join(' + ');
+      } else {
+        _heroNote.textContent = fmtN(rentPU) + '/unit × ' + units + ' units';
+      }
     }
   } else {
-    document.getElementById('rn-hero-rent-note') && (document.getElementById('rn-hero-rent-note').textContent = '/month');
+    setEl('rn-hero-rent-note', '/month');
   }
 
-  const heroCf = document.getElementById('rn-hero-cf');
-  if (heroCf) { heroCf.textContent = dscrCf !== 0 ? signedFmt(dscrCf) + '/mo' : '—'; heroCf.style.color = cfColor(dscrCf); }
-  const heroLeft = document.getElementById('rn-hero-left');
-  if (heroLeft) { heroLeft.textContent = infinite ? '♾️ Full recycle' : fmtN(cashLeft); heroLeft.style.color = infinite ? 'var(--buy)' : cashLeft < cashIn * 0.35 ? 'var(--buy)' : 'var(--text)'; }
+  setEl('rn-hero-cf', bCf !== 0 ? signed(bCf) + '/mo' : '—', cfClr(bCf));
+  setEl('rn-hero-left', infinite ? '♾️  $0' : fmtN(cashLeft),
+    infinite ? 'var(--buy)' : cashLeft < cashIn * 0.25 ? 'var(--buy)' : cashLeft < cashIn * 0.50 ? 'var(--review)' : 'var(--text)');
+  setEl('rn-hero-left-note', infinite ? '← GOAL ACHIEVED 🎯' : cashLeft > 0 ? fmtN(cashLeft) + ' still in deal' : '');
+  if (document.getElementById('rn-hero-left-note')) {
+    document.getElementById('rn-hero-left-note').style.color = infinite ? 'var(--buy)' : 'var(--muted)';
+  }
 
-  // Income
-  setEl('rn-calc-gross', gross > 0 ? fmtN(gross) + '/mo' : '—');
-  setEl('rn-calc-egi',   egi > 0   ? fmtN(egi)   + '/mo' : '—');
-  setEl('rn-calc-exp',   totExp > 0 ? '−' + fmtN(totExp) + '/mo' : '—');
+  // BRRRR steps
+  setEl('rn-b-cashin',    cashIn  > 0 ? fmtN(cashIn)  : '—', 'var(--review)');
+  setEl('rn-b-arv',       fi_arv  > 0 ? fmtN(fi_arv)  : '—', 'var(--gold)');
+  setEl('rn-b-refi-loan', refiLoan > 0 ? fmtN(refiLoan) : '—');
+  setEl('rn-b-cashout',   cashOut > 0 ? fmtN(cashOut) : '—', 'var(--buy)');
+  setEl('rn-b-left', infinite ? '~$0' : fmtN(Math.max(0, cashLeft)),
+    infinite ? 'var(--buy)' : cashLeft < cashIn * 0.25 ? 'var(--buy)' : cashLeft < cashIn * 0.5 ? 'var(--review)' : 'var(--red)');
+  if (document.getElementById('rn-b-infinite')) {
+    document.getElementById('rn-b-infinite').style.display = infinite ? '' : 'none';
+  }
+  // Step 3 card border highlight
+  const s3 = document.getElementById('rn-step3-card');
+  if (s3) {
+    s3.style.background = infinite ? 'rgba(60,200,130,.08)' : cashLeft < cashIn * 0.3 ? 'rgba(60,200,130,.04)' : 'var(--bg2)';
+    s3.style.borderColor = infinite ? 'var(--buy)' : cashLeft < cashIn * 0.3 ? 'rgba(60,200,130,.4)' : 'var(--border2)';
+  }
 
-  // NOI
-  const noiEl = document.getElementById('rn-calc-noi');
-  if (noiEl) { noiEl.textContent = noi !== 0 ? signedFmt(noi) + '/mo' : '—'; noiEl.style.color = noi > 0 ? 'var(--buy)' : noi < 0 ? 'var(--red)' : 'var(--muted)'; }
-  setEl('rn-calc-cap', capRate ? capRate + '%' : '—');
-  setEl('rn-calc-gy',  gy  ? gy  + '%' : '—');
-  setEl('rn-calc-ptr', ptr ? ptr + 'x' : '—');
+  setEl('rn-b-pmt', refiPmt > 0 ? fmtN(refiPmt) + '/mo' : '—');
+  setEl('rn-b-dscr', bDscr ? bDscr + 'x ' + (parseFloat(bDscr) >= 1.25 ? '✅' : '⚠️') : '—',
+    parseFloat(bDscr) >= 1.25 ? 'var(--buy)' : parseFloat(bDscr) >= 1.0 ? 'var(--review)' : 'var(--red)');
+  setEl('rn-b-cf', bCf !== 0 ? signed(bCf) + '/mo' : '—', cfClr(bCf));
 
-  // DSCR Loan
-  setEl('rn-calc-dscr-pmt', dscrPmt ? fmtN(dscrPmt) : '—');
-  const dCfEl = document.getElementById('rn-calc-dscr-cf');
-  if (dCfEl) { dCfEl.textContent = dscrCf !== 0 ? signedFmt(dscrCf) + '/mo' : '—'; dCfEl.style.color = cfColor(dscrCf); }
-  const dRatEl = document.getElementById('rn-calc-dscr-ratio');
-  if (dRatEl) { dRatEl.textContent = dscrRat ? dscrRat + 'x ' + (parseFloat(dscrRat)>=1.25?'✅':'⚠️') : '—'; dRatEl.style.color = parseFloat(dscrRat)>=1.25?'var(--buy)':parseFloat(dscrRat)>=1.0?'var(--review)':'var(--red)'; }
+  // DSCR preview in financing row
+  setEl('rn-dscr-cf-preview', dscrCf !== 0 ? signed(dscrCf) + '/mo' : '—', cfClr(dscrCf));
 
-  // Conventional
-  setEl('rn-calc-conv-pmt', convPmt ? fmtN(convPmt) : '—');
-  const cCfEl = document.getElementById('rn-calc-conv-cf');
-  if (cCfEl) { cCfEl.textContent = convCf !== 0 ? signedFmt(convCf) + '/mo' : '—'; cCfEl.style.color = cfColor(convCf); }
-  setEl('rn-calc-conv-dp', convDp > 0 ? fmtN(convDp) + ' down' : '—');
-
-  // BRRRR
-  setEl('rn-b-cashin',   fmtN(cashIn));
-  setEl('rn-b-arv',      fmtN(fi_arv));
-  setEl('rn-b-refi-loan', fmtN(refiLoan));
-  const coEl = document.getElementById('rn-b-cashout');
-  if (coEl) { coEl.textContent = fmtN(cashOut); coEl.style.color = 'var(--buy)'; }
-  const clEl = document.getElementById('rn-b-left');
-  if (clEl) { clEl.textContent = infinite ? '~$0' : fmtN(cashLeft); clEl.style.color = infinite ? 'var(--buy)' : cashLeft < cashIn*0.35 ? 'var(--buy)' : 'var(--text)'; }
-  const infEl = document.getElementById('rn-b-infinite');
-  if (infEl) infEl.style.display = infinite ? '' : 'none';
-  setEl('rn-b-pmt', refiPmt ? fmtN(refiPmt) : '—');
-  const bCfEl = document.getElementById('rn-b-cf');
-  if (bCfEl) { bCfEl.textContent = bCf !== 0 ? signedFmt(bCf) + '/mo' : '—'; bCfEl.style.color = cfColor(bCf); }
-  const bDEl = document.getElementById('rn-b-dscr');
-  if (bDEl) { bDEl.textContent = bDscr ? bDscr + 'x ' + (parseFloat(bDscr)>=1.25?'✅':'⚠️') : '—'; bDEl.style.color = parseFloat(bDscr)>=1.25?'var(--buy)':parseFloat(bDscr)>=1.0?'var(--review)':'var(--red)'; }
-  setEl('rn-b-coc', bCoc ? bCoc + '% annual' : infinite ? '♾️' : '—');
+  // Metrics
+  setEl('rn-calc-cap', capRate ? capRate + '%' : '—',
+    parseFloat(capRate) >= 7 ? 'var(--buy)' : parseFloat(capRate) >= 5 ? 'var(--review)' : 'var(--red)');
+  const _hudFmr = (typeof curUW !== 'undefined' && curUW?.rental?.marketRent?.hudFMR);
+  setEl('rn-calc-hud', _hudFmr ? '$' + _hudFmr.toLocaleString() + '/mo' : '—');
 
   // Strategy pill
-  const sEl = document.getElementById('rn-brrrr-strat-pill');
-  if (sEl) {
-    sEl.textContent = strat;
-    const isGood = strat.includes('FULL') || strat.includes('STRONG');
-    const isMed  = strat.includes('PARTIAL') || strat.includes('POSSIBLE');
-    sEl.style.background = isGood ? 'rgba(60,200,130,.15)' : isMed ? 'rgba(255,160,32,.12)' : 'rgba(120,120,140,.1)';
-    sEl.style.color = isGood ? 'var(--buy)' : isMed ? 'var(--review)' : 'var(--muted)';
-    sEl.style.border = '1px solid ' + (isGood ? 'rgba(60,200,130,.3)' : isMed ? 'rgba(255,160,32,.25)' : 'var(--border)');
-    sEl.style.padding = '2px 10px';
-    sEl.style.borderRadius = '10px';
-    sEl.style.fontSize = '10px';
-    sEl.style.fontWeight = '700';
+  const sPill = document.getElementById('rn-brrrr-strat-pill');
+  if (sPill) {
+    sPill.textContent = strat;
+    const good = strat.includes('FULL') || strat.includes('STRONG');
+    const med  = strat.includes('PARTIAL') || strat.includes('POSSIBLE');
+    sPill.style.background   = good ? 'rgba(60,200,130,.15)' : med ? 'rgba(255,160,32,.12)' : 'rgba(100,100,120,.1)';
+    sPill.style.color        = good ? 'var(--buy)' : med ? 'var(--review)' : 'var(--muted)';
+    sPill.style.border       = '1px solid ' + (good ? 'rgba(60,200,130,.3)' : med ? 'rgba(255,160,32,.25)' : 'var(--border)');
+    sPill.style.padding      = '3px 10px';
+    sPill.style.borderRadius = '10px';
+    sPill.style.fontWeight   = '700';
+    sPill.style.fontSize     = '10px';
   }
 }
+
 
 function rnReset() {
   ['rn-in-rent-pu','rn-in-units','rn-in-vac','rn-in-pm','rn-in-tax','rn-in-ins','rn-in-maint','rn-in-capex','rn-in-other','rn-in-dscr-rate','rn-in-dscr-ltv','rn-in-conv-rate','rn-in-conv-ltv','rn-in-refi-ltv','rn-in-refi-rate'].forEach(id => {
