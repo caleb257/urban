@@ -1822,19 +1822,19 @@ function renderUW(uw) {
   setIn('rn-in-rent-pu', _rentPU || Math.round((rnMR.estimated || 0) / Math.max(_uc, 1)));
   setIn('rn-in-units', _uc);
   setIn('rn-in-vac', Math.round((rnInc.vacancyRate || 0.07) * 100));
-  setIn('rn-in-pm',  Math.round((rnExp.propertyManagement?.rate || 0.09) * 100));
+  setIn('rn-in-pm',  10); // Caleb: 10% PM
   const _tax = rnExp.propertyTaxes?.monthly || (fi_arv3 ? Math.round(fi_arv3 * 0.012 / 12) : 0);
   setIn('rn-in-tax', _tax);
-  setIn('rn-in-ins',   rnExp.insurance?.monthly    || 250);
-  setIn('rn-in-maint', rnExp.maintenance?.monthly  || Math.round((parseFloat(curDeal?.sqft)||1200)/12));
+  setIn('rn-in-ins',   rnExp.insurance?.monthly || ''); // Caleb: depends on property, leave blank
+  setIn('rn-in-maint', 125); // Caleb: $125/mo
   setIn('rn-in-capex', rnExp.capexReserve?.monthly || 100);
-  setIn('rn-in-other', (rnExp.hoa?.monthly || parseFloat(curDeal?.hoaFee) || 0) + (rnExp.lawnTrash?.monthly || 80));
-  setIn('rn-in-dscr-rate',  rn.debtService?.dscrLoan?.rate    || 8.0);
+  setIn('rn-in-other', (rnExp.hoa?.monthly || parseFloat(curDeal?.hoaFee) || 0));
+  setIn('rn-in-dscr-rate',  6.75); // Caleb's actual rate
   setIn('rn-in-dscr-ltv',   75);
-  setIn('rn-in-conv-rate',  rn.debtService?.conventional30?.rate || 7.25);
+  setIn('rn-in-conv-rate',  7.25);
   setIn('rn-in-conv-ltv',   80);
   setIn('rn-in-refi-ltv',   75);
-  setIn('rn-in-refi-rate',  rn.debtService?.dscrLoan?.rate || 7.5);
+  setIn('rn-in-refi-rate',  6.75); // Caleb's actual rate
 
   // Unit pill
   const _pill = document.getElementById('rn-unit-pill');
@@ -2381,12 +2381,12 @@ function rnCalc() {
   const egi     = Math.round(gross * (1 - vacPct));
 
   // Expenses
-  const pmPct   = g('rn-in-pm') / 100;
+  const pmPct   = (g('rn-in-pm') || 10) / 100; // default 10%
   const pm      = Math.round(gross * pmPct);
   const tax     = g('rn-in-tax');
   const ins     = g('rn-in-ins');
-  const maint   = g('rn-in-maint');
-  const capex   = g('rn-in-capex');
+  const maint   = g('rn-in-maint') || 125; // Caleb default
+  const capex   = g('rn-in-capex') || 100;
   const other   = g('rn-in-other');
   const totExp  = pm + tax + ins + maint + capex + other;
   const noi     = Math.round(egi - totExp);
@@ -2485,7 +2485,10 @@ function rnCalc() {
   const coEl = document.getElementById('rn-b-cashout');
   if (coEl) { coEl.textContent = fmtN(cashOut); coEl.style.color = 'var(--buy)'; }
   const clEl = document.getElementById('rn-b-left');
-  if (clEl) { clEl.textContent = infinite ? '~$0' : fmtN(cashLeft); clEl.style.color = infinite ? 'var(--buy)' : cashLeft < cashIn*0.35 ? 'var(--buy)' : 'var(--text)'; }
+  if (clEl) {
+    clEl.textContent = infinite ? '♾️  $0 — GOAL ✅' : fmtN(Math.max(0, cashLeft));
+    clEl.style.color = infinite ? 'var(--buy)' : cashLeft < cashIn*0.25 ? 'var(--buy)' : cashLeft < cashIn*0.5 ? 'var(--review)' : 'var(--red)';
+  }
   const infEl = document.getElementById('rn-b-infinite');
   if (infEl) infEl.style.display = infinite ? '' : 'none';
   setEl('rn-b-pmt', refiPmt ? fmtN(refiPmt) : '—');
