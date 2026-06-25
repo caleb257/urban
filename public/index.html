@@ -414,6 +414,13 @@ a{color:var(--accent)}
 
         <!-- OVERVIEW -->
         <div class="tc active" id="t-overview">
+          <!-- SEEN-BY ROW -->
+          <div id="seen-by-row" style="display:none;margin-bottom:10px;padding:7px 12px;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+            <span style="font-size:11px;color:var(--muted)">👁 Reviewed by:</span>&nbsp;
+            <span id="seen-caleb" style="font-size:11px;display:none"><strong style="color:var(--buy)">Caleb</strong>&nbsp;<span id="seen-caleb-when" style="color:var(--muted);font-size:10px"></span></span>
+            <span id="seen-grant" style="font-size:11px;display:none"><strong style="color:var(--accent)">Grant</strong>&nbsp;<span id="seen-grant-when" style="color:var(--muted);font-size:10px"></span></span>
+            <span id="seen-nobody" style="font-size:11px;color:var(--muted);opacity:.5">Nobody yet</span>
+          </div>
           <!-- PRICE SANITY WARNING — shows when asking price looks off -->
           <div id="price-sanity-banner" style="display:none;background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.25);border-radius:6px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:12px">
             <span style="font-size:18px">⚠️</span>
@@ -425,6 +432,20 @@ a{color:var(--accent)}
             <span style="flex:1;font-size:12px;color:var(--text)">Photos available for this property</span>
             <a id="photo-banner-link" href="#" target="_blank" rel="noopener" style="padding:5px 14px;background:rgba(180,140,255,.2);border:1px solid rgba(180,140,255,.4);border-radius:4px;color:rgba(200,160,255,.95);font-size:11px;font-weight:700;text-decoration:none;letter-spacing:.5px">VIEW PHOTOS ↗</a>
           </div>
+          <!-- TEAM NOTES -->
+          <div id="notes-card" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.6px">📝 TEAM NOTES</span>
+              <span id="notes-count" style="font-size:10px;color:var(--muted)"></span>
+            </div>
+            <div id="notes-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;max-height:220px;overflow-y:auto"></div>
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <textarea id="notes-input" placeholder="Add a note — Urban will use it in analysis..." rows="2"
+                style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:8px 10px;font-size:12px;font-family:var(--sans);resize:none;outline:none;line-height:1.4"></textarea>
+              <button onclick="addDealNote()" style="padding:7px 14px;background:var(--accent);color:#000;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Add Note</button>
+            </div>
+          </div>
+
           <!-- NEGOTIATION LADDER -->
             <div id="neg-ladder" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:16px;margin-bottom:16px;display:none">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -1443,6 +1464,10 @@ function renderList() {
 // -- SELECT DEAL ----------------------------------------------------------------
 async function selectDeal(d) {
   curDeal = d;
+  // Fire seen-by + load notes in background (non-blocking)
+  const _uid = d.uid || (d.address + '-' + d.dateReceived);
+  markDealSeen(_uid);
+  loadDealNotes(_uid);
   // Update chat header to show which deal is active
   const chatLabel = $('chat-deal-label');
   if (chatLabel) chatLabel.textContent = d.address ? `— ${d.address}` : '';
@@ -2995,6 +3020,114 @@ function copyOfferLadder() {
       if (b) { b.textContent = 'Copied!'; setTimeout(function() { b.textContent = 'Copy'; }, 2000); }
     });
   }
+}
+
+// -- DEAL NOTES + SEEN-BY ---------------------------------------------------
+var _notesUid = null;
+
+function loadDealNotes(uid) {
+  _notesUid = uid;
+  var enc = encodeURIComponent(uid);
+  fetch('/api/notes/' + enc, { headers: { 'x-urban-token': TOKEN } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) { renderNotes(data.notes || [], data.seenBy || {}); })
+    .catch(function() {});
+}
+
+function renderNotes(notes, seenBy) {
+  // --- seen-by row ---
+  var row = document.getElementById('seen-by-row');
+  var nobody = document.getElementById('seen-nobody');
+  var cEl = document.getElementById('seen-caleb');
+  var gEl = document.getElementById('seen-grant');
+  if (row) {
+    row.style.display = 'flex';
+    var hasSeen = Object.keys(seenBy).length > 0;
+    if (nobody) nobody.style.display = hasSeen ? 'none' : '';
+    if (cEl) {
+      if (seenBy.caleb) {
+        cEl.style.display = '';
+        var cWhen = document.getElementById('seen-caleb-when');
+        if (cWhen) cWhen.textContent = timeAgo(seenBy.caleb);
+      } else { cEl.style.display = 'none'; }
+    }
+    if (gEl) {
+      if (seenBy.grant) {
+        gEl.style.display = '';
+        var gWhen = document.getElementById('seen-grant-when');
+        if (gWhen) gWhen.textContent = timeAgo(seenBy.grant);
+      } else { gEl.style.display = 'none'; }
+    }
+  }
+  // --- notes list ---
+  var list = document.getElementById('notes-list');
+  var count = document.getElementById('notes-count');
+  if (!list) return;
+  if (!notes || notes.length === 0) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--muted);opacity:.5;padding:4px 0">No notes yet. Add one below — Urban will use it next time it analyzes this deal.</div>';
+    if (count) count.textContent = '';
+    return;
+  }
+  if (count) count.textContent = notes.length + ' note' + (notes.length !== 1 ? 's' : '');
+  list.innerHTML = notes.map(function(n) {
+    var isCaleb = (n.author || '').toLowerCase() === 'caleb';
+    var color = isCaleb ? 'var(--buy)' : 'var(--accent)';
+    var name = isCaleb ? 'Caleb' : 'Grant';
+    var dt = n.created_at ? timeAgo(n.created_at) : '';
+    return '<div style="background:var(--bg3);border-radius:5px;padding:8px 10px;border-left:2px solid ' + color + '">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
+        '<strong style="font-size:11px;color:' + color + '">' + name + '</strong>' +
+        '<span style="font-size:10px;color:var(--muted)">' + dt + '</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--text);line-height:1.5">' + escHtml(n.note) + '</div>' +
+    '</div>';
+  }).join('');
+  // Scroll to bottom
+  list.scrollTop = list.scrollHeight;
+}
+
+function addDealNote() {
+  var inp = document.getElementById('notes-input');
+  var note = inp ? inp.value.trim() : '';
+  if (!note || !_notesUid) return;
+  var btn = document.querySelector('[onclick="addDealNote()"]');
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+  fetch('/api/notes/' + encodeURIComponent(_notesUid), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-urban-token': TOKEN },
+    body: JSON.stringify({ note: note, author: author })
+  }).then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (inp) inp.value = '';
+      renderNotes(data.notes || [], data.seenBy || {});
+    })
+    .catch(function(e) { console.error('Note save failed', e); })
+    .finally(function() {
+      if (btn) { btn.textContent = 'Add Note'; btn.disabled = false; }
+    });
+}
+
+function markDealSeen(uid) {
+  if (!uid || !TOKEN) return;
+  fetch('/api/seen/' + encodeURIComponent(uid), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-urban-token': TOKEN },
+    body: JSON.stringify({ author: author })
+  }).catch(function() {});
+}
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  var diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (diff < 60)   return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  var d = new Date(ts);
+  return (d.getMonth()+1)+'/'+(d.getDate())+'/'+d.getFullYear();
 }
 
 // -- WHOLESALER SCORECARDS -----------------------------------------------------

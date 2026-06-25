@@ -480,6 +480,77 @@ async function getPortfolioStats() {
   } catch(e) { return null; }
 }
 
+
+// ── DEAL NOTES ─────────────────────────────────────────────────────────────────
+async function initDealNotes() {
+  if (!pool || !ready) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS deal_notes (
+        id         SERIAL PRIMARY KEY,
+        uid        TEXT NOT NULL,
+        author     TEXT NOT NULL,
+        note       TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_deal_notes_uid ON deal_notes(uid);
+
+      CREATE TABLE IF NOT EXISTS deal_seen (
+        uid        TEXT NOT NULL,
+        author     TEXT NOT NULL,
+        seen_at    TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (uid, author)
+      );
+    `);
+  } catch(e) { console.warn('initDealNotes:', e.message.slice(0,80)); }
+}
+
+async function saveNote(uid, note, author) {
+  if (!pool || !ready) return null;
+  try {
+    const r = await pool.query(
+      `INSERT INTO deal_notes (uid, note, author) VALUES ($1,$2,$3) RETURNING id, created_at`,
+      [uid, note, author]
+    );
+    return r.rows[0] || null;
+  } catch(e) { return null; }
+}
+
+async function getNotes(uid) {
+  if (!pool || !ready) return [];
+  try {
+    const r = await pool.query(
+      `SELECT id, uid, author, note, created_at FROM deal_notes WHERE uid=$1 ORDER BY created_at ASC`,
+      [uid]
+    );
+    return r.rows;
+  } catch(e) { return []; }
+}
+
+async function markSeen(uid, author) {
+  if (!pool || !ready) return;
+  try {
+    await pool.query(
+      `INSERT INTO deal_seen (uid, author, seen_at) VALUES ($1,$2,NOW())
+       ON CONFLICT (uid, author) DO UPDATE SET seen_at = NOW()`,
+      [uid, author]
+    );
+  } catch(e) {}
+}
+
+async function getSeenBy(uid) {
+  if (!pool || !ready) return {};
+  try {
+    const r = await pool.query(
+      `SELECT author, seen_at FROM deal_seen WHERE uid=$1`,
+      [uid]
+    );
+    const out = {};
+    for (const row of r.rows) out[row.author] = row.seen_at;
+    return out;
+  } catch(e) { return {}; }
+}
+
 module.exports = {
   initDB, isAvailable,
   initCompCache, getCachedComps, saveComps,
@@ -489,5 +560,6 @@ module.exports = {
   saveMarketData, getMarketData, getMarketStats,
   saveSoldComps, getSoldComps, getSoldCompStats,
   saveNbhcStats, getNbhcArv,
-  getPortfolioStats
+  getPortfolioStats,
+  initDealNotes, saveNote, getNotes, markSeen, getSeenBy
 };
