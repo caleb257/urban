@@ -1483,15 +1483,24 @@ async function selectDeal(d) {
   const sanityBanner = document.getElementById('price-sanity-banner');
   const sanityMsg = document.getElementById('price-sanity-msg');
   if (sanityBanner) {
-    if (d.priceSanityFlag) {
+    // K-format detection: if sheet had e.g. "365" meaning $365K, server corrects it
+    // and sets d._rawAskingPrice to the original value
+    const _wasKformat = d._rawAskingPrice && parseFloat(d._rawAskingPrice) < 10000;
+    if (_wasKformat) {
       sanityBanner.style.display = 'flex';
+      sanityBanner.style.background = 'rgba(100,180,255,.08)';
+      sanityBanner.style.borderColor = 'rgba(100,180,255,.3)';
+      if (sanityMsg) sanityMsg.innerHTML = '📋 Sheet had <strong>' + d._rawAskingPrice + '</strong> in Asking Price column — ' +
+        'auto-corrected to <strong>$' + parseInt(d.askingPrice).toLocaleString() + '</strong>. Verify with Derek.';
+      sanityBanner.style.background = 'rgba(255,200,0,.08)';
+      sanityBanner.style.borderColor = 'rgba(255,200,0,.25)';
       const _psm = {
         'ASK_NEAR_OR_ABOVE_ARV': '⚠️ Asking price is near or above ARV — verify against the original email before acting.',
         'ASK_VS_WS_ARV_MISMATCH': '⚠️ Asking price differs significantly from wholesaler ARV — double-check the original email.',
         'PRICE_HIGH_FOR_SQFT': '⚠️ Asking price seems high for the square footage — verify the listing.',
         'PRICE_TOO_LOW': '⚠️ Asking price unusually low — may be a data entry error.'
       };
-      if (sanityMsg) sanityMsg.textContent = _psm[d.priceSanityFlag] || '⚠️ Asking price may be incorrect.';
+      if (sanityMsg) sanityMsg.innerHTML = _psm[d.priceSanityFlag] || '⚠️ Asking price may be incorrect.';
     } else {
       sanityBanner.style.display = 'none';
     }
