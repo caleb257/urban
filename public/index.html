@@ -2729,6 +2729,9 @@ function rnCalc() {
   setEl('rn-b-refi-loan', fmtN(refiLoan));
   const coEl = document.getElementById('rn-b-cashout');
   if (coEl) { coEl.textContent = fmtN(cashOut); coEl.style.color = 'var(--buy)'; }
+  // profit/profitAmt MUST be declared before they are used below
+  const profit    = cashIn > 0 && refiLoan > cashIn;
+  const profitAmt = profit ? Math.round(refiLoan - cashIn) : 0;
   const clEl = document.getElementById('rn-b-left');
   if (clEl) {
     if (profit) {
@@ -2742,8 +2745,6 @@ function rnCalc() {
       clEl.style.color = cashLeft < cashIn*0.25 ? 'var(--buy)' : cashLeft < cashIn*0.5 ? 'var(--review)' : 'var(--red)';
     }
   }
-  const profit = cashIn > 0 && refiLoan > cashIn; // pulled out MORE than put in
-  const profitAmt = profit ? Math.round(refiLoan - cashIn) : 0;
 
   const infEl = document.getElementById('rn-b-infinite');
   if (infEl) infEl.style.display = (infinite && !profit) ? '' : 'none';
