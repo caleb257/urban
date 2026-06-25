@@ -1386,10 +1386,13 @@ function renderList() {
     // Show inflation warning if brain flags this wholesaler
     const inflationWarn = d.wholesalerInflationWarning || d.inflationWarning;
     const badgeCls = status === 'HARD NO' ? 'b-HARDNO' : `b-${status}`;
-    const _uw = underwrites && underwrites[uid];
-    const _uwAsk = _uw && _uw.financials && _uw.financials.askingPrice && parseFloat(_uw.financials.askingPrice) > 1000 ? _uw.financials.askingPrice : null;
-    const _rawAsk = d.askingPrice ? parseFloat(d.askingPrice) : 0;
-    const _displayAsk = _uwAsk || (_rawAsk >= 1000 ? _rawAsk : null);
+    // Use underwrite financials.askingPrice when available (server already injects
+    // this into each deal object as d.financials). Catches K-format sheet entries
+    // like "225" (meaning $225K) where raw sheet value would show as $225.
+    const _fiAsk = d.financials && d.financials.askingPrice && parseFloat(d.financials.askingPrice) > 1000
+      ? parseFloat(d.financials.askingPrice) : 0;
+    const _rawAsk = parseFloat(d.askingPrice) || 0;
+    const _displayAsk = _fiAsk || (_rawAsk >= 1000 ? _rawAsk : null);
     const price = _displayAsk ? fmt(_displayAsk) : (d.askingPrice ? fmt(d.askingPrice) : 'No price');
     const isActive = curDeal && (curDeal.uid || `${curDeal.address}-${curDeal.dateReceived}`) === uid;
     const el = document.createElement('div');
