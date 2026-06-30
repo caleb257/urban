@@ -1168,9 +1168,9 @@ function renderPropertyTab(d, el) {
   }
 
   // ── QUICK LINKS ───────────────────────────────────────────────────────────
-  const _a2=(uw&&uw.deal&&uw.deal.address)||d.address||'';
-  const _c2=(uw&&uw.deal&&uw.deal.city)||d.city||'';
-  const _co2=((uw&&uw.deal&&uw.deal.county)||d.county||'').toLowerCase();
+  const _a2=(curUW&&curUW.deal&&curUW.deal.address)||d.address||'';
+  const _c2=(curUW&&curUW.deal&&curUW.deal.city)||d.city||'';
+  const _co2=((curUW&&curUW.deal&&curUW.deal.county)||d.county||'').toLowerCase();
   const _q2=encodeURIComponent(_a2+' '+_c2+' FL');
   const _paM={hillsborough:'https://www.hcpafl.org/Property-Search#/?query='+encodeURIComponent(_a2),pasco:'https://www.epascoapp.com/searches?query='+encodeURIComponent(_a2),hernando:'https://www.hernandopa.org/pa/jWeb/Searches?query='+encodeURIComponent(_a2),pinellas:'https://www.pcpao.gov/search/?q='+encodeURIComponent(_a2),polk:'https://www.polkpa.org/search?query='+encodeURIComponent(_a2),lake:'https://www.lakecopropappr.com/search/?query='+encodeURIComponent(_a2),manatee:'https://www.manateepao.com/search/?query='+encodeURIComponent(_a2),sarasota:'https://www.sc-pa.com/search/?query='+encodeURIComponent(_a2)};
   const _paE=Object.entries(_paM).find(([k])=>_co2.includes(k));
