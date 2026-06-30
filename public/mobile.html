@@ -256,9 +256,20 @@ function doLogin() {
   });
 }
 
-// Auto-login if token stored
+// URL token support — lets a tappable link log straight in, same as desktop
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  const urlToken = p.get('token');
+  if (urlToken) {
+    TOKEN = urlToken;
+    document.getElementById('token-inp').value = urlToken;
+  }
+})();
+
+// Auto-login if token present (from URL or saved from a prior visit)
 if (TOKEN) {
   api('/api/stats').then(function() {
+    localStorage.setItem('urban_token', TOKEN);
     show('s-list');
     loadDeals();
   }).catch(function() { TOKEN = ''; });
