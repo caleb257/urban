@@ -245,6 +245,7 @@ a{color:var(--accent)}
         <p>Coralstone Underwriter</p>
       </div>
       <button id="map-view-btn" onclick="showMapView()" title="Deal map" style="width:38px;height:38px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--accent);font-size:16px;cursor:pointer">🗺️</button>
+      <button id="profits-view-btn" onclick="showProfitsView()" title="Profits" style="width:38px;height:38px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--accent);font-size:16px;cursor:pointer">💰</button>
     </div>
     <div id="stats-bar">
       <div class="stat-chip"><div class="val" id="st-total">—</div><div class="lbl">Underwritten</div></div>
@@ -383,6 +384,14 @@ a{color:var(--accent)}
         </div>
       </div>
       <div id="map-canvas-d" style="width:100%;height:100%"></div>
+    </div>
+
+    <div id="main-profits" style="display:none;width:calc(100vw - 310px);height:100vh;overflow-y:auto;padding:32px 40px;box-sizing:border-box">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px">
+        <button onclick="hideProfitsView()" style="padding:8px 16px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--accent);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer">← Back to List</button>
+        <h2 style="font-size:22px;letter-spacing:1px;margin:0">💰 PROFITS</h2>
+      </div>
+      <div id="profits-content-d">Loading…</div>
     </div>
 
     <div id="dv">
@@ -3174,6 +3183,57 @@ function showMapView() {
 function hideMapView() {
   document.getElementById('main-map').style.display = 'none';
   if (curDeal) { show('dv', true); } else { show('main-empty', true); }
+}
+
+// -- PROFITS VIEW -----------------------------------------------------------
+function showProfitsView() {
+  show('main-empty', false);
+  show('dv', false);
+  document.getElementById('main-map').style.display = 'none';
+  document.getElementById('main-profits').style.display = 'block';
+  fetch('/api/profits', { headers: { 'x-urban-token': TOKEN } })
+    .then(r => r.json())
+    .then(renderProfitsD)
+    .catch(e => { document.getElementById('profits-content-d').innerHTML = '<p style="color:var(--hot)">Could not load profits: ' + e.message + '</p>'; });
+}
+function hideProfitsView() {
+  document.getElementById('main-profits').style.display = 'none';
+  if (curDeal) { show('dv', true); } else { show('main-empty', true); }
+}
+function renderProfitsD(data) {
+  const t = data.totals || {};
+  const rows = data.rows || [];
+  const fmtP = n => (n >= 0 ? '+' : '') + fmt(n);
+  let html = '';
+  html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px">';
+  const tiles = [
+    ['Total Profit', fmtP(t.all||0), 'var(--accent)'],
+    ['Flip', fmtP(t.flip||0), 'var(--hot)'],
+    ['BRRRR', fmtP(t.brrrr||0), 'var(--pass)'],
+    ['Wholesale', fmtP(t.wholesale||0), 'var(--buy)'],
+    ['Other', fmtP(t.other||0), 'var(--review)'],
+  ];
+  tiles.forEach(([lbl, val, color]) => {
+    html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px"><div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">' + lbl + '</div><div style="font-family:var(--display);font-size:28px;color:' + color + '">' + val + '</div></div>';
+  });
+  html += '</div>';
+  if (t.pendingCount) {
+    html += '<div style="margin-bottom:20px;padding:12px 16px;background:rgba(240,160,48,.08);border:1px solid rgba(240,160,48,.3);border-radius:8px;color:var(--review);font-size:13px">⚠️ ' + t.pendingCount + ' purchased deal' + (t.pendingCount===1?'':'s') + ' logged without a profit figure yet — update them from the deal\'s Purchased status once they close.</div>';
+  }
+  html += '<table style="width:100%;border-collapse:collapse;font-size:13px">';
+  html += '<thead><tr style="text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px 10px;border-bottom:1px solid var(--border)">Address</th><th style="padding:8px 10px;border-bottom:1px solid var(--border)">Strategy</th><th style="padding:8px 10px;border-bottom:1px solid var(--border)">Purchase</th><th style="padding:8px 10px;border-bottom:1px solid var(--border)">Profit</th><th style="padding:8px 10px;border-bottom:1px solid var(--border)">Logged</th></tr></thead><tbody>';
+  rows.forEach(r => {
+    const profitColor = r.actualProfit == null ? 'var(--muted)' : r.actualProfit >= 0 ? 'var(--buy)' : 'var(--hot)';
+    const profitTxt = r.actualProfit == null ? 'Not logged yet' : fmtP(r.actualProfit);
+    html += '<tr><td style="padding:9px 10px;border-bottom:1px solid var(--border)">' + r.address + ', ' + r.city + '</td>' +
+      '<td style="padding:9px 10px;border-bottom:1px solid var(--border);text-transform:capitalize">' + r.strategy + (r.wholesaleFee ? ' (' + fmt(r.wholesaleFee) + ' fee)' : '') + '</td>' +
+      '<td style="padding:9px 10px;border-bottom:1px solid var(--border)">' + fmt(r.purchasePrice) + '</td>' +
+      '<td style="padding:9px 10px;border-bottom:1px solid var(--border);color:' + profitColor + ';font-weight:700">' + profitTxt + '</td>' +
+      '<td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--muted)">' + (r.loggedAt ? new Date(r.loggedAt).toLocaleDateString() : '') + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  if (!rows.length) html += '<p style="color:var(--muted)">No purchased deals logged yet.</p>';
+  document.getElementById('profits-content-d').innerHTML = html;
 }
 function mapPinColorD(v) {
   const m = {HOT:'#ff4444', BUY:'#44cc88', REVIEW:'#f0a030', PASS:'#6688aa', 'HARD NO':'#cc4466', PENDING:'#666680'};
