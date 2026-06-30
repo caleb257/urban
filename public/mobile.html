@@ -79,7 +79,7 @@ button,select,input,textarea{font-family:inherit}
 .subtab-wrap{position:relative;background:var(--bg);border-bottom:1px solid var(--border)}
 .subtab-wrap::after{content:'';position:absolute;right:0;top:0;bottom:1px;width:24px;background:linear-gradient(to right, transparent, var(--bg));pointer-events:none}
 .subtab-row{display:flex;gap:6px;padding:10px 16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.subtab{padding:6px 13px;border-radius:16px;font-size:11.5px;font-weight:600;border:1px solid var(--border2);color:var(--muted);background:transparent;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.subtab{padding:10px 15px;border-radius:16px;font-size:12px;font-weight:600;border:1px solid var(--border2);color:var(--muted);background:transparent;cursor:pointer;white-space:nowrap;flex-shrink:0;min-height:42px;display:inline-flex;align-items:center}
 .subtab.active{background:var(--accent);color:#0a0a0f;border-color:var(--accent);font-weight:700}
 /* Comp cards (ARV tab) */
 .comp-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:8px}
@@ -1166,6 +1166,25 @@ function renderPropertyTab(d, el) {
     if (d.googleMapsLink) html += '<a class="phone-link" href="' + esc(d.googleMapsLink) + '" target="_blank" rel="noopener" style="display:block">📍 Open in Google Maps</a>';
     html += '</div>';
   }
+
+  // ── QUICK LINKS ───────────────────────────────────────────────────────────
+  const _a2=(uw&&uw.deal&&uw.deal.address)||d.address||'';
+  const _c2=(uw&&uw.deal&&uw.deal.city)||d.city||'';
+  const _co2=((uw&&uw.deal&&uw.deal.county)||d.county||'').toLowerCase();
+  const _q2=encodeURIComponent(_a2+' '+_c2+' FL');
+  const _paM={hillsborough:'https://www.hcpafl.org/Property-Search#/?query='+encodeURIComponent(_a2),pasco:'https://www.epascoapp.com/searches?query='+encodeURIComponent(_a2),hernando:'https://www.hernandopa.org/pa/jWeb/Searches?query='+encodeURIComponent(_a2),pinellas:'https://www.pcpao.gov/search/?q='+encodeURIComponent(_a2),polk:'https://www.polkpa.org/search?query='+encodeURIComponent(_a2),lake:'https://www.lakecopropappr.com/search/?query='+encodeURIComponent(_a2),manatee:'https://www.manateepao.com/search/?query='+encodeURIComponent(_a2),sarasota:'https://www.sc-pa.com/search/?query='+encodeURIComponent(_a2)};
+  const _paE=Object.entries(_paM).find(([k])=>_co2.includes(k));
+  const _paUrl=_paE?_paE[1]:'https://www.google.com/search?q='+encodeURIComponent(_a2+' '+_c2+' FL property appraiser');
+  const _paLbl=_paE?(_paE[0].charAt(0).toUpperCase()+_paE[0].slice(1)+' Appraiser'):'Property Appraiser';
+  const _qlStyle='display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);text-decoration:none';
+  const _qlArrow='<span style="margin-left:auto;color:var(--muted);font-size:14px">&#8250;</span>';
+  html += '<div style="margin:16px 16px 4px"><div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">QUICK LINKS</div><div style="display:flex;flex-direction:column;gap:8px">';
+  html += '<a href="https://www.google.com/maps?q='+_q2+'&layer=c" target="_blank" rel="noopener" style="'+_qlStyle+'"><span style="font-size:20px">&#128694;</span><div><div style="font-size:13px;font-weight:700;color:var(--text)">Google Street View</div><div style="font-size:11px;color:var(--muted)">See it from the street</div></div>'+_qlArrow+'</a>';
+  html += '<a href="'+esc(_paUrl)+'" target="_blank" rel="noopener" style="'+_qlStyle+'"><span style="font-size:20px">&#127963;&#65039;</span><div><div style="font-size:13px;font-weight:700;color:var(--text)">'+esc(_paLbl)+'</div><div style="font-size:11px;color:var(--muted)">County records, sqft, year built</div></div>'+_qlArrow+'</a>';
+  if(_co2.includes('pasco')) html+='<a href="https://energovweb.pascocountyfl.net/EnerGov_Prod/SelfService#/search?SearchModule=Permits&query='+encodeURIComponent(_a2)+'" target="_blank" rel="noopener" style="'+_qlStyle+'"><span style="font-size:20px">&#128296;</span><div><div style="font-size:13px;font-weight:700;color:var(--text)">Accella / EnerGov Permits</div><div style="font-size:11px;color:var(--muted)">Pasco County permit history</div></div>'+_qlArrow+'</a>';
+  else if(_co2.includes('hillsborough')) html+='<a href="https://www.hillsborough.permittingportal.com/search?query='+encodeURIComponent(_a2)+'" target="_blank" rel="noopener" style="'+_qlStyle+'"><span style="font-size:20px">&#128296;</span><div><div style="font-size:13px;font-weight:700;color:var(--text)">Permit Portal</div><div style="font-size:11px;color:var(--muted)">Permit history &amp; open permits</div></div>'+_qlArrow+'</a>';
+  html += '<a href="https://www.redfin.com/FL/'+encodeURIComponent(_c2)+'/find-homes" target="_blank" rel="noopener" style="'+_qlStyle+'"><span style="font-size:20px">&#128308;</span><div><div style="font-size:13px;font-weight:700;color:var(--text)">Redfin</div><div style="font-size:11px;color:var(--muted)">Recent sales &amp; comps</div></div>'+_qlArrow+'</a>';
+  html += '</div></div>';
 
   el.innerHTML = html || emptyState('📋', 'No property data available.');
 }
