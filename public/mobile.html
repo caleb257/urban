@@ -367,6 +367,9 @@ button,select,input,textarea{font-family:inherit}
 const BASE = window.location.origin;
 let TOKEN = localStorage.getItem('urban_token') || '';
 
+// Service worker temporarily pulled — see public/sw.js for the kill-switch
+// version that unregisters any previously-installed copy. Re-introduce once
+// thoroughly tested on real iOS devices, not just desktop Chrome.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(function() {});
 }
@@ -1532,11 +1535,19 @@ function sendChat() {
   });
 }
 
+function mdToHtml(text) {
+  var h = (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+  h = h.replace(/(<li>[\s\S]*?<\/li>(\n(?=<li>))?)+/g, function(m) { return '<ul style="margin:6px 0 6px 18px;padding:0">' + m.replace(/\n/g,'') + '</ul>'; });
+  h = h.replace(/\n/g, '<br>');
+  return h;
+}
 function refreshChatUI() {
   const list = document.getElementById('chat-list');
   if (!list) return;
   list.innerHTML = chatHistory.map(function(m){
-    return '<div class="chat-bubble ' + m.role + (m.thinking?' thinking':'') + '">' + esc(m.text) + '</div>';
+    return '<div class="chat-bubble ' + m.role + (m.thinking?' thinking':'') + '">' + mdToHtml(m.text) + '</div>';
   }).join('');
   list.scrollTop = list.scrollHeight;
   const chips = document.querySelector('.suggested-chip');
