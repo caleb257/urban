@@ -585,6 +585,16 @@ async function saveGeocode(key, lat, lng) {
   } catch(e) { console.error('saveGeocode:', e.message); }
 }
 
+async function getGeocodesForKeys(keys) {
+  if (!pool || !ready || !keys.length) return {};
+  try {
+    const r = await pool.query('SELECT key, lat, lng FROM geocode_cache WHERE key = ANY($1)', [keys]);
+    const out = {};
+    for (const row of r.rows) out[row.key] = { lat: row.lat, lng: row.lng };
+    return out;
+  } catch(e) { return {}; }
+}
+
 module.exports = {
   initDB, isAvailable,
   initCompCache, getCachedComps, saveComps,
@@ -596,5 +606,5 @@ module.exports = {
   saveNbhcStats, getNbhcArv,
   getPortfolioStats,
   initDealNotes, saveNote, getNotes, markSeen, getSeenBy,
-  initGeocodeCache, getGeocode, saveGeocode
+  initGeocodeCache, getGeocode, saveGeocode, getGeocodesForKeys
 };
