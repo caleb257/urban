@@ -1534,6 +1534,21 @@ function sendChat() {
   }).then(function(data){
     chatHistory.pop();
     chatHistory.push({role:'urban', text: data.reply || data.message || JSON.stringify(data)});
+    // If Urban corrected numbers, apply them to curUW immediately so ARV/
+    // rehab tabs show the locked-in values without needing a page reload.
+    if (data.updated && curUW) {
+      if (data.arv) curUW.arv = data.arv;
+      if (data.rehab) curUW.rehab = data.rehab;
+      if (data.financials) curUW.financials = data.financials;
+      if (data.verdict) curUW.verdict = data.verdict;
+      if (data.score !== undefined) curUW.score = data.score;
+      if (data.chatHistory) curUW.chatHistory = data.chatHistory;
+      if (curDeal) {
+        var _uid = curUW.uid || (curDeal.address + '-' + curDeal.dateReceived);
+        uwCache[_uid] = curUW;
+      }
+      renderDetail('overview');
+    }
     refreshChatUI();
   }).catch(function(e){
     chatHistory.pop();
