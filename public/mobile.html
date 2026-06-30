@@ -302,6 +302,51 @@ button,select,input,textarea{font-family:inherit}
   </div>
 </div>
 
+<!-- PURCHASED MODAL -->
+<div id="purchased-modal-m" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:22px;width:340px;max-width:90vw;max-height:85vh;overflow-y:auto">
+    <div style="font-size:16px;font-weight:700;margin-bottom:14px;color:var(--buy)">🏠 Log Purchase</div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Actual purchase price</div>
+        <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="ocm-purchase" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:9px 10px;font-size:15px;font-weight:600"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Strategy</div>
+        <select id="ocm-strategy" onchange="updatePurchasedFormFieldsM()" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:9px 10px;font-size:14px">
+          <option value="flip">Flip</option>
+          <option value="brrrr">BRRRR / Hold</option>
+          <option value="wholesale">Wholesale</option>
+        </select>
+      </div>
+      <div id="ocm-flip-fields">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Actual rehab spend</div>
+        <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="ocm-rehab" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:9px 10px;font-size:15px;font-weight:600"></div>
+      </div>
+      <div id="ocm-arv-field">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Expected ARV</div>
+        <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="ocm-arv" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:9px 10px;font-size:15px;font-weight:600"></div>
+      </div>
+      <div id="ocm-wholesale-field" style="display:none">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Wholesale fee charged</div>
+        <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="ocm-wholesale-fee" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:9px 10px;font-size:15px;font-weight:600"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Actual profit (if known)</div>
+        <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="ocm-profit" type="number" placeholder="Leave blank if not closed yet" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:9px 10px;font-size:14px;font-weight:600"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Notes</div>
+        <textarea id="ocm-notes" rows="2" placeholder="What Urban got right or wrong..." style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:9px 10px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:var(--sans)"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="closePurchasedFormM()" style="flex:1;padding:11px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--muted);cursor:pointer">Cancel</button>
+      <button onclick="savePurchasedOutcomeM()" id="ocm-submit-btn" style="flex:2;padding:11px;background:rgba(68,204,136,.15);border:1px solid rgba(68,204,136,.4);border-radius:8px;color:var(--buy);font-weight:700;cursor:pointer;font-size:13px">Log Outcome</button>
+    </div>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -788,6 +833,14 @@ function renderOverview(d, uw, uid, targetEl) {
   html += '<span class="verdict-badge-big vb-' + vClass(v) + '">' + (v==='HARD NO'?'HARD NO':v) + '</span>';
   html += '</div>';
   if (reason) html += '<div class="verdict-reason">' + esc(reason) + '</div>';
+  if (uw && !(uw.dealOutcome)) {
+    html += '<div style="padding:0 16px 14px"><button onclick="showPurchasedFormM()" style="width:100%;padding:11px;background:rgba(68,204,136,.12);border:1px solid rgba(68,204,136,.35);border-radius:8px;color:var(--buy);font-weight:700;font-size:13px;cursor:pointer">🏠 Mark Purchased</button></div>';
+  } else if (uw && uw.dealOutcome) {
+    var doO = uw.dealOutcome;
+    html += '<div style="margin:0 16px 14px;padding:11px 14px;background:rgba(68,204,136,.08);border:1px solid rgba(68,204,136,.3);border-radius:8px">' +
+      '<div style="font-size:11px;color:var(--buy);font-weight:700;margin-bottom:3px">✅ PURCHASED — ' + (doO.strategy||'flip').toUpperCase() + '</div>' +
+      '<div style="font-size:12px;color:var(--muted)">' + fmtM(doO.purchasePrice) + (doO.wholesaleFee ? ' · fee ' + fmtM(doO.wholesaleFee) : '') + (doO.actualProfit != null ? ' · profit ' + fmtM(doO.actualProfit) : ' · profit not logged yet') + '</div></div>';
+  }
 
   if (rec) {
     html += '<div class="rec-box"><div class="rec-ct">Urban\'s Take</div><div class="rec-txt">' + esc(rec) + '</div></div>';
@@ -1106,6 +1159,73 @@ function renderFlagsTab(uw, el) {
 
 function emptyState(icon, msg) {
   return '<div class="empty" style="padding:50px 32px"><div class="empty-icon">' + icon + '</div><div>' + esc(msg) + '</div></div>';
+}
+
+// -- PURCHASED OUTCOME -----------------------------------------------------
+function showPurchasedFormM() {
+  if (!curDeal || !curUW) return;
+  var m = document.getElementById('purchased-modal-m');
+  if (!m) return;
+  var p = document.getElementById('ocm-purchase'); if (p) p.value = parseFloat(curDeal.askingPrice) || '';
+  var r = document.getElementById('ocm-rehab');    if (r) r.value = (curUW.rehab && curUW.rehab.urbanEstimate) || '';
+  var a = document.getElementById('ocm-arv');      if (a) a.value = (curUW.arv && curUW.arv.urbanARV) || '';
+  var s = document.getElementById('ocm-strategy'); if (s) s.value = 'flip';
+  var wf = document.getElementById('ocm-wholesale-fee'); if (wf) wf.value = '';
+  var pf = document.getElementById('ocm-profit');  if (pf) pf.value = '';
+  var n = document.getElementById('ocm-notes');    if (n) n.value = '';
+  updatePurchasedFormFieldsM();
+  m.style.display = 'flex';
+}
+function closePurchasedFormM() {
+  var m = document.getElementById('purchased-modal-m'); if (m) m.style.display = 'none';
+}
+function updatePurchasedFormFieldsM() {
+  var s = document.getElementById('ocm-strategy'); if (!s) return;
+  var isWholesale = s.value === 'wholesale';
+  var flipFields = document.getElementById('ocm-flip-fields');
+  var arvField = document.getElementById('ocm-arv-field');
+  var wholesaleField = document.getElementById('ocm-wholesale-field');
+  if (flipFields) flipFields.style.display = isWholesale ? 'none' : '';
+  if (arvField) arvField.style.display = isWholesale ? 'none' : '';
+  if (wholesaleField) wholesaleField.style.display = isWholesale ? '' : 'none';
+}
+async function savePurchasedOutcomeM() {
+  if (!curUW) return;
+  var purchase = parseFloat(document.getElementById('ocm-purchase') && document.getElementById('ocm-purchase').value) || 0;
+  var rehab    = parseFloat(document.getElementById('ocm-rehab')    && document.getElementById('ocm-rehab').value)    || 0;
+  var arv      = parseFloat(document.getElementById('ocm-arv')      && document.getElementById('ocm-arv').value)      || 0;
+  var strategy = (document.getElementById('ocm-strategy') && document.getElementById('ocm-strategy').value) || 'flip';
+  var wholesaleFee = (document.getElementById('ocm-wholesale-fee') && document.getElementById('ocm-wholesale-fee').value) || '';
+  var actualProfit = (document.getElementById('ocm-profit') && document.getElementById('ocm-profit').value) || '';
+  var notes    = (document.getElementById('ocm-notes')    && document.getElementById('ocm-notes').value)    || '';
+  if (!purchase) { alert('Enter the purchase price'); return; }
+  var btn = document.getElementById('ocm-submit-btn');
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+  try {
+    var r = await fetch('/api/outcome/' + encodeURIComponent(curUW.uid), {
+      method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ purchase: purchase, rehab: rehab, arv: arv, strategy: strategy, wholesaleFee: wholesaleFee, actualProfit: actualProfit, notes: notes, address: curDeal && curDeal.address, author: AUTHOR })
+    });
+    if (r.ok) {
+      curUW = await r.json();
+      uwCache[curUW.uid] = curUW;
+      closePurchasedFormM();
+      allDeals = allDeals.filter(function(d) { return d.address !== curDeal.address; });
+      curDeal = null;
+      document.getElementById('s-deal').classList.remove('active');
+      show('s-list');
+      renderList();
+      loadStats();
+    } else {
+      var errTxt = await r.text().catch(function(){ return ''; });
+      console.error('Purchase save failed:', r.status, errTxt);
+      alert('Could not save (HTTP ' + r.status + '). Check console.');
+    }
+  } catch(e) {
+    console.error('outcome save error:', e.message);
+    alert('Network error: ' + e.message);
+  }
+  if (btn) { btn.textContent = 'Log Outcome'; btn.disabled = false; }
 }
 
 // ── NOTES ─────────────────────────────────────────────────────
