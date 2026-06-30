@@ -223,9 +223,11 @@ button,select,input,textarea{font-family:inherit}
 /* Phone link */
 .phone-link{display:inline-block;margin-top:10px;font-size:13px;color:var(--accent);text-decoration:none;font-weight:600}
 ::-webkit-scrollbar{display:none}
+.offline-banner{position:fixed;top:0;left:0;right:0;background:var(--review);color:#0a0a0f;text-align:center;padding:7px;font-size:12px;font-weight:700;z-index:9999;display:none;padding-top:max(7px, env(safe-area-inset-top))}
 </style>
 </head>
 <body>
+<div class="offline-banner" id="offline-banner">⚠️ Offline — showing last-known data</div>
 
 <!-- ── LOGIN SCREEN ────────────────────────────────────────── -->
 <div class="screen active" id="s-login">
@@ -364,6 +366,17 @@ button,select,input,textarea{font-family:inherit}
 
 const BASE = window.location.origin;
 let TOKEN = localStorage.getItem('urban_token') || '';
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(function() {});
+}
+function updateOfflineBanner() {
+  var b = document.getElementById('offline-banner');
+  if (b) b.style.display = navigator.onLine ? 'none' : 'block';
+}
+window.addEventListener('online', updateOfflineBanner);
+window.addEventListener('offline', updateOfflineBanner);
+
 let AUTHOR = localStorage.getItem('urban_author') || 'caleb';
 let allDeals = [];
 let curFilter = 'ALL';
