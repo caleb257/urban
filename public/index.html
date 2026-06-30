@@ -333,20 +333,28 @@ a{color:var(--accent)}
           <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-purchase" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:14px;font-weight:600"></div>
         </div>
         <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Actual rehab spend</div>
-          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-rehab" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:14px;font-weight:600"></div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Expected ARV</div>
-          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-arv" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:14px;font-weight:600"></div>
-        </div>
-        <div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Strategy</div>
-          <select id="oc-strategy" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:13px">
+          <select id="oc-strategy" onchange="updatePurchasedFormFields()" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:13px">
             <option value="flip">Flip</option>
             <option value="brrrr">BRRRR / Hold</option>
             <option value="wholesale">Wholesale</option>
           </select>
+        </div>
+        <div id="oc-flip-fields">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Actual rehab spend</div>
+          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-rehab" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:14px;font-weight:600"></div>
+        </div>
+        <div id="oc-arv-field">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Expected ARV</div>
+          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-arv" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:14px;font-weight:600"></div>
+        </div>
+        <div id="oc-wholesale-field" style="display:none">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Wholesale fee charged</div>
+          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-wholesale-fee" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:14px;font-weight:600"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Actual profit (if known)</div>
+          <div style="display:flex;align-items:center;gap:4px"><span style="color:var(--muted)">$</span><input id="oc-profit" type="number" placeholder="Leave blank if not closed yet" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:6px 8px;font-size:14px;font-weight:600"></div>
         </div>
         <div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Notes</div>
@@ -3304,7 +3312,21 @@ function showPurchasedForm() {
   var p = document.getElementById('oc-purchase'); if (p) p.value = parseFloat(curDeal.askingPrice) || '';
   var r = document.getElementById('oc-rehab');   if (r) r.value = curUW.rehab && curUW.rehab.urbanEstimate || '';
   var a = document.getElementById('oc-arv');     if (a) a.value = curUW.arv && curUW.arv.urbanARV || '';
+  var s = document.getElementById('oc-strategy'); if (s) s.value = 'flip';
+  var wf = document.getElementById('oc-wholesale-fee'); if (wf) wf.value = '';
+  var pf = document.getElementById('oc-profit'); if (pf) pf.value = '';
+  updatePurchasedFormFields();
   m.style.display = 'flex';
+}
+function updatePurchasedFormFields() {
+  var s = document.getElementById('oc-strategy'); if (!s) return;
+  var isWholesale = s.value === 'wholesale';
+  var flipFields = document.getElementById('oc-flip-fields');
+  var arvField = document.getElementById('oc-arv-field');
+  var wholesaleField = document.getElementById('oc-wholesale-field');
+  if (flipFields) flipFields.style.display = isWholesale ? 'none' : '';
+  if (arvField) arvField.style.display = isWholesale ? 'none' : '';
+  if (wholesaleField) wholesaleField.style.display = isWholesale ? '' : 'none';
 }
 function closePurchasedForm() {
   var m = document.getElementById('purchased-modal'); if (m) m.style.display = 'none';
@@ -3316,13 +3338,15 @@ async function savePurchasedOutcome() {
   var arv      = parseFloat(document.getElementById('oc-arv')      && document.getElementById('oc-arv').value)      || 0;
   var strategy = document.getElementById('oc-strategy') && document.getElementById('oc-strategy').value || 'flip';
   var notes    = document.getElementById('oc-notes')    && document.getElementById('oc-notes').value    || '';
+  var wholesaleFee = document.getElementById('oc-wholesale-fee') && document.getElementById('oc-wholesale-fee').value || '';
+  var actualProfit = document.getElementById('oc-profit') && document.getElementById('oc-profit').value || '';
   if (!purchase) { alert('Enter the purchase price'); return; }
   var btn = document.querySelector('[onclick="savePurchasedOutcome()"]');
   if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
   try {
     var r = await fetch('/api/outcome/' + encodeURIComponent(curUW.uid), {
       method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ purchase: purchase, rehab: rehab, arv: arv, strategy: strategy, notes: notes, address: curDeal && curDeal.address, author: author })
+      body: JSON.stringify({ purchase: purchase, rehab: rehab, arv: arv, strategy: strategy, wholesaleFee: wholesaleFee, actualProfit: actualProfit, notes: notes, address: curDeal && curDeal.address, author: author })
     });
     if (r.ok) {
       curUW = await r.json();
