@@ -2539,7 +2539,7 @@ async function doChat() {
     if (data.updated && curDeal) {
       // Re-fetch the deal's underwrite and refresh the display
       try {
-        const r2 = await fetch(`/api/underwrite/${encodeURIComponent(data.uid || uid)}/result`, {
+        const r2 = await fetch(`/api/underwrite/${encodeURIComponent(data.uid || uid)}`, {
           headers: { 'x-urban-token': TOKEN }
         });
         if (r2.ok) {
