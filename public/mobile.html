@@ -43,21 +43,25 @@ button,select,input,textarea{font-family:inherit}
 #login-err{color:var(--hot);font-size:12px;text-align:center;display:none}
 /* ── HEADER ─────────────────────────────────────────────── */
 .hdr{padding:14px 16px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;padding-top:max(14px, env(safe-area-inset-top))}
-.hdr-back{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--accent);font-size:20px;cursor:pointer;flex-shrink:0}
+.hdr-back{height:38px;display:flex;align-items:center;justify-content:center;gap:2px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--accent);font-size:15px;font-weight:600;cursor:pointer;flex-shrink:0;padding:0 14px 0 10px}
+.hdr-back-arrow{font-size:20px;line-height:1}
 .hdr-title{font-family:var(--display);font-size:22px;letter-spacing:1px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1}
 .hdr-icon-btn{width:38px;height:38px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--accent);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 /* ── FILTER TABS ────────────────────────────────────────── */
-.filter-tabs{display:flex;gap:7px;padding:11px 16px;background:var(--bg);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0}
+.filter-tabs-wrap{position:relative;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0}
+.filter-tabs-wrap::after{content:'';position:absolute;right:0;top:0;bottom:1px;width:28px;background:linear-gradient(to right, transparent, var(--bg));pointer-events:none}
+.filter-tabs{display:flex;gap:7px;padding:11px 16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .filter-tabs::-webkit-scrollbar{display:none}
 .ftab{padding:7px 15px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.3px;border:1px solid var(--border2);color:var(--muted);background:transparent;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .ftab.active{background:var(--accent);color:#0a0a0f;border-color:var(--accent);font-weight:700}
 /* ── DEAL LIST ───────────────────────────────────────────── */
 #s-list{background:var(--bg)}
 .list-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px;display:flex;flex-direction:column;gap:9px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
-.deal-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;overflow:hidden}
-.deal-card:active{background:var(--bg3)}
+.deal-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;overflow:hidden;transition:transform .1s, background .1s}
+.deal-card:active{background:var(--bg3);transform:scale(.98)}
 .deal-card-accent{position:absolute;left:0;top:0;bottom:0;width:3px}
-.card-addr{font-size:15px;font-weight:600;margin-bottom:3px;line-height:1.3;color:var(--text)}
+.card-addr{font-size:15px;font-weight:600;margin-bottom:3px;line-height:1.3;color:var(--text);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-chevron{color:var(--muted);font-size:18px;font-weight:400;flex-shrink:0;opacity:.6}
 .card-city{font-size:12px;color:var(--muted);margin-bottom:10px}
 .card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:3px;letter-spacing:1px;text-transform:uppercase}
@@ -186,14 +190,14 @@ button,select,input,textarea{font-family:inherit}
     <div id="list-count" style="font-size:11px;color:var(--muted);font-family:var(--mono);flex-shrink:0"></div>
     <button class="hdr-icon-btn" onclick="loadDeals()">↻</button>
   </div>
-  <div class="filter-tabs" id="filter-tabs">
+  <div class="filter-tabs-wrap"><div class="filter-tabs" id="filter-tabs">
     <button class="ftab active" onclick="setFilter('ALL',this)">All</button>
     <button class="ftab" onclick="setFilter('HOT',this)">🔥 Hot</button>
     <button class="ftab" onclick="setFilter('BUY',this)">Buy</button>
     <button class="ftab" onclick="setFilter('REVIEW',this)">Review</button>
     <button class="ftab" onclick="setFilter('PASS',this)">Pass</button>
     <button class="ftab" onclick="setFilter('PENDING',this)">Pending</button>
-  </div>
+  </div></div>
   <div class="list-body" id="deal-list">
     <div class="loading"><div class="spin"></div>Loading deals…</div>
   </div>
@@ -202,7 +206,7 @@ button,select,input,textarea{font-family:inherit}
 <!-- ── DEAL DETAIL SCREEN ──────────────────────────────────── -->
 <div class="screen" id="s-deal">
   <div class="hdr">
-    <button class="hdr-back" onclick="goBack()">‹</button>
+    <button class="hdr-back" onclick="goBack()"><span class="hdr-back-arrow">‹</span>Deals</button>
     <div class="hdr-title" id="d-addr" style="font-size:16px;font-family:var(--sans);font-weight:700;letter-spacing:0">—</div>
   </div>
   <div class="tab-nav" style="border-top:none;border-bottom:1px solid var(--border)">
@@ -231,7 +235,7 @@ let chatHistory = [];
 // ── UTILS ─────────────────────────────────────────────────────
 const fmtK = n => (n || n === 0) ? '$' + (Math.abs(n) >= 1000 ? Math.round(n/1000) + 'K' : Math.round(n)) : '—';
 const fmtM = n => n != null ? '$' + Math.round(n).toLocaleString() : '—';
-const esc  = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const esc  = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 function timeAgo(ts) {
   if (!ts) return '';
   const diff = Math.floor((Date.now() - new Date(ts))/1000);
@@ -350,9 +354,9 @@ function renderList() {
     const profit = (fi.netProfitAtAsking != null) ? fi.netProfitAtAsking : null;
     const profitColor = profit > 0 ? 'var(--buy)' : profit < 0 ? 'var(--hot)' : 'var(--muted)';
     const uid = d.uid || (d.address + '-' + (d.dateReceived||''));
-    return '<div class="deal-card" onclick="openDeal(' + JSON.stringify(uid).replace(/'/g,"\\'") + ')" data-uid="' + esc(uid) + '">' +
+    return '<div class="deal-card" data-uid="' + esc(uid) + '">' +
       '<div class="deal-card-accent" style="background:' + accentColor(v) + '"></div>' +
-      '<div class="card-addr">' + esc(d.address||'Unknown') + '</div>' +
+      '<div class="card-addr">' + esc(d.address||'Unknown') + '<span class="card-chevron">›</span></div>' +
       '<div class="card-city">' + esc((d.city||'') + (d.state ? ', '+d.state : '')) + '</div>' +
       '<div class="card-meta">' +
         '<span class="badge b-' + vClass(v) + '">' + (v==='HARD NO'?'HARD NO':v) + '</span>' +
@@ -363,6 +367,18 @@ function renderList() {
     '</div>';
   }).join('');
 }
+
+// Single delegated listener — handles every card, present or future, with zero
+// per-card string-escaping risk. This is the fix for the "cards aren't
+// clickable" bug: the old approach embedded the uid into an inline onclick="
+// attribute via JSON.stringify, which wraps strings in DOUBLE quotes — those
+// collided with the onclick="" attribute's own double quotes and corrupted
+// the handler on every single card.
+document.getElementById('deal-list').addEventListener('click', function(e) {
+  const card = e.target.closest('.deal-card');
+  if (!card) return;
+  openDeal(card.dataset.uid);
+});
 
 // ── DEAL DETAIL ───────────────────────────────────────────────
 function openDeal(uid) {
