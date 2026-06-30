@@ -2590,18 +2590,32 @@ function renderChat(history) {
   history.forEach(h => addMsg(h.role==='user'?'u':'a', h.content, h.timestamp));
 }
 
+// Lightweight markdown -> HTML for chat bubbles. Escapes first so the model's
+// own text can never break the page, then handles the formatting Claude
+// actually uses in practice: **bold**, "- " bullet lists, and line breaks.
+function mdToHtml(text) {
+  let h = (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+  h = h.replace(/(<li>[\s\S]*?<\/li>(\n(?=<li>))?)+/g, function(m) {
+    return '<ul style="margin:6px 0 6px 18px;padding:0">' + m.replace(/\n/g,'') + '</ul>';
+  });
+  h = h.replace(/\n/g, '<br>');
+  return h;
+}
 function addMsg(role, content, ts) {
   const msgs = $('chat-msgs');
   const d = document.createElement('div');
   d.className = `cm ${role}`;
   // Parse "CALEB: " or "GRANT: " prefix for sender label
-  let displayContent = content.replace(/\n/g,'<br>');
   let senderLabel = role === 'a' ? 'URBAN' : '';
+  let bodyText = content;
   const prefixMatch = content.match(/^(CALEB|GRANT|USER):\s*/i);
   if (prefixMatch) {
     senderLabel = prefixMatch[1].toUpperCase();
-    displayContent = content.slice(prefixMatch[0].length).replace(/\n/g,'<br>');
+    bodyText = content.slice(prefixMatch[0].length);
   }
+  let displayContent = mdToHtml(bodyText);
   const timeStr = ts ? new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
   d.innerHTML = `
     <div class="sender">${senderLabel}${timeStr ? ' · ' + timeStr : ''}</div>
