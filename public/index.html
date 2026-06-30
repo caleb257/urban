@@ -2353,9 +2353,9 @@ function fillPropTab(d) {
   const note = (label, val, color) => val ? `<div class="pnote" ${color?`style="color:${color}"`:''}><div class="pnote-lbl" ${color?`style="color:${color}"`:''}>${label}</div>${val}</div>` : '';
 
   // Quick Links (Street View, Appraiser, Permits, Redfin)
-  const _a2=d.address||(uw&&uw.deal&&uw.deal.address)||'';
-  const _c2=d.city||(uw&&uw.deal&&uw.deal.city)||'';
-  const _co2=((d.county||(uw&&uw.deal&&uw.deal.county))||'').toLowerCase();
+  const _a2=d.address||(curUW&&curUW.deal&&curUW.deal.address)||'';
+  const _c2=d.city||(curUW&&curUW.deal&&curUW.deal.city)||'';
+  const _co2=((d.county||(curUW&&curUW.deal&&curUW.deal.county))||'').toLowerCase();
   const _q2=encodeURIComponent(_a2+' '+_c2+' FL');
   const _paM2={hillsborough:'https://www.hcpafl.org/Property-Search#/?query='+encodeURIComponent(_a2),pasco:'https://www.epascoapp.com/searches?query='+encodeURIComponent(_a2),hernando:'https://www.hernandopa.org/pa/jWeb/Searches?query='+encodeURIComponent(_a2),pinellas:'https://www.pcpao.gov/search/?q='+encodeURIComponent(_a2),polk:'https://www.polkpa.org/search?query='+encodeURIComponent(_a2),lake:'https://www.lakecopropappr.com/search/?query='+encodeURIComponent(_a2),manatee:'https://www.manateepao.com/search/?query='+encodeURIComponent(_a2),sarasota:'https://www.sc-pa.com/search/?query='+encodeURIComponent(_a2)};
   const _paE2=Object.entries(_paM2).find(([k])=>_co2.includes(k));
