@@ -246,6 +246,7 @@ button,select,input,textarea{font-family:inherit}
     <div class="hdr-title">URBAN</div>
     <div id="list-count" style="font-size:11px;color:var(--muted);font-family:var(--mono);flex-shrink:0"></div>
     <button class="hdr-icon-btn map-toggle-btn" onclick="openMap()" title="Map view">🗺️</button>
+    <button class="hdr-icon-btn" onclick="openProfits()" title="Profits">💰</button>
     <button class="hdr-icon-btn" onclick="loadDeals()">↻</button>
   </div>
   <div class="stats-strip" id="stats-strip"></div>
@@ -276,6 +277,17 @@ button,select,input,textarea{font-family:inherit}
 </div>
 
 <!-- ── DEAL MAP SCREEN ─────────────────────────────────────── -->
+<!-- PROFITS SCREEN -->
+<div class="screen" id="s-profits">
+  <div class="hdr">
+    <button class="hdr-back" onclick="closeProfits()"><span class="hdr-back-arrow">‹</span>Deals</button>
+    <div class="hdr-title" style="font-size:16px;font-family:var(--sans);font-weight:700;letter-spacing:0">💰 Profits</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:24px" id="profits-content-m">
+    <div class="loading"><div class="spin"></div></div>
+  </div>
+</div>
+
 <div class="screen" id="s-map">
   <div class="hdr">
     <button class="hdr-back" onclick="closeMap()"><span class="hdr-back-arrow">‹</span>Deals</button>
@@ -1226,6 +1238,45 @@ async function savePurchasedOutcomeM() {
     alert('Network error: ' + e.message);
   }
   if (btn) { btn.textContent = 'Log Outcome'; btn.disabled = false; }
+}
+
+// -- PROFITS -----------------------------------------------------------------
+function openProfits() {
+  show('s-profits');
+  document.getElementById('profits-content-m').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  api('/api/profits').then(renderProfitsM).catch(function(e) {
+    document.getElementById('profits-content-m').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div>Could not load profits.<br><small>' + e.message + '</small></div></div>';
+  });
+}
+function closeProfits() { show('s-list'); }
+function renderProfitsM(data) {
+  var t = data.totals || {};
+  var rows = data.rows || [];
+  function fmtP(n) { return (n>=0?'+':'') + fmtM(n); }
+  var html = '<div style="padding:16px 16px 0"><div class="card" style="text-align:center;padding:20px"><div class="metric-label">Total Profit</div><div style="font-family:var(--display);font-size:38px;color:var(--accent)">' + fmtP(t.all||0) + '</div></div></div>';
+  html += '<div class="metric-grid">';
+  [['Flip', t.flip||0, 'var(--hot)'], ['BRRRR', t.brrrr||0, 'var(--pass)'], ['Wholesale', t.wholesale||0, 'var(--buy)'], ['Other', t.other||0, 'var(--review)']].forEach(function(x) {
+    html += '<div class="metric-tile"><div class="metric-label">' + x[0] + '</div><div class="metric-val" style="color:' + x[2] + '">' + fmtP(x[1]) + '</div></div>';
+  });
+  html += '</div>';
+  if (t.pendingCount) {
+    html += '<div style="margin:0 16px 14px;padding:11px 14px;background:rgba(240,160,48,.08);border:1px solid rgba(240,160,48,.3);border-radius:8px;color:var(--review);font-size:12px">⚠️ ' + t.pendingCount + ' purchased deal' + (t.pendingCount===1?'':'s') + ' without a profit figure logged yet.</div>';
+  }
+  if (!rows.length) {
+    html += '<div class="empty"><div class="empty-icon">💰</div><div>No purchased deals logged yet</div></div>';
+  } else {
+    html += '<div style="padding:0 16px">';
+    rows.forEach(function(r) {
+      var profitColor = r.actualProfit == null ? 'var(--muted)' : r.actualProfit >= 0 ? 'var(--buy)' : 'var(--hot)';
+      var profitTxt = r.actualProfit == null ? 'Not logged' : fmtP(r.actualProfit);
+      html += '<div class="card" style="padding:13px 15px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
+        '<div style="font-size:13.5px;font-weight:600;flex:1">' + esc(r.address) + '</div>' +
+        '<div style="font-family:var(--mono);font-weight:700;color:' + profitColor + ';font-size:13px">' + profitTxt + '</div></div>' +
+        '<div style="font-size:11px;color:var(--muted);text-transform:capitalize">' + esc(r.strategy) + (r.wholesaleFee ? ' · fee ' + fmtM(r.wholesaleFee) : '') + ' · purchased ' + fmtM(r.purchasePrice) + '</div></div>';
+    });
+    html += '</div>';
+  }
+  document.getElementById('profits-content-m').innerHTML = html;
 }
 
 // ── NOTES ─────────────────────────────────────────────────────
