@@ -1,4 +1,4 @@
-const CACHE_NAME = 'urban-v1';
+const CACHE_NAME = 'urban-v2';
 const APP_SHELL = ['/m', '/manifest.json', '/apple-touch-icon.png', '/icon-192.png'];
 
 self.addEventListener('install', (e) => {
@@ -37,16 +37,16 @@ self.addEventListener('fetch', (e) => {
     );
     return;
   }
-  // Cache-first for the app shell / static assets
+  // Network-first for the app shell itself — this is an actively-developed
+  // app, not a static site, so a deploy should be visible the next time
+  // someone opens it while online. Cache is purely the offline fallback.
   e.respondWith(
-    caches.match(e.request).then((cached) =>
-      cached || fetch(e.request).then((res) => {
-        if (res.ok) {
-          const resClone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
-        }
-        return res;
-      })
-    )
+    fetch(e.request).then((res) => {
+      if (res.ok) {
+        const resClone = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });
