@@ -221,6 +221,7 @@ a{color:var(--accent)}
 .map-pin-city{font-size:12px;color:var(--muted);margin-bottom:9px}
 .map-pin-meta{display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
 .map-pin-btn{display:block;width:100%;text-align:center;background:var(--accent);color:#000;border:none;border-radius:5px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)}
+.ql-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-weight:600;text-decoration:none;transition:background .15s;white-space:nowrap}.ql-btn:hover{background:var(--bg2)}
 </style>
 </head>
 <body>
@@ -2351,6 +2352,20 @@ function fillPropTab(d) {
   };
   const note = (label, val, color) => val ? `<div class="pnote" ${color?`style="color:${color}"`:''}><div class="pnote-lbl" ${color?`style="color:${color}"`:''}>${label}</div>${val}</div>` : '';
 
+  // Quick Links (Street View, Appraiser, Permits, Redfin)
+  const _a2=d.address||(uw&&uw.deal&&uw.deal.address)||'';
+  const _c2=d.city||(uw&&uw.deal&&uw.deal.city)||'';
+  const _co2=((d.county||(uw&&uw.deal&&uw.deal.county))||'').toLowerCase();
+  const _q2=encodeURIComponent(_a2+' '+_c2+' FL');
+  const _paM2={hillsborough:'https://www.hcpafl.org/Property-Search#/?query='+encodeURIComponent(_a2),pasco:'https://www.epascoapp.com/searches?query='+encodeURIComponent(_a2),hernando:'https://www.hernandopa.org/pa/jWeb/Searches?query='+encodeURIComponent(_a2),pinellas:'https://www.pcpao.gov/search/?q='+encodeURIComponent(_a2),polk:'https://www.polkpa.org/search?query='+encodeURIComponent(_a2),lake:'https://www.lakecopropappr.com/search/?query='+encodeURIComponent(_a2),manatee:'https://www.manateepao.com/search/?query='+encodeURIComponent(_a2),sarasota:'https://www.sc-pa.com/search/?query='+encodeURIComponent(_a2)};
+  const _paE2=Object.entries(_paM2).find(([k])=>_co2.includes(k));
+  const _paUrl2=_paE2?_paE2[1]:'https://www.google.com/search?q='+encodeURIComponent(_a2+' '+_c2+' FL property appraiser');
+  const _paLbl2=_paE2?(_paE2[0].charAt(0).toUpperCase()+_paE2[0].slice(1)+' Appraiser'):'Property Appraiser';
+  let _permitBtn='';
+  if(_co2.includes('pasco'))_permitBtn=`<a href="https://energovweb.pascocountyfl.net/EnerGov_Prod/SelfService#/search?SearchModule=Permits&query=${encodeURIComponent(_a2)}" target="_blank" rel="noopener" class="ql-btn">&#128296; Accella/EnerGov</a>`;
+  else if(_co2.includes('hillsborough'))_permitBtn=`<a href="https://www.hillsborough.permittingportal.com/search?query=${encodeURIComponent(_a2)}" target="_blank" rel="noopener" class="ql-btn">&#128296; Permit Portal</a>`;
+  const _qlHtml=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><a href="https://www.google.com/maps?q=${_q2}&layer=c" target="_blank" rel="noopener" class="ql-btn">&#128694; Street View</a><a href="${_paUrl2}" target="_blank" rel="noopener" class="ql-btn">&#127963;&#65039; ${_paLbl2}</a>${_permitBtn}<a href="https://www.redfin.com/FL/${encodeURIComponent(_c2)}/find-homes" target="_blank" rel="noopener" class="ql-btn">&#128308; Redfin</a></div>`;
+
   el.innerHTML = [
     sec('📋', 'DEAL INFO', [
       prow('Date Received', vv(d.dateReceived)),
@@ -2453,6 +2468,8 @@ function fillPropTab(d) {
         </div>`;
       })() : '',
     ]),
+  ,
+    _qlHtml,
   ].join('');
 }
 
