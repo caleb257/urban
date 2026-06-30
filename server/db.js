@@ -551,6 +551,40 @@ async function getSeenBy(uid) {
   } catch(e) { return {}; }
 }
 
+// ── GEOCODE CACHE — lat/lng per address, never re-geocode the same address ────
+async function initGeocodeCache() {
+  if (!pool || !ready) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS geocode_cache (
+        key        TEXT PRIMARY KEY,
+        lat        DOUBLE PRECISION,
+        lng        DOUBLE PRECISION,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+  } catch(e) { console.warn('initGeocodeCache:', e.message.slice(0,80)); }
+}
+
+async function getGeocode(key) {
+  if (!pool || !ready) return null;
+  try {
+    const r = await pool.query('SELECT lat, lng FROM geocode_cache WHERE key=$1', [key]);
+    return r.rows[0] || null;
+  } catch(e) { return null; }
+}
+
+async function saveGeocode(key, lat, lng) {
+  if (!pool || !ready) return;
+  try {
+    await pool.query(
+      `INSERT INTO geocode_cache (key, lat, lng, updated_at) VALUES ($1,$2,$3,NOW())
+       ON CONFLICT (key) DO UPDATE SET lat=EXCLUDED.lat, lng=EXCLUDED.lng, updated_at=NOW()`,
+      [key, lat, lng]
+    );
+  } catch(e) { console.error('saveGeocode:', e.message); }
+}
+
 module.exports = {
   initDB, isAvailable,
   initCompCache, getCachedComps, saveComps,
@@ -561,5 +595,6 @@ module.exports = {
   saveSoldComps, getSoldComps, getSoldCompStats,
   saveNbhcStats, getNbhcArv,
   getPortfolioStats,
-  initDealNotes, saveNote, getNotes, markSeen, getSeenBy
+  initDealNotes, saveNote, getNotes, markSeen, getSeenBy,
+  initGeocodeCache, getGeocode, saveGeocode
 };

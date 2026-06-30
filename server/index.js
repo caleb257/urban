@@ -4281,6 +4281,32 @@ app.post('/api/notes/:uid', auth, async (req, res) => {
   res.json({ notes: notes2, seenBy: seenBy2 });
 });
 
+// ── BATCH GEOCODING — for the mobile deal map. Caches every address in
+// Postgres so it's only ever geocoded once; everything after that is instant.
+app.post('/api/geocode-batch', auth, async (req, res) => {
+  try {
+    const items = (req.body && req.body.items) || [];
+    const out = {};
+    const CHUNK = 3; // gentle on Nominatim's free tier
+    for (let i = 0; i < items.length; i += CHUNK) {
+      const chunk = items.slice(i, i + CHUNK);
+      await Promise.all(chunk.map(async (it) => {
+        if (!it || !it.address) return;
+        const key = `${it.address}|${it.city||''}|FL`.toLowerCase().trim();
+        let geo = await DB.getGeocode(key).catch(() => null);
+        if (!geo || geo.lat == null) {
+          geo = await geocodeAddress(it.address, it.city || '', 'FL').catch(() => null);
+          if (geo) DB.saveGeocode(key, geo.lat, geo.lng).catch(() => {});
+        }
+        if (geo && geo.lat != null) out[it.uid] = { lat: geo.lat, lng: geo.lng };
+      }));
+      if (i + CHUNK < items.length) await new Promise(r => setTimeout(r, 350));
+    }
+    res.json(out);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
 app.post('/api/seen/:uid', auth, async (req, res) => {
   const uid   = decodeURIComponent(req.params.uid);
   const who   = (req.body.author || 'caleb').trim();
@@ -4439,6 +4465,7 @@ app.listen(PORT, async () => {
   await DB.initCompCache().catch(() => {});
   await DB.initDealsCache().catch(() => {});
   await DB.initDealNotes().catch(() => {});
+  await DB.initGeocodeCache().catch(() => {});
   if (DB.isAvailable()) {
     // Merge Postgres + JSON: JSON already loaded above, DB wins on conflicts
     const fromDB = await DB.getAllUnderwrites().catch(() => ({}));

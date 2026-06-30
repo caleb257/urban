@@ -15,6 +15,8 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" sizes="192x192" href="/icon-192.png">
 <title>Urban · CCG</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -54,6 +56,50 @@ button,select,input,textarea{font-family:inherit}
 .filter-tabs::-webkit-scrollbar{display:none}
 .ftab{padding:7px 15px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.3px;border:1px solid var(--border2);color:var(--muted);background:transparent;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .ftab.active{background:var(--accent);color:#0a0a0f;border-color:var(--accent);font-weight:700}
+/* ── STATS STRIP (home screen) ──────────────────────────────── */
+.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border)}
+.stat-chip{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 6px;text-align:center}
+.stat-chip-val{font-family:var(--display);font-size:19px;color:var(--accent);letter-spacing:.3px;line-height:1.1}
+.stat-chip-lbl{font-size:8.5px;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin-top:3px;line-height:1.2}
+/* ── MAP TOGGLE / SCREEN ─────────────────────────────────────── */
+.map-toggle-btn{font-size:16px}
+#s-map{background:var(--bg)}
+#map-canvas{flex:1;width:100%;background:var(--bg2)}
+.leaflet-popup-content-wrapper{background:var(--bg2);color:var(--text);border-radius:10px;border:1px solid var(--border2)}
+.leaflet-popup-tip{background:var(--bg2);border:1px solid var(--border2)}
+.leaflet-popup-content{margin:12px 14px;font-family:var(--sans)}
+.leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
+.map-pin-addr{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.map-pin-city{font-size:11px;color:var(--muted);margin-bottom:7px}
+.map-pin-meta{display:flex;align-items:center;gap:6px;margin-bottom:9px;flex-wrap:wrap}
+.map-pin-btn{display:block;width:100%;text-align:center;background:var(--accent);color:#0a0a0f;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer}
+.map-pending-note{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:7px 16px;font-size:11px;color:var(--muted);z-index:1000;display:none;align-items:center;gap:7px}
+.map-spin{width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+/* ── SUB-TAB ROW (inside Overview — ARV/Rehab/Financials/Property/Flags) ── */
+.subtab-wrap{position:relative;background:var(--bg);border-bottom:1px solid var(--border)}
+.subtab-wrap::after{content:'';position:absolute;right:0;top:0;bottom:1px;width:24px;background:linear-gradient(to right, transparent, var(--bg));pointer-events:none}
+.subtab-row{display:flex;gap:6px;padding:10px 16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.subtab{padding:6px 13px;border-radius:16px;font-size:11.5px;font-weight:600;border:1px solid var(--border2);color:var(--muted);background:transparent;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.subtab.active{background:var(--accent);color:#0a0a0f;border-color:var(--accent);font-weight:700}
+/* Comp cards (ARV tab) */
+.comp-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:8px}
+.comp-addr{font-size:12.5px;font-weight:600;margin-bottom:5px}
+.comp-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.comp-price{font-family:var(--mono);color:var(--accent);font-weight:700;font-size:13px}
+/* Rehab line items */
+.rehab-line{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.rehab-line:last-child{border-bottom:none}
+.rehab-line-name{font-size:12.5px;color:var(--text);text-transform:capitalize}
+.rehab-line-val{font-family:var(--mono);font-size:12.5px;color:var(--text);font-weight:600}
+.rehab-total{display:flex;justify-content:space-between;padding-top:10px;margin-top:4px;border-top:2px solid var(--border2)}
+/* Risk flags */
+.flag-card{border-radius:8px;padding:11px 13px;margin-bottom:8px;border-left-width:3px;border-left-style:solid}
+.flag-HIGH{background:rgba(255,68,68,.08);border-left-color:var(--hot)}
+.flag-MEDIUM{background:rgba(240,160,48,.07);border-left-color:var(--review)}
+.flag-LOW{background:rgba(102,136,170,.06);border-left-color:var(--pass)}
+.flag-title{font-size:12.5px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:7px}
+.flag-sev{font-size:8.5px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.5px}
+.flag-detail{font-size:12px;color:var(--muted);line-height:1.55}
 /* ── DEAL LIST ───────────────────────────────────────────── */
 #s-list{background:var(--bg)}
 .list-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px;display:flex;flex-direction:column;gap:9px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
@@ -188,8 +234,10 @@ button,select,input,textarea{font-family:inherit}
   <div class="hdr">
     <div class="hdr-title">URBAN</div>
     <div id="list-count" style="font-size:11px;color:var(--muted);font-family:var(--mono);flex-shrink:0"></div>
+    <button class="hdr-icon-btn map-toggle-btn" onclick="openMap()" title="Map view">🗺️</button>
     <button class="hdr-icon-btn" onclick="loadDeals()">↻</button>
   </div>
+  <div class="stats-strip" id="stats-strip"></div>
   <div class="filter-tabs-wrap"><div class="filter-tabs" id="filter-tabs">
     <button class="ftab active" onclick="setFilter('ALL',this)">All</button>
     <button class="ftab" onclick="setFilter('HOT',this)">🔥 Hot</button>
@@ -201,6 +249,16 @@ button,select,input,textarea{font-family:inherit}
   <div class="list-body" id="deal-list">
     <div class="loading"><div class="spin"></div>Loading deals…</div>
   </div>
+</div>
+
+<!-- ── DEAL MAP SCREEN ─────────────────────────────────────── -->
+<div class="screen" id="s-map">
+  <div class="hdr">
+    <button class="hdr-back" onclick="closeMap()"><span class="hdr-back-arrow">‹</span>Deals</button>
+    <div class="hdr-title" style="font-size:16px;font-family:var(--sans);font-weight:700;letter-spacing:0">Deal Map</div>
+  </div>
+  <div id="map-canvas"></div>
+  <div class="map-pending-note" id="map-pending-note"><div class="map-spin"></div><span id="map-pending-text"></span></div>
 </div>
 
 <!-- ── DEAL DETAIL SCREEN ──────────────────────────────────── -->
@@ -274,8 +332,9 @@ function doLogin() {
   const t = document.getElementById('token-inp').value.trim();
   if (!t) return;
   TOKEN = t;
-  api('/api/stats').then(function() {
+  api('/api/stats').then(function(s) {
     localStorage.setItem('urban_token', TOKEN);
+    renderStats(s);
     show('s-list');
     loadDeals();
   }).catch(function() {
@@ -293,8 +352,9 @@ function doLogin() {
 })();
 
 if (TOKEN) {
-  api('/api/stats').then(function() {
+  api('/api/stats').then(function(s) {
     localStorage.setItem('urban_token', TOKEN);
+    renderStats(s);
     show('s-list');
     loadDeals();
   }).catch(function() { TOKEN = ''; });
@@ -304,9 +364,32 @@ document.getElementById('token-inp').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') doLogin();
 });
 
+// ── STATS STRIP ───────────────────────────────────────────────
+function renderStats(s) {
+  const strip = document.getElementById('stats-strip');
+  if (!strip || !s) return;
+  const total = s.totalUnderwritten || 0;
+  const avgScore = s.avgScore ? s.avgScore.toFixed(1) : '—';
+  const buyCount = (s.verdicts && (s.verdicts.HOT||0) + (s.verdicts.BUY||0)) || 0;
+  const avgProfit = s.avgProfit ? fmtK(s.avgProfit) : '—';
+  strip.innerHTML = [
+    ['Underwritten', total],
+    ['Avg Score', avgScore],
+    ['💰 Buy/Hot', buyCount],
+    ['Avg Profit', avgProfit],
+  ].map(function(p) {
+    return '<div class="stat-chip"><div class="stat-chip-val">' + p[1] + '</div><div class="stat-chip-lbl">' + p[0] + '</div></div>';
+  }).join('');
+}
+
+function loadStats() {
+  api('/api/stats').then(renderStats).catch(function(){});
+}
+
 // ── DEALS ─────────────────────────────────────────────────────
 function loadDeals() {
   document.getElementById('deal-list').innerHTML = '<div class="loading"><div class="spin"></div>Loading…</div>';
+  loadStats();
   api('/api/deals').then(function(data) {
     allDeals = data.deals || data || [];
     renderList();
@@ -380,6 +463,121 @@ document.getElementById('deal-list').addEventListener('click', function(e) {
   openDeal(card.dataset.uid);
 });
 
+// ── DEAL MAP ──────────────────────────────────────────────────
+// Tampa Bay center — CCG's buy box (Pasco/Hillsborough/Hernando)
+const MAP_DEFAULT_CENTER = [28.15, -82.45];
+let leafletMap = null;
+let mapMarkers = [];
+let geoCache = {};
+try { geoCache = JSON.parse(localStorage.getItem('urban_geo_cache') || '{}'); } catch(e) { geoCache = {}; }
+
+function saveGeoCache() {
+  try { localStorage.setItem('urban_geo_cache', JSON.stringify(geoCache)); } catch(e) {}
+}
+
+function openMap() {
+  show('s-map');
+  if (!leafletMap) {
+    leafletMap = L.map('map-canvas', { zoomControl: true, attributionControl: true })
+      .setView(MAP_DEFAULT_CENTER, 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(leafletMap);
+  }
+  // Leaflet needs a resize kick when its container was display:none during init
+  setTimeout(function() { leafletMap.invalidateSize(); }, 50);
+  plotMapPins();
+}
+
+function closeMap() {
+  show('s-list');
+}
+
+function mapPinColor(v) {
+  const m = {HOT:'#ff4444', BUY:'#44cc88', REVIEW:'#f0a030', PASS:'#6688aa', 'HARD NO':'#cc4466', PENDING:'#666680'};
+  return m[v] || '#666680';
+}
+
+function plotMapPins() {
+  mapMarkers.forEach(function(m) { leafletMap.removeLayer(m); });
+  mapMarkers = [];
+
+  const dealsForMap = allDeals.filter(function(d) {
+    const v = d.underwriteStatus || 'PENDING';
+    if (curFilter === 'ALL') return true;
+    if (curFilter === 'PENDING') return v === 'PENDING' || !d.underwriteStatus;
+    return v === curFilter;
+  });
+
+  const located = [];
+  const missing = [];
+  dealsForMap.forEach(function(d) {
+    const uid = d.uid || (d.address + '-' + d.dateReceived);
+    const geo = geoCache[uid];
+    if (geo && geo.lat != null) located.push({ d: d, uid: uid, geo: geo });
+    else missing.push({ uid: uid, address: d.address, city: d.city });
+  });
+
+  located.forEach(function(item) {
+    const d = item.d;
+    const v = d.underwriteStatus || 'PENDING';
+    const fi = d.financials || {};
+    const _fiAsk = fi.askingPrice && parseFloat(fi.askingPrice) > 1000 ? parseFloat(fi.askingPrice) : 0;
+    const _rawAsk = parseFloat(d.askingPrice) || 0;
+    const ask = _fiAsk || (_rawAsk >= 1000 ? _rawAsk : 0);
+    const color = mapPinColor(v);
+
+    const marker = L.circleMarker([item.geo.lat, item.geo.lng], {
+      radius: 9, fillColor: color, color: '#0a0a0f', weight: 2, fillOpacity: 0.9
+    }).addTo(leafletMap);
+
+    const popupHtml = '<div class="map-pin-addr">' + esc(d.address||'') + '</div>' +
+      '<div class="map-pin-city">' + esc((d.city||'')+(d.state?', '+d.state:'')) + '</div>' +
+      '<div class="map-pin-meta">' +
+        '<span class="badge b-' + vClass(v) + '">' + (v==='HARD NO'?'HARD NO':v) + '</span>' +
+        (d.underwriteScore ? '<span class="card-score">' + d.underwriteScore + '/10</span>' : '') +
+        (ask > 0 ? '<span class="card-price">' + fmtK(ask) + '</span>' : '') +
+      '</div>' +
+      '<button class="map-pin-btn" onclick="closeMap();setTimeout(function(){openDeal(' + "'" + item.uid.replace(/'/g,"\\'") + "'" + ')},80)">View Deal</button>';
+    marker.bindPopup(popupHtml);
+    mapMarkers.push(marker);
+  });
+
+  if (located.length) {
+    const bounds = L.latLngBounds(located.map(function(item) { return [item.geo.lat, item.geo.lng]; }));
+    leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+  }
+
+  const note = document.getElementById('map-pending-note');
+  const noteText = document.getElementById('map-pending-text');
+  if (missing.length) {
+    note.style.display = 'flex';
+    noteText.textContent = 'Locating ' + missing.length + ' more propert' + (missing.length===1?'y':'ies') + '…';
+    geocodeMissingDeals(missing);
+  } else if (note) {
+    note.style.display = 'none';
+  }
+}
+
+function geocodeMissingDeals(missing) {
+  const items = missing.slice(0, 60).map(function(m) { return { uid: m.uid, address: m.address, city: m.city }; });
+  if (!items.length) return;
+  api('/api/geocode-batch', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ items: items })
+  }).then(function(result) {
+    Object.keys(result).forEach(function(uid) { geoCache[uid] = result[uid]; });
+    saveGeoCache();
+    const note = document.getElementById('map-pending-note');
+    if (note) note.style.display = 'none';
+    if (document.getElementById('s-map').classList.contains('active')) plotMapPins();
+  }).catch(function() {
+    const note = document.getElementById('map-pending-note');
+    if (note) note.style.display = 'none';
+  });
+}
+
 // ── DEAL DETAIL ───────────────────────────────────────────────
 function openDeal(uid) {
   curDeal = allDeals.find(function(d) { return (d.uid||(d.address+'-'+d.dateReceived)) === uid; });
@@ -419,13 +617,51 @@ function renderDetail(tab) {
   document.getElementById('d-addr').textContent = d.address || '—';
   document.getElementById('deal-body').dataset.tab = tab;
 
-  if (tab === 'overview') renderOverview(d, curUW, uid);
+  if (tab === 'overview') renderOverviewWrap(d, curUW, uid);
   else if (tab === 'notes') renderNotesTab(uid);
   else if (tab === 'ladder') renderLadder(curUW);
   else if (tab === 'chat') renderChat();
 }
 
-function renderOverview(d, uw, uid) {
+// Overview hosts its own horizontal sub-tab strip — Summary / ARV / Rehab /
+// Financials / Property / Flags — so the depth that used to only exist on
+// desktop is actually reachable on mobile, without overloading the bottom nav.
+let curSubtab = 'summary';
+const SUBTABS = [
+  ['summary','Summary'], ['arv','ARV'], ['rehab','Rehab'],
+  ['financials','Financials'], ['property','Property'], ['flags','Flags']
+];
+
+function renderOverviewWrap(d, uw, uid) {
+  let html = '<div class="subtab-wrap"><div class="subtab-row" id="subtab-row">' +
+    SUBTABS.map(function(s) {
+      return '<button class="subtab' + (curSubtab===s[0]?' active':'') + '" data-s="' + s[0] + '" onclick="setSubtab(\'' + s[0] + '\')">' + s[1] + '</button>';
+    }).join('') + '</div></div>' +
+    '<div id="subtab-content"></div>';
+  document.getElementById('deal-body').innerHTML = html;
+  renderSubtabContent(d, uw, uid);
+}
+
+function setSubtab(name) {
+  curSubtab = name;
+  document.querySelectorAll('#subtab-row .subtab').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.s === name);
+  });
+  renderSubtabContent(curDeal, curUW, curDeal && (curDeal.uid || (curDeal.address+'-'+curDeal.dateReceived)));
+}
+
+function renderSubtabContent(d, uw, uid) {
+  const el = document.getElementById('subtab-content');
+  if (!el) return;
+  if (curSubtab === 'summary') return renderOverview(d, uw, uid, el);
+  if (curSubtab === 'arv') return renderARVTab(d, uw, el);
+  if (curSubtab === 'rehab') return renderRehabTab(d, uw, el);
+  if (curSubtab === 'financials') return renderFinancialsTab(d, uw, el);
+  if (curSubtab === 'property') return renderPropertyTab(d, el);
+  if (curSubtab === 'flags') return renderFlagsTab(uw, el);
+}
+
+function renderOverview(d, uw, uid, targetEl) {
   const fi = (uw && uw.financials) || d.financials || {};
   const arv = (uw && uw.arv && uw.arv.urbanARV) || (d.arv && d.arv.urbanARV) || 0;
   const rehab = (uw && uw.rehab && uw.rehab.urbanEstimate) || 0;
@@ -494,7 +730,278 @@ function renderOverview(d, uw, uid) {
     html += '</div>';
   }
 
-  document.getElementById('deal-body').innerHTML = html;
+  document.getElementById('subtab-content').innerHTML = html;
+}
+
+// ── ARV TAB — comps, confidence, as-is vs full-rehab spread ───────────────────
+function renderARVTab(d, uw, el) {
+  if (!uw) { el.innerHTML = emptyState('⚡', 'Run a full underwrite to see ARV analysis and comps.'); return; }
+  const arv = uw.arv || {};
+  const conf = arv.arvConfidence || 'LOW';
+  const confColor = conf==='HIGH' ? 'var(--buy)' : conf==='MEDIUM' ? 'var(--review)' : 'var(--hot)';
+  const wsArv = arv.wholesalerARV || 0;
+  const urArv = arv.urbanARV || 0;
+  const diff = wsArv - urArv;
+
+  let html = '<div class="card" style="margin-top:14px">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+    '<div class="ct" style="margin-bottom:0">Confidence</div>' +
+    '<span class="badge" style="background:' + confColor + '22;color:' + confColor + ';border-color:' + confColor + '66">' + conf + '</span></div>';
+  html += '<div style="display:flex;gap:10px;margin-bottom:10px">' +
+    '<div style="flex:1"><div class="metric-label">Wholesaler ARV</div><div style="font-family:var(--mono);font-size:16px;color:var(--review);font-weight:700">' + fmtM(wsArv) + '</div></div>' +
+    '<div style="flex:1"><div class="metric-label">Urban ARV</div><div style="font-family:var(--mono);font-size:16px;color:var(--accent);font-weight:700">' + fmtM(urArv) + '</div></div>' +
+  '</div>';
+  if (wsArv && urArv) {
+    const diffColor = diff > 10000 ? 'var(--hot)' : diff < -10000 ? 'var(--buy)' : 'var(--muted)';
+    const diffTxt = diff > 1000 ? 'Wholesaler inflated by ' + fmtK(diff) : diff < -1000 ? 'Wholesaler undervalued — upside ' + fmtK(Math.abs(diff)) : 'Matches Urban';
+    html += '<div class="prow"><span class="plbl">Variance</span><span class="pval" style="color:' + diffColor + '">' + diffTxt + '</span></div>';
+  }
+  if (arv.asIsValue) html += '<div class="prow"><span class="plbl">As-Is Value</span><span class="pval">' + fmtM(arv.asIsValue) + '</span></div>';
+  if (arv.arvPerSqft) html += '<div class="prow"><span class="plbl">$ / sqft</span><span class="pval">$' + Math.round(arv.arvPerSqft) + '/sf</span></div>';
+  if (arv.arvNotes) html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text);line-height:1.6">' + esc(arv.arvNotes) + '</div>';
+  html += '</div>';
+
+  const comps = uw.comps || [];
+  html += '<div style="padding:0 16px"><div class="ct" style="margin-top:4px">Comparable Sales (' + comps.length + ')</div></div>';
+  if (!comps.length) {
+    html += '<div style="padding:0 16px"><div style="font-size:12.5px;color:var(--muted);padding:10px 0">No live comps loaded — hit Re-run on desktop to pull fresh comps.</div></div>';
+  } else {
+    html += '<div style="padding:0 16px 16px">';
+    comps.forEach(function(c) {
+      const price = c.salePrice || c.sold_price || 0;
+      const date = (c.saleDate || c.sold_date || '').slice(0,10);
+      const ppsf = c.ppsf ? Math.round(parseFloat(c.ppsf)) : (price && c.sqft ? Math.round(price/c.sqft) : null);
+      html += '<div class="comp-card">' +
+        '<div class="comp-addr">' + esc(c.address||'—') + '</div>' +
+        '<div class="comp-row"><span>' + (c.beds||'?') + 'bd / ' + (c.baths||'?') + 'ba · ' + (c.sqft?parseInt(c.sqft).toLocaleString()+' sf':'—') + '</span><span class="comp-price">' + fmtM(price) + '</span></div>' +
+        '<div class="comp-row"><span>' + (ppsf ? '$'+ppsf+'/sf' : '') + '</span><span>' + date + '</span></div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+// ── REHAB TAB — scope + full line-item breakdown ───────────────────────────
+function renderRehabTab(d, uw, el) {
+  if (!uw || !uw.rehab) { el.innerHTML = emptyState('⚡', 'Run a full underwrite to see the rehab breakdown.'); return; }
+  const r = uw.rehab;
+  const items = r.lineItems || {};
+  const order = ['roof','hvac','plumbing','electrical','kitchen','bathrooms','flooring','windows','paint','landscaping','permits','misc','contingency','other'];
+
+  let html = '<div class="card" style="margin-top:14px">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+    '<span class="badge b-REVIEW">' + (r.scopeLevel||'MEDIUM') + '</span>' +
+    '<span style="font-size:11px;color:var(--muted)">' + (uw.financials && uw.financials.holdMonths || 5) + ' month hold</span></div>';
+  html += '</div>';
+
+  html += '<div class="card">';
+  let tot = 0;
+  let any = false;
+  order.forEach(function(k) {
+    const v = items[k];
+    if (!v) return;
+    any = true; tot += v;
+    html += '<div class="rehab-line"><span class="rehab-line-name">' + k + '</span><span class="rehab-line-val">' + fmtM(v) + '</span></div>';
+  });
+  Object.keys(items).forEach(function(k) {
+    if (order.indexOf(k) === -1 && items[k]) { any = true; tot += items[k]; html += '<div class="rehab-line"><span class="rehab-line-name">' + esc(k.replace(/_/g,' ')) + '</span><span class="rehab-line-val">' + fmtM(items[k]) + '</span></div>'; }
+  });
+  if (!any) html += '<div style="font-size:12.5px;color:var(--muted);padding:8px 0">No itemized breakdown in this underwrite yet.</div>';
+  else html += '<div class="rehab-total"><span style="font-weight:700;font-size:13px">TOTAL</span><span style="font-family:var(--mono);font-weight:800;color:var(--accent);font-size:15px">' + fmtM(tot) + '</span></div>';
+  if (r.urbanEstimateRange) html += '<div style="font-size:11px;color:var(--muted);margin-top:8px">Range: ' + fmtM(r.urbanEstimateRange.low) + ' – ' + fmtM(r.urbanEstimateRange.high) + '</div>';
+  html += '</div>';
+
+  if (r.wholesalerEstimate || r.confidence) {
+    html += '<div class="card">';
+    if (r.wholesalerEstimate) html += '<div class="prow"><span class="plbl">Wholesaler Estimate</span><span class="pval" style="color:var(--review)">' + fmtM(r.wholesalerEstimate) + '</span></div>';
+    html += '<div class="prow"><span class="plbl">Urban Estimate</span><span class="pval">' + fmtM(r.urbanEstimate) + '</span></div>';
+    if (r.confidence) html += '<div class="prow"><span class="plbl">Confidence</span><span class="pval">' + r.confidence + '</span></div>';
+    html += '</div>';
+  }
+  if (r.notes) html += '<div class="card"><div class="ct">Notes</div><div style="font-size:12.5px;color:var(--text);line-height:1.6">' + esc(r.notes) + '</div></div>';
+  if (r.missingInfo) html += '<div class="card" style="border-color:rgba(240,160,48,.3)"><div class="ct" style="color:var(--review)">⚠️ Missing Info</div><div style="font-size:12.5px;color:var(--text);line-height:1.6">' + esc(r.missingInfo) + '</div></div>';
+
+  el.innerHTML = html;
+}
+
+// ── FINANCIALS TAB — full breakdown matching desktop's 4-card layout ──────────
+function renderFinancialsTab(d, uw, el) {
+  if (!uw) { el.innerHTML = emptyState('⚡', 'Run a full underwrite to see full financials.'); return; }
+  const f = uw.financials || {};
+  const arv = (uw.arv && uw.arv.urbanARV) || 0;
+  const rehab = (uw.rehab && uw.rehab.urbanEstimate) || 0;
+  const _fiAsk = f.askingPrice && parseFloat(f.askingPrice) > 1000 ? parseFloat(f.askingPrice) : 0;
+  const _rawAsk = parseFloat(d.askingPrice) || 0;
+  const ask = _fiAsk || (_rawAsk >= 1000 ? _rawAsk : 0);
+  const mao = f.mao || Math.round(arv*0.7 - rehab);
+  const loan = (f.hardMoney && f.hardMoney.loanAmount) || Math.round(ask*0.9);
+  const dp = Math.round(ask*0.1);
+  const interest = (f.hardMoney && f.hardMoney.totalInterest) || 0;
+  const points = (f.hardMoney && f.hardMoney.originationPoints) || Math.round(loan*0.02);
+  const holding = (f.holdingCosts && f.holdingCosts.total) || 0;
+  const selling = (f.sellingCosts && f.sellingCosts.total) || Math.round(arv*0.075);
+  const financing = interest + points;
+  const totalAllIn = ask + rehab + financing + holding + selling;
+  const profit = arv > 0 ? Math.round(arv - totalAllIn) : null;
+  const ctc = dp + rehab;
+  const roi = totalAllIn > 0 && profit != null ? (profit/totalAllIn*100).toFixed(1) : null;
+  const coc = ctc > 0 && profit != null ? (profit/ctc*100).toFixed(1) : null;
+
+  function row(lbl, val, color) { return '<div class="prow"><span class="plbl">' + lbl + '</span><span class="pval"' + (color?' style="color:'+color+'"':'') + '>' + val + '</span></div>'; }
+
+  let html = '<div class="card" style="margin-top:14px"><div class="ct">Deal Economics</div>';
+  html += row('Asking Price', fmtM(ask));
+  html += row("Urban's ARV", fmtM(arv), 'var(--accent)');
+  html += row('Rehab Budget', fmtM(rehab));
+  html += row('MAO (70% − Repairs)', fmtM(mao));
+  html += row('Asking vs MAO', (ask-mao>0?'+':'')+fmtK(ask-mao), ask>mao?'var(--hot)':'var(--buy)');
+  html += '</div>';
+
+  html += '<div class="card"><div class="ct">Hard Money · 9.5% Interest Only</div>';
+  html += row('Loan Amount (90% LTV)', fmtM(loan));
+  html += row('Down Payment (10%)', fmtM(dp));
+  html += row('Total Interest', fmtM(interest));
+  html += row('Origination (2 pts)', fmtM(points));
+  html += row('Total Financing Cost', fmtM(financing));
+  html += '</div>';
+
+  html += '<div class="card"><div class="ct">All-In Cost Breakdown</div>';
+  html += row('Purchase Price', fmtM(ask));
+  html += row('Rehab', fmtM(rehab));
+  html += row('Financing', fmtM(financing));
+  html += row('Holding Costs', fmtM(holding));
+  html += row('Selling Costs', fmtM(selling));
+  html += '<div class="rehab-total"><span style="font-weight:700;font-size:13px">TOTAL ALL-IN</span><span style="font-family:var(--mono);font-weight:800;font-size:15px">' + fmtM(totalAllIn) + '</span></div>';
+  html += '<div style="margin-top:8px;padding:9px 11px;background:rgba(200,169,110,.08);border-radius:6px;display:flex;justify-content:space-between">' +
+    '<span style="font-size:12px;font-weight:600">Cash to Close</span><span style="font-family:var(--mono);font-weight:700;color:var(--accent)">' + fmtM(ctc) + '</span></div>';
+  html += '</div>';
+
+  html += '<div class="card"><div class="ct">Profit &amp; Returns</div>';
+  html += '<div style="text-align:center;padding:6px 0 12px"><div class="metric-label">Net Profit @ Asking</div>' +
+    '<div style="font-family:var(--display);font-size:30px;color:' + (profit>0?'var(--buy)':'var(--hot)') + '">' + (profit!=null?(profit>0?'+':'')+fmtM(profit):'—') + '</div></div>';
+  html += row('Return on All-In', roi!=null ? roi+'%' : '—');
+  html += row('Cash-on-Cash', coc!=null ? coc+'%' : '—', 'var(--buy)');
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+// ── PROPERTY TAB — every field from the sheet, organized like desktop ─────────
+function renderPropertyTab(d, el) {
+  function row(lbl, val) {
+    if (val === null || val === undefined || val === '' || val === '0' || val === false) return '';
+    return '<div class="prow"><span class="plbl">' + lbl + '</span><span class="pval">' + esc(String(val)) + '</span></div>';
+  }
+  function money(v) { return v && parseFloat(v) ? fmtM(parseFloat(v)) : null; }
+  function section(title, rows) {
+    const content = rows.filter(Boolean).join('');
+    if (!content) return '';
+    return '<div class="card"><div class="ct">' + title + '</div>' + content + '</div>';
+  }
+  function hasFlag(x) { return x && !['no','n/a','none','x',''].includes(String(x).toLowerCase().trim()); }
+
+  let html = '<div style="margin-top:14px"></div>';
+  html += section('Property', [
+    row('Address', d.address),
+    row('City / State / Zip', [d.city, d.state, d.zip].filter(Boolean).join(', ')),
+    row('County', d.county),
+    row('Subdivision', d.subdivision),
+    row('School District', d.schoolDistrict),
+    row('Type', d.propertyType),
+    row('Beds / Baths', d.beds && d.baths ? d.beds+' bd · '+d.baths+' ba' : null),
+    row('Sqft', d.sqft ? parseInt(d.sqft).toLocaleString()+' sf' : null),
+    row('Lot Size', d.lotSqft ? parseInt(d.lotSqft).toLocaleString()+' sf' : null),
+    row('Year Built', d.yearBuilt),
+    row('Stories', d.stories),
+    row('Construction', d.construction),
+    row('Foundation', d.foundation),
+    row('Occupancy', d.occupancy),
+    row('Pool', d.pool && String(d.pool).toLowerCase()!=='no' ? 'Yes' : null),
+    row('Garage', d.garage && String(d.garage).toLowerCase()!=='no' ? (d.garageSpaces ? d.garageSpaces+' spaces' : 'Yes') : null),
+    row('Flood Zone', hasFlag(d.floodZone) ? d.floodZone : null),
+    row('HOA', hasFlag(d.hoa) ? d.hoa + (d.hoaFee ? ' — '+money(d.hoaFee)+'/mo' : '') : null),
+  ]);
+  html += section('Wholesaler Numbers', [
+    row('Asking Price', money(d.askingPrice)),
+    row('Wholesaler ARV', money(d.wholesalerARV)),
+    row('Repairs Estimate', money(d.repairsEstimate)),
+    row('Assignment Fee', money(d.assignmentFee)),
+    row('Annual Taxes', money(d.annualTaxes)),
+    row('Rent (Current)', money(d.rentCurrent)),
+    row('Rent (Market Est)', money(d.rentMarket)),
+    row('Close Date', d.closeDate),
+    row('Inspection Period', d.inspectionPeriod),
+    row('Earnest Money', money(d.earnestMoney)),
+    row('Cash Only', d.cashOnly && String(d.cashOnly)!=='false' ? 'Yes' : null),
+  ]);
+  html += section('Systems & Condition', [
+    row('Overall Condition', d.overall_condition),
+    row('Roof', [d.roofType, d.roofAge].filter(Boolean).join(' · ')),
+    row('HVAC / AC', d.acYear),
+    row('Water Heater', d.waterHeater),
+    row('Electrical', d.electrical),
+    row('Plumbing', d.plumbing),
+    row('Windows', d.windows),
+    row('Flooring', d.flooring),
+  ]);
+  const condNotes = [
+    ['Kitchen', d.kitchenNotes], ['Bathrooms', d.bathNotes],
+    ["What's Updated", d.whatIsUpdated], ['Needs Work', d.whatNeedsWork],
+    ['Highlights', d.highlights], ['Red Flags', d.redFlags], ['Notes', d.additionalNotes]
+  ].filter(function(p){return p[1];});
+  if (condNotes.length) {
+    html += '<div class="card"><div class="ct">Condition Notes</div>';
+    condNotes.forEach(function(p) {
+      html += '<div style="margin-bottom:10px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">' + p[0] + '</div><div style="font-size:12.5px;color:var(--text);line-height:1.55">' + esc(p[1]) + '</div></div>';
+    });
+    html += '</div>';
+  }
+  html += section('Seller', [
+    row('Name', d.sellerName), row('Phone', d.sellerPhone),
+    row('Situation', d.sellerSituation), row('Motivation', d.sellerMotivation),
+  ]);
+  html += section('Wholesaler Contact', [
+    row('Company', d.wholesalerCompany || d.contact1Company),
+    row('Contact', d.contact1Name),
+    row('Phone', d.contact1Phone),
+    row('Email', d.contact1Email),
+  ]);
+
+  if (d.googleMapsLink || d.zillowLink) {
+    html += '<div class="card"><div class="ct">Links</div>';
+    if (d.zillowLink) html += '<a class="phone-link" href="' + esc(d.zillowLink) + '" target="_blank" rel="noopener" style="display:block;margin-bottom:8px">🔗 View on Zillow</a>';
+    if (d.googleMapsLink) html += '<a class="phone-link" href="' + esc(d.googleMapsLink) + '" target="_blank" rel="noopener" style="display:block">📍 Open in Google Maps</a>';
+    html += '</div>';
+  }
+
+  el.innerHTML = html || emptyState('📋', 'No property data available.');
+}
+
+// ── FLAGS TAB — risk flags, severity-sorted ────────────────────────────────
+function renderFlagsTab(uw, el) {
+  if (!uw || !uw.riskFlags || !uw.riskFlags.length) {
+    el.innerHTML = emptyState('🔍', 'No risk flags identified yet — run a full underwrite for risk analysis.');
+    return;
+  }
+  const order = {HIGH:0, MEDIUM:1, LOW:2};
+  const sorted = uw.riskFlags.slice().sort(function(a,b) { return (order[a.severity]||3) - (order[b.severity]||3); });
+  let html = '<div style="padding:16px 16px 0">';
+  sorted.forEach(function(f) {
+    const sev = (f.severity||'LOW').toUpperCase();
+    const icon = sev==='HIGH' ? '🔴' : sev==='MEDIUM' ? '🟡' : '🔵';
+    const sevColor = sev==='HIGH' ? 'var(--hot)' : sev==='MEDIUM' ? 'var(--review)' : 'var(--pass)';
+    html += '<div class="flag-card flag-' + sev + '">' +
+      '<div class="flag-title">' + icon + ' <span style="flex:1">' + esc(f.flag||'Risk') + '</span>' +
+      '<span class="flag-sev" style="background:' + sevColor + '33;color:' + sevColor + '">' + sev + '</span></div>' +
+      '<div class="flag-detail">' + esc(f.detail||'') + '</div></div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function emptyState(icon, msg) {
+  return '<div class="empty" style="padding:50px 32px"><div class="empty-icon">' + icon + '</div><div>' + esc(msg) + '</div></div>';
 }
 
 // ── NOTES ─────────────────────────────────────────────────────
