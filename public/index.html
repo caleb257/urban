@@ -277,45 +277,35 @@ a{color:var(--accent)}
   </div>
 
   <div id="sold-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center">
-    <div style="background:var(--bg3);border:1px solid rgba(255,215,0,.3);border-radius:10px;padding:24px;width:340px;max-width:90vw">
-      <div style="font-size:15px;font-weight:700;margin-bottom:4px;color:var(--gold)">🤝 Mark as Sold</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">This archives the deal and trains Urban's brain.</div>
+    <div style="background:var(--bg3);border:1px solid rgba(255,215,0,.3);border-radius:10px;padding:24px;width:360px;max-width:90vw">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;color:var(--gold)">🤝 Lost to Another Buyer</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">They sold it before we could lock it up. This logs why and trains Urban's brain — the deal leaves your active pipeline.</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Sale price (required)</div>
-          <div style="display:flex;align-items:center;gap:4px">
-            <span style="color:var(--muted)">$</span>
-            <input id="sold-price" type="number" placeholder="0" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:15px;font-weight:700">
-          </div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Buyer type</div>
-          <select id="sold-buyer" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:13px">
-            <option value="retail">Retail buyer (MLS flip)</option>
-            <option value="investor">Investor / cash buyer</option>
-            <option value="wholesale">Wholesaled out</option>
-            <option value="brrrr">Kept — BRRRR / rental</option>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">What happened?</div>
+          <select id="lost-reason" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:13px">
+            <option value="lost_price">Another buyer offered more</option>
+            <option value="lost_speed">Another buyer moved faster / closed quicker</option>
+            <option value="seller_changed_mind">Seller backed out / decided not to sell</option>
+            <option value="lost_unresponsive">Wholesaler went unresponsive</option>
+            <option value="other">Other</option>
           </select>
         </div>
         <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Actual all-in cost (optional)</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">What did it reportedly sell for? (optional — often unknown)</div>
           <div style="display:flex;align-items:center;gap:4px">
             <span style="color:var(--muted)">$</span>
-            <input id="sold-cost" type="number" placeholder="purchase + rehab + holding" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:13px">
+            <input id="lost-price" type="number" placeholder="Leave blank if unknown" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:14px;font-weight:600">
           </div>
         </div>
         <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Notes</div>
-          <input id="sold-notes" type="text" placeholder="What Urban got right or wrong..." style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:12px;box-sizing:border-box">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Notes — this is what trains Urban</div>
+          <textarea id="lost-notes" rows="3" placeholder="e.g. Called 20 min after the email went out — wholesaler said someone already wired EMD at full ask. We were $6K under." style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-size:12px;box-sizing:border-box;resize:vertical;font-family:var(--sans)"></textarea>
         </div>
       </div>
-      <div id="sold-profit-preview" style="display:none;margin-top:10px;padding:10px;background:var(--bg2);border-radius:6px;text-align:center">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Actual profit</div>
-        <div id="sold-profit-num" style="font-size:22px;font-weight:800"></div>
-      </div>
       <div style="display:flex;gap:8px;margin-top:14px">
-        <button onclick="closeSoldForm()" style="flex:1;padding:9px;background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--muted);cursor:pointer">Cancel</button>
-        <button onclick="saveSold()" id="sold-submit-btn" style="flex:2;padding:9px;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.4);border-radius:5px;color:var(--gold);font-weight:700;cursor:pointer;font-size:13px">Archive Deal</button>
+        <button onclick="closeLostForm()" style="flex:1;padding:9px;background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--muted);cursor:pointer">Cancel</button>
+        <button onclick="saveLost()" id="lost-submit-btn" style="flex:2;padding:9px;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.4);border-radius:5px;color:var(--gold);font-weight:700;cursor:pointer;font-size:13px">Archive Deal</button>
       </div>
     </div>
   </div>
@@ -379,7 +369,7 @@ a{color:var(--accent)}
         <button class="btn" id="btn-sheet">📊 Sheet</button>
         <button class="btn" id="btn-hard-no" onclick="doMarkHardNo()" title="Mark this deal as Hard No — removes from pipeline" style="display:none;background:rgba(255,60,60,.12);border-color:rgba(255,60,60,.3);color:rgba(255,100,100,.9)">⛔ Hard No</button>
         <button class="btn" id="btn-purchased" onclick="showPurchasedForm()" style="display:none;background:rgba(60,200,130,.1);border-color:rgba(60,200,130,.3);color:rgba(60,200,130,.9)">🏠 Purchased</button>
-        <button class="btn" id="btn-sold" onclick="showSoldForm()" style="display:none;background:rgba(255,215,0,.1);border-color:rgba(255,215,0,.35);color:rgba(255,215,0,.9);font-weight:700">🤝 Mark as Sold</button>
+        <button class="btn" id="btn-sold" onclick="showLostForm()" style="display:none;background:rgba(255,215,0,.1);border-color:rgba(255,215,0,.35);color:rgba(255,215,0,.9);font-weight:700">🤝 Lost to Buyer</button>
         <button class="btn" id="btn-photos" style="display:none;background:rgba(180,140,255,.12);border-color:rgba(180,140,255,.3);color:rgba(180,140,255,.9)" onclick="openPhotos()">📸 See Photos</button>
       </div>
 
@@ -3186,7 +3176,9 @@ async function savePurchasedOutcome() {
   var arv      = parseFloat(document.getElementById('oc-arv')      && document.getElementById('oc-arv').value)      || 0;
   var strategy = document.getElementById('oc-strategy') && document.getElementById('oc-strategy').value || 'flip';
   var notes    = document.getElementById('oc-notes')    && document.getElementById('oc-notes').value    || '';
-  if (!purchase) return;
+  if (!purchase) { alert('Enter the purchase price'); return; }
+  var btn = document.querySelector('[onclick="savePurchasedOutcome()"]');
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
   try {
     var r = await fetch('/api/outcome/' + encodeURIComponent(curUW.uid), {
       method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
@@ -3195,90 +3187,74 @@ async function savePurchasedOutcome() {
     if (r.ok) {
       curUW = await r.json();
       closePurchasedForm();
-      renderUW(curUW);
-      var b = document.getElementById('btn-purchased');
-      if (b) { b.textContent = 'Purchased'; b.style.background = 'rgba(60,200,130,.2)'; }
+      deals = deals.filter(function(d) { return d.address !== curDeal.address; });
+      curDeal = null;
+      document.getElementById('dv').style.display = 'none';
+      document.getElementById('main-empty').style.display = '';
+      renderList();
+      doLoadStats();
+    } else {
+      var errTxt = await r.text().catch(function(){ return ''; });
+      console.error('Purchase save failed:', r.status, errTxt);
+      alert('Could not save (HTTP ' + r.status + '). Check console.');
     }
-  } catch(e) { console.error('outcome save error:', e.message); }
+  } catch(e) {
+    console.error('outcome save error:', e.message);
+    alert('Network error: ' + e.message);
+  }
+  if (btn) { btn.textContent = 'Log Outcome'; btn.disabled = false; }
 }
 
-// -- SOLD / ARCHIVE ------------------------------------------------------------
-function showSoldForm() {
+// -- LOST TO ANOTHER BUYER / ARCHIVE -------------------------------------------
+function showLostForm() {
   if (!curDeal) return;
   var m = document.getElementById('sold-modal');
   if (!m) return;
-  // Pre-fill with estimated sale price (ARV * 96%)
-  var arv = curUW && curUW.arv && curUW.arv.urbanARV || 0;
-  var sp = document.getElementById('sold-price');
-  if (sp && arv) sp.value = Math.round(arv * 0.96);
-  var sc = document.getElementById('sold-cost');
-  if (sc) {
-    var ask = parseFloat(curDeal.askingPrice) || 0;
-    var rehab = curUW && curUW.rehab && curUW.rehab.urbanEstimate || 0;
-    sc.value = ask + rehab > 0 ? Math.round(ask + rehab) : '';
-  }
-  // Live profit preview
-  ['sold-price','sold-cost'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.oninput = updateSoldPreview;
-  });
-  updateSoldPreview();
+  var r = document.getElementById('lost-reason'); if (r) r.value = 'lost_price';
+  var p = document.getElementById('lost-price');  if (p) p.value = '';
+  var n = document.getElementById('lost-notes');  if (n) n.value = '';
   m.style.display = 'flex';
 }
-function updateSoldPreview() {
-  var price = parseFloat(document.getElementById('sold-price') && document.getElementById('sold-price').value) || 0;
-  var cost  = parseFloat(document.getElementById('sold-cost')  && document.getElementById('sold-cost').value)  || 0;
-  var prev = document.getElementById('sold-profit-preview');
-  var num  = document.getElementById('sold-profit-num');
-  if (price > 0 && cost > 0 && prev && num) {
-    var profit = price - cost;
-    prev.style.display = '';
-    num.textContent = (profit >= 0 ? '+' : '') + '$' + Math.round(profit).toLocaleString();
-    num.style.color = profit >= 0 ? 'var(--buy)' : 'var(--red)';
-  } else if (prev) {
-    prev.style.display = 'none';
-  }
-}
-function closeSoldForm() {
+function closeLostForm() {
   var m = document.getElementById('sold-modal');
   if (m) m.style.display = 'none';
 }
-async function saveSold() {
-  if (!curUW || !curDeal) return;
-  var price = parseFloat(document.getElementById('sold-price') && document.getElementById('sold-price').value) || 0;
-  if (!price) { alert('Enter the sale price'); return; }
-  var cost    = parseFloat(document.getElementById('sold-cost')  && document.getElementById('sold-cost').value)  || 0;
-  var buyer   = document.getElementById('sold-buyer')  && document.getElementById('sold-buyer').value  || 'retail';
-  var notes   = document.getElementById('sold-notes')  && document.getElementById('sold-notes').value  || '';
-  var btn = document.getElementById('sold-submit-btn');
+async function saveLost() {
+  if (!curDeal) return;
+  var uid = (curUW && curUW.uid) || curDeal.uid || (curDeal.address + '-' + curDeal.dateReceived);
+  var reason     = document.getElementById('lost-reason') && document.getElementById('lost-reason').value || 'other';
+  var theirPrice = document.getElementById('lost-price')  && document.getElementById('lost-price').value  || '';
+  var notes      = document.getElementById('lost-notes')  && document.getElementById('lost-notes').value  || '';
+  var btn = document.getElementById('lost-submit-btn');
   if (btn) { btn.textContent = 'Archiving...'; btn.disabled = true; }
   try {
-    var r = await fetch('/api/sold/' + encodeURIComponent(curUW.uid), {
+    var r = await fetch('/api/lost/' + encodeURIComponent(uid), {
       method: 'POST',
       headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ salePrice: price, allInCost: cost, buyerType: buyer, notes: notes, address: curDeal.address, author: author })
+      body: JSON.stringify({ reason: reason, theirPrice: theirPrice, notes: notes, address: curDeal.address, city: curDeal.city, state: curDeal.state, author: author })
     });
     if (r.ok) {
-      closeSoldForm();
-      // Remove from local deals array
+      closeLostForm();
       deals = deals.filter(function(d) { return d.address !== curDeal.address; });
-      // Clear current deal view
       curDeal = null; curUW = null;
       document.getElementById('dv').style.display = 'none';
       document.getElementById('main-empty').style.display = '';
       renderList();
       doLoadStats();
-      // Flash success banner
       var banner = document.createElement('div');
       banner.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(60,200,130,.9);color:#000;padding:12px 24px;border-radius:8px;font-weight:700;font-size:14px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.4)';
-      banner.textContent = 'Deal archived! Brain updated.';
+      banner.textContent = "Logged as lost — Urban's brain updated.";
       document.body.appendChild(banner);
       setTimeout(function() { document.body.removeChild(banner); }, 3000);
     } else {
+      var errTxt = await r.text().catch(function(){ return ''; });
+      console.error('Lost-deal save failed:', r.status, errTxt);
+      alert('Could not save (HTTP ' + r.status + '). Check console.');
       if (btn) { btn.textContent = 'Archive Deal'; btn.disabled = false; }
     }
   } catch(e) {
-    console.error('sold save:', e);
+    console.error('lost save:', e);
+    alert('Network error: ' + e.message);
     if (btn) { btn.textContent = 'Archive Deal'; btn.disabled = false; }
   }
 }
