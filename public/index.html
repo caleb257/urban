@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Urban — Coralstone Capital Underwriter</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root{--bg:#0a0a0f;--bg2:#111118;--bg3:#18181f;--border:#22222e;--border2:#2e2e3e;--text:#e8e8f0;--muted:#666680;--accent:#c8a96e;--accent2:#e8c98e;--hot:#ff4444;--buy:#44cc88;--review:#f0a030;--pass:#6688aa;--go:#44cc88;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Bebas Neue',sans-serif}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -210,6 +212,15 @@ a{color:var(--accent)}
 .neg-profit{font-family:var(--mono);font-size:12px;font-weight:600;min-width:90px}
 .neg-roi{font-size:11px;color:var(--muted);font-family:var(--mono)}
 .neg-ok{color:var(--buy)}.neg-no{color:var(--review)}.neg-bad{color:var(--hot)}
+.leaflet-popup-content-wrapper{background:var(--bg3);color:var(--text);border-radius:8px;border:1px solid var(--border2)}
+.leaflet-popup-tip{background:var(--bg3);border:1px solid var(--border2)}
+.leaflet-popup-content{margin:14px 16px;font-family:var(--sans);min-width:200px}
+.leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
+.leaflet-container{background:var(--bg2);font-family:var(--sans)}
+.map-pin-addr{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.map-pin-city{font-size:12px;color:var(--muted);margin-bottom:9px}
+.map-pin-meta{display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
+.map-pin-btn{display:block;width:100%;text-align:center;background:var(--accent);color:#000;border:none;border-radius:5px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)}
 </style>
 </head>
 <body>
@@ -228,9 +239,12 @@ a{color:var(--accent)}
 <!-- APP -->
 <div id="app">
   <div id="sidebar">
-    <div id="sidebar-header">
-      <h1>URBAN</h1>
-      <p>Coralstone Underwriter</p>
+    <div id="sidebar-header" style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <h1>URBAN</h1>
+        <p>Coralstone Underwriter</p>
+      </div>
+      <button id="map-view-btn" onclick="showMapView()" title="Deal map" style="width:38px;height:38px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--accent);font-size:16px;cursor:pointer">🗺️</button>
     </div>
     <div id="stats-bar">
       <div class="stat-chip"><div class="val" id="st-total">—</div><div class="lbl">Underwritten</div></div>
@@ -350,6 +364,17 @@ a{color:var(--accent)}
     <div id="main-empty">
       <h2>SELECT A DEAL</h2>
       <p>Deals auto-underwrite when they arrive. Click one to review.</p>
+    </div>
+
+    <div id="main-map" style="display:none;position:relative;width:calc(100vw - 310px);height:100vh">
+      <div style="position:absolute;top:16px;left:16px;z-index:1000;display:flex;gap:8px;align-items:center">
+        <button onclick="hideMapView()" style="padding:8px 16px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--accent);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer">← Back to List</button>
+        <div id="map-pending-note-d" style="display:none;align-items:center;gap:8px;padding:8px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;font-size:12px;color:var(--muted)">
+          <div class="spinner" style="width:13px;height:13px;margin:0;border-width:2px"></div>
+          <span id="map-pending-text-d"></span>
+        </div>
+      </div>
+      <div id="map-canvas-d" style="width:100%;height:100%"></div>
     </div>
 
     <div id="dv">
@@ -3118,6 +3143,121 @@ function timeAgo(ts) {
   if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
   var d = new Date(ts);
   return (d.getMonth()+1)+'/'+(d.getDate())+'/'+d.getFullYear();
+}
+
+// -- DEAL MAP -------------------------------------------------------------------
+const MAP_DEFAULT_CENTER = [28.15, -82.45]; // Tampa Bay — CCG's buy box
+let leafletMapD = null;
+let mapMarkersD = [];
+let geoCacheD = {};
+try { geoCacheD = JSON.parse(localStorage.getItem('urban_geo_cache') || '{}'); } catch(e) { geoCacheD = {}; }
+function saveGeoCacheD() { try { localStorage.setItem('urban_geo_cache', JSON.stringify(geoCacheD)); } catch(e) {} }
+
+function showMapView() {
+  show('main-empty', false);
+  show('dv', false);
+  document.getElementById('main-map').style.display = 'block';
+  if (!leafletMapD) {
+    leafletMapD = L.map('map-canvas-d', { zoomControl: true }).setView(MAP_DEFAULT_CENTER, 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(leafletMapD);
+  }
+  setTimeout(() => { leafletMapD.invalidateSize(); plotMapPinsD(); }, 60);
+}
+function hideMapView() {
+  document.getElementById('main-map').style.display = 'none';
+  if (curDeal) { show('dv', true); } else { show('main-empty', true); }
+}
+function mapPinColorD(v) {
+  const m = {HOT:'#ff4444', BUY:'#44cc88', REVIEW:'#f0a030', PASS:'#6688aa', 'HARD NO':'#cc4466', PENDING:'#666680'};
+  return m[v] || '#666680';
+}
+function plotMapPinsD() {
+  mapMarkersD.forEach(m => leafletMapD.removeLayer(m));
+  mapMarkersD = [];
+
+  const dealsForMap = deals.filter(d => {
+    const status = d.underwriteStatus || 'PENDING';
+    if (hideHardNo && status === 'HARD NO') return false;
+    if (curFilter === 'ALL') return true;
+    if (curFilter === 'PENDING') return status === 'PENDING' || !d.underwriteStatus;
+    if (curFilter === 'BUY') return status === 'BUY' || status === 'HOT';
+    if (curFilter === 'HARDNO') return status === 'HARD NO';
+    return status === curFilter;
+  });
+
+  const located = [], missing = [];
+  let unmappable = 0;
+  dealsForMap.forEach(d => {
+    const uid = d.uid || `${d.address}-${d.dateReceived}`;
+    const geo = geoCacheD[uid];
+    if (geo && geo.lat != null) located.push({ d, uid, geo });
+    else if (geo && geo.failed) unmappable++;
+    else missing.push({ uid, address: d.address, city: d.city });
+  });
+
+  located.forEach(item => {
+    const d = item.d;
+    const status = d.underwriteStatus || 'PENDING';
+    const badgeCls = status === 'HARD NO' ? 'b-HARDNO' : `b-${status}`;
+    const _fiAsk = d.financials && d.financials.askingPrice && parseFloat(d.financials.askingPrice) > 1000 ? parseFloat(d.financials.askingPrice) : 0;
+    const _rawAsk = parseFloat(d.askingPrice) || 0;
+    const ask = _fiAsk || (_rawAsk >= 1000 ? _rawAsk : 0);
+    const color = mapPinColorD(status);
+
+    const marker = L.circleMarker([item.geo.lat, item.geo.lng], { radius: 9, fillColor: color, color: '#0a0a0f', weight: 2, fillOpacity: .9 }).addTo(leafletMapD);
+    const popupHtml = `<div class="map-pin-addr">${d.address||''}</div>` +
+      `<div class="map-pin-city">${d.city||''}${d.state?', '+d.state:''}</div>` +
+      `<div class="map-pin-meta"><span class="badge ${badgeCls}">${status}</span>` +
+      (d.underwriteScore ? `<span class="di-score" style="font-weight:700">${d.underwriteScore}/10</span>` : '') +
+      (ask > 0 ? `<span class="di-price">${fmt(ask)}</span>` : '') + `</div>` +
+      `<button class="map-pin-btn" onclick='__selectFromMap(${JSON.stringify(item.uid)})'>View Deal</button>`;
+    marker.bindPopup(popupHtml);
+    mapMarkersD.push(marker);
+  });
+
+  if (located.length) {
+    leafletMapD.fitBounds(L.latLngBounds(located.map(i => [i.geo.lat, i.geo.lng])), { padding: [50,50], maxZoom: 14 });
+  }
+
+  const note = document.getElementById('map-pending-note-d');
+  const noteText = document.getElementById('map-pending-text-d');
+  const noteSpin = note ? note.querySelector('.spinner') : null;
+  if (missing.length) {
+    note.style.display = 'flex';
+    if (noteSpin) noteSpin.style.display = '';
+    noteText.textContent = `Locating ${missing.length} more propert${missing.length===1?'y':'ies'}…`;
+    geocodeMissingDealsD(missing);
+  } else if (unmappable && note) {
+    note.style.display = 'flex';
+    if (noteSpin) noteSpin.style.display = 'none';
+    noteText.textContent = `${unmappable} propert${unmappable===1?'y':'ies'} could not be located`;
+  } else if (note) {
+    note.style.display = 'none';
+  }
+}
+function geocodeMissingDealsD(missing) {
+  const items = missing.slice(0, 60).map(m => ({ uid: m.uid, address: m.address, city: m.city }));
+  if (!items.length) return;
+  fetch('/api/geocode-batch', {
+    method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items })
+  }).then(r => r.json()).then(result => {
+    Object.keys(result).forEach(uid => { geoCacheD[uid] = result[uid]; });
+    items.forEach(it => { if (!result[it.uid]) geoCacheD[it.uid] = { failed: true }; });
+    saveGeoCacheD();
+    const note = document.getElementById('map-pending-note-d');
+    if (note) note.style.display = 'none';
+    if (document.getElementById('main-map').style.display !== 'none') plotMapPinsD();
+  }).catch(() => {
+    const note = document.getElementById('map-pending-note-d');
+    if (note) note.style.display = 'none';
+  });
+}
+function __selectFromMap(uid) {
+  const d = deals.find(x => (x.uid || `${x.address}-${x.dateReceived}`) === uid);
+  if (!d) return;
+  hideMapView();
+  selectDeal(d);
 }
 
 // -- WHOLESALER SCORECARDS -----------------------------------------------------

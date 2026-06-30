@@ -106,7 +106,8 @@ button,select,input,textarea{font-family:inherit}
 .deal-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;overflow:hidden;transition:transform .1s, background .1s}
 .deal-card:active{background:var(--bg3);transform:scale(.98)}
 .deal-card-accent{position:absolute;left:0;top:0;bottom:0;width:3px}
-.card-addr{font-size:15px;font-weight:600;margin-bottom:3px;line-height:1.3;color:var(--text);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-addr{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.card-addr-text{font-size:15.5px;font-weight:600;line-height:1.3;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .card-chevron{color:var(--muted);font-size:18px;font-weight:400;flex-shrink:0;opacity:.6}
 .card-city{font-size:12px;color:var(--muted);margin-bottom:10px}
 .card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -289,6 +290,8 @@ let curFilter = 'ALL';
 let curDeal = null;
 let curUW = null;
 let chatHistory = [];
+let uwCache = {}; // uid -> underwrite data. Once a deal is fetched, re-opening it
+                   // is instant from here instead of hitting the network again.
 
 // ── UTILS ─────────────────────────────────────────────────────
 const fmtK = n => (n || n === 0) ? '$' + (Math.abs(n) >= 1000 ? Math.round(n/1000) + 'K' : Math.round(n)) : '—';
@@ -439,7 +442,7 @@ function renderList() {
     const uid = d.uid || (d.address + '-' + (d.dateReceived||''));
     return '<div class="deal-card" data-uid="' + esc(uid) + '">' +
       '<div class="deal-card-accent" style="background:' + accentColor(v) + '"></div>' +
-      '<div class="card-addr">' + esc(d.address||'Unknown') + '<span class="card-chevron">›</span></div>' +
+      '<div class="card-addr"><span class="card-addr-text">' + esc(d.address||'Unknown') + '</span><span class="card-chevron">›</span></div>' +
       '<div class="card-city">' + esc((d.city||'') + (d.state ? ', '+d.state : '')) + '</div>' +
       '<div class="card-meta">' +
         '<span class="badge b-' + vClass(v) + '">' + (v==='HARD NO'?'HARD NO':v) + '</span>' +
@@ -486,8 +489,7 @@ function openMap() {
     }).addTo(leafletMap);
   }
   // Leaflet needs a resize kick when its container was display:none during init
-  setTimeout(function() { leafletMap.invalidateSize(); }, 50);
-  plotMapPins();
+  setTimeout(function() { leafletMap.invalidateSize(); plotMapPins(); }, 60);
 }
 
 function closeMap() {
@@ -512,10 +514,12 @@ function plotMapPins() {
 
   const located = [];
   const missing = [];
+  let unmappable = 0;
   dealsForMap.forEach(function(d) {
     const uid = d.uid || (d.address + '-' + d.dateReceived);
     const geo = geoCache[uid];
     if (geo && geo.lat != null) located.push({ d: d, uid: uid, geo: geo });
+    else if (geo && geo.failed) unmappable++; // tried before, couldn't locate it — don't ask again
     else missing.push({ uid: uid, address: d.address, city: d.city });
   });
 
@@ -551,10 +555,16 @@ function plotMapPins() {
 
   const note = document.getElementById('map-pending-note');
   const noteText = document.getElementById('map-pending-text');
+  const noteSpin = note ? note.querySelector('.map-spin') : null;
   if (missing.length) {
     note.style.display = 'flex';
+    if (noteSpin) noteSpin.style.display = '';
     noteText.textContent = 'Locating ' + missing.length + ' more propert' + (missing.length===1?'y':'ies') + '…';
     geocodeMissingDeals(missing);
+  } else if (unmappable && note) {
+    note.style.display = 'flex';
+    if (noteSpin) noteSpin.style.display = 'none';
+    noteText.textContent = unmappable + ' propert' + (unmappable===1?'y':'ies') + ' could not be located on the map';
   } else if (note) {
     note.style.display = 'none';
   }
@@ -568,6 +578,11 @@ function geocodeMissingDeals(missing) {
     body: JSON.stringify({ items: items })
   }).then(function(result) {
     Object.keys(result).forEach(function(uid) { geoCache[uid] = result[uid]; });
+    // Anything we asked for but didn't get coordinates back for failed
+    // server-side — remember that here too so we stop asking every time.
+    items.forEach(function(it) {
+      if (!result[it.uid]) geoCache[it.uid] = { failed: true };
+    });
     saveGeoCache();
     const note = document.getElementById('map-pending-note');
     if (note) note.style.display = 'none';
@@ -582,18 +597,32 @@ function geocodeMissingDeals(missing) {
 function openDeal(uid) {
   curDeal = allDeals.find(function(d) { return (d.uid||(d.address+'-'+d.dateReceived)) === uid; });
   if (!curDeal) return;
-  curUW = null;
   chatHistory = [];
   show('s-deal');
   api('/api/seen/' + encodeURIComponent(uid), {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({author:AUTHOR})
   }).catch(function(){});
-  renderDetail('overview');
+
+  if (uwCache[uid]) {
+    // Already have this one — show it instantly, no spinner, no network wait.
+    curUW = uwCache[uid];
+    renderDetail('overview');
+  } else {
+    curUW = null;
+    renderDetail('overview');
+  }
+
+  // Always refresh in the background so data can't go stale forever (e.g. someone
+  // re-ran the underwrite on desktop) — but the UI never has to wait on this if
+  // a cached copy is already showing.
   api('/api/underwrite/' + encodeURIComponent(uid)).then(function(uw) {
-    curUW = uw;
-    const activeTab = document.querySelector('.deal-body').dataset.tab || 'overview';
-    renderDetail(activeTab);
+    uwCache[uid] = uw;
+    if (curDeal && (curDeal.uid||(curDeal.address+'-'+curDeal.dateReceived)) === uid) {
+      curUW = uw;
+      const activeTab = document.querySelector('.deal-body').dataset.tab || 'overview';
+      renderDetail(activeTab);
+    }
   }).catch(function(){});
 }
 
