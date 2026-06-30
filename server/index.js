@@ -630,6 +630,29 @@ async function geocodeAddress(address, city, state = 'FL') {
   } catch { return null; }
 }
 
+// In-memory de-dup so we don't hit Postgres just to check "have we tried this
+// uid yet" on every single /api/deals call — resets harmlessly on restart.
+const _geocodeAttempted = {};
+async function proactivelyGeocodeDeals(targetDeals) {
+  const toTry = targetDeals
+    .filter(d => d.address && !_geocodeAttempted[d.uid || `${d.address}-${d.dateReceived}`])
+    .slice(0, 8);
+  for (const d of toTry) {
+    const uid = d.uid || `${d.address}-${d.dateReceived}`;
+    _geocodeAttempted[uid] = true;
+    const key = `${d.address}|${d.city||''}|FL`.toLowerCase().trim();
+    try {
+      const cached = await DB.getGeocode(key);
+      if (!cached) {
+        const fresh = await geocodeAddress(d.address, d.city || '', 'FL').catch(() => null);
+        if (fresh) await DB.saveGeocode(key, fresh.lat, fresh.lng);
+        else await DB.saveGeocode(key, null, null);
+      }
+    } catch(e) {}
+    await new Promise(r => setTimeout(r, 250));
+  }
+}
+
 // ── COUNTY GIS COMP FETCHER ───────────────────────────────────────────────────
 // Queries each FL county's Property Appraiser ArcGIS REST API
 // Government APIs — no IP blocking, free, returns actual recorded deed sales
@@ -3260,10 +3283,22 @@ app.get('/api/deals', auth, async (req, res) => {
           }
         })
     ).catch(() => {});
+
+    // Proactively geocode new/uncached deals in the background — runs every
+    // time anyone loads the app, not just when the map screen is opened, so
+    // a deal is already located on the map well before anyone goes looking
+    // for it.
+    proactivelyGeocodeDeals(targetDeals).catch(() => {});
+
+    // One bulk lookup for everything we already know — not a per-deal query.
+    const _geoKeys = targetDeals.map(d => `${d.address}|${d.city||''}|FL`.toLowerCase().trim());
+    const _geoMap = await DB.getGeocodesForKeys(_geoKeys).catch(() => ({}));
+
     const out = targetDeals.map(d => {
       const uid = d.uid || `${d.address}-${d.dateReceived}`;
       const uw  = underwrites[uid];
       if (uw && uw.archived) return null; // logged as Lost to Buyer or Purchased — out of the active pipeline
+      const _geo = _geoMap[`${d.address}|${d.city||''}|FL`.toLowerCase().trim()];
 
       // Stale detection — 7 days default, unless "kept"
       const received  = d.dateReceived ? new Date(d.dateReceived) : null;
@@ -3329,6 +3364,9 @@ app.get('/api/deals', auth, async (req, res) => {
         financials:       uw ? uw.financials : null,
         // Stale
         isStale, daysOld, keptUntil: keptUntil || null,
+        // Map coordinates — already-known location, no separate round-trip needed
+        lat: (_geo && _geo.lat != null) ? _geo.lat : null,
+        lng: (_geo && _geo.lng != null) ? _geo.lng : null,
         // Wholesaler brain stats
         wholesalerDeals:           wsProfile?.deals || 0,
         wholesalerAvgInflation:    wsProfile?.avgARVInflation || null,
@@ -4415,7 +4453,7 @@ app.post('/api/lost/:uid', auth, async (req, res) => {
 app.post('/api/outcome/:uid', auth, async (req, res) => {
   try {
     const uid = decodeURIComponent(req.params.uid);
-    const { purchase, rehab, arv, strategy, notes, author, address } = req.body || {};
+    const { purchase, rehab, arv, strategy, wholesaleFee, actualProfit, notes, author, address } = req.body || {};
     let uw = underwrites[uid] || await DB.getUnderwrite(uid);
     if (!uw) return res.status(404).json({ error: 'Underwrite not found for this deal' });
     uw.uid = uw.uid || uid;
@@ -4423,10 +4461,15 @@ app.post('/api/outcome/:uid', auth, async (req, res) => {
     const purchasePrice = parseFloat(purchase) || 0;
     const actualRehab   = parseFloat(rehab) || 0;
     const expectedArv   = parseFloat(arv) || (uw.arv?.urbanARV || 0);
+    const wFee          = strategy === 'wholesale' ? (parseFloat(wholesaleFee) || 0) : null;
+    const profit = actualProfit !== undefined && actualProfit !== '' && actualProfit !== null
+      ? parseFloat(actualProfit)
+      : (strategy === 'wholesale' && wFee ? wFee : null);
 
     uw.dealOutcome = {
       type: 'PURCHASED', purchasePrice, actualRehab, expectedARV: expectedArv,
-      strategy: strategy || 'flip', notes: (notes || '').trim(),
+      strategy: strategy || 'flip', wholesaleFee: wFee, actualProfit: profit,
+      notes: (notes || '').trim(),
       loggedBy: author || 'caleb', loggedAt: new Date().toISOString()
     };
     uw.archived = true;
@@ -4437,8 +4480,10 @@ app.post('/api/outcome/:uid', auth, async (req, res) => {
     urbanBrain.lessons = urbanBrain.lessons || [];
     urbanBrain.lessons.push({
       type: 'purchased_deal', address: addr, author: author || 'caleb',
-      text: `[PURCHASED] ${addr} — bought for $${purchasePrice.toLocaleString()}, rehab budget ` +
-        `$${actualRehab.toLocaleString()}, expected ARV $${expectedArv.toLocaleString()}, strategy: ${strategy || 'flip'}.` +
+      text: `[PURCHASED] ${addr} — bought for ${purchasePrice.toLocaleString()}, rehab budget ` +
+        `${actualRehab.toLocaleString()}, expected ARV ${expectedArv.toLocaleString()}, strategy: ${strategy || 'flip'}.` +
+        (wFee ? ` Wholesale fee: ${wFee.toLocaleString()}.` : '') +
+        (profit != null ? ` Logged profit: ${profit.toLocaleString()}.` : '') +
         (notes ? ` Notes: ${notes}` : ''),
       ts: new Date().toISOString()
     });
@@ -4452,6 +4497,50 @@ app.post('/api/outcome/:uid', auth, async (req, res) => {
     ]).catch(() => {});
 
     res.json(uw);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/profit/:uid', auth, async (req, res) => {
+  try {
+    const uid = decodeURIComponent(req.params.uid);
+    const { actualProfit, wholesaleFee, notes, author } = req.body || {};
+    let uw = underwrites[uid] || await DB.getUnderwrite(uid);
+    if (!uw || !uw.dealOutcome) return res.status(404).json({ error: 'No logged outcome for this deal yet — log it as Purchased first.' });
+    if (actualProfit !== undefined && actualProfit !== '') uw.dealOutcome.actualProfit = parseFloat(actualProfit);
+    if (wholesaleFee !== undefined && wholesaleFee !== '') uw.dealOutcome.wholesaleFee = parseFloat(wholesaleFee);
+    if (notes) uw.dealOutcome.notes = ((uw.dealOutcome.notes || '') + ' ' + notes).trim();
+    uw.dealOutcome.profitUpdatedBy = author || 'caleb';
+    uw.dealOutcome.profitUpdatedAt = new Date().toISOString();
+    underwrites[uid] = uw;
+    DB.saveUnderwrite(uid, uw).catch(() => {});
+    res.json(uw);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/profits', auth, async (req, res) => {
+  try {
+    const all = Object.values(underwrites).length ? underwrites : await DB.getAllUnderwrites();
+    const rows = [];
+    Object.values(all).forEach(uw => {
+      if (!uw || !uw.dealOutcome || uw.dealOutcome.type !== 'PURCHASED') return;
+      const o = uw.dealOutcome;
+      rows.push({
+        uid: uw.uid, address: uw.deal?.address || '', city: uw.deal?.city || '',
+        strategy: o.strategy || 'flip', purchasePrice: o.purchasePrice || 0,
+        wholesaleFee: o.wholesaleFee || null, actualProfit: o.actualProfit != null ? o.actualProfit : null,
+        notes: o.notes || '', loggedAt: o.loggedAt
+      });
+    });
+    rows.sort((a, b) => new Date(b.loggedAt||0) - new Date(a.loggedAt||0));
+    const totals = { flip: 0, brrrr: 0, wholesale: 0, other: 0, all: 0, loggedCount: 0, pendingCount: 0 };
+    rows.forEach(r => {
+      if (r.actualProfit == null) { totals.pendingCount++; return; }
+      totals.loggedCount++;
+      totals.all += r.actualProfit;
+      const key = ['flip','brrrr','wholesale'].includes(r.strategy) ? r.strategy : 'other';
+      totals[key] += r.actualProfit;
+    });
+    res.json({ rows, totals });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
