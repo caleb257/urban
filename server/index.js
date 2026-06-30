@@ -3625,7 +3625,8 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
       '- Always end a recalculation: "→ New verdict: [VERDICT] ([score]/10) | Net profit: [amount]"',
       '- Log brain lessons: "🧠 Noted: [insight]"',
       '- Be honest if your estimate was off. Own it and update.',
-      '- MAO formula: ARV × 70% - Repairs | Min profit: 10% of ask (≥$20K floor) | Hard money 9.5% fix-and-flip | Construction loans 11.5% (CCG owns 50% land equity, lender funds 100% build + 50% land) | Counties: Pasco/Hillsborough/Polk/Pinellas/Hernando'
+      '- MAO formula: ARV × 70% - Repairs | Min profit: 10% of ask (≥$20K floor) | Hard money 9.5% fix-and-flip | Construction loans 11.5% (CCG owns 50% land equity, lender funds 100% build + 50% land) | Counties: Pasco/Hillsborough/Polk/Pinellas/Hernando',
+      '- CRITICAL: when the user states a correction or new data point as fact (not a hypothetical "what if") — a real ARV, a real repair cost, a confirmed comp, anything that should change the underwrite — you MUST end your reply with a block in EXACTLY this format, one line per field that actually changed, using these literal labels so the system can lock the correction in permanently:\nARV: $XXX,XXX\nRehab: $XX,XXX\nMAO: $XXX,XXX\nNet profit: $XX,XXX\nNew verdict: VERDICT (X)\n  Only include the lines for fields that actually changed. Never include this block for a hypothetical "what if" question — only for a stated correction the user wants applied for real.'
     ].filter(Boolean).join('\n')
 
     const historyForAPI = chatHistory.slice(-10).map(h => ({
@@ -3633,10 +3634,14 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
       content: h.content
     }));
 
-    // Chat uses Sonnet — this is human conversation, quality matters more than cost here
+    // Chat uses Sonnet — this is human conversation Caleb and Grant actually
+    // read and act on. A prior pass swapped this to Haiku to save money per
+    // message, which is almost certainly why the chat started feeling dumb —
+    // Haiku is real savings but a genuine step down in reasoning depth for
+    // exactly the kind of multi-step deal analysis this needs. Reverting.
     const r2 = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001', // Switched to Haiku — saves 3x on every chat message
-      max_tokens: 1000,
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
       system: systemPrompt,
       messages: historyForAPI
     });
