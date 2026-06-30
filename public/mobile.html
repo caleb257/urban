@@ -735,6 +735,7 @@ function openDeal(uid) {
   if (uwCache[uid]) {
     // Already have this one — show it instantly, no spinner, no network wait.
     curUW = uwCache[uid];
+    chatHistory = mapServerChatHistory(curUW.chatHistory);
     renderDetail('overview');
   } else {
     curUW = null;
@@ -748,6 +749,12 @@ function openDeal(uid) {
     uwCache[uid] = uw;
     if (curDeal && (curDeal.uid||(curDeal.address+'-'+curDeal.dateReceived)) === uid) {
       curUW = uw;
+      // Only overwrite local chat history with the server's copy if we haven't
+      // sent anything new since this request started — never blow away a
+      // message someone just typed while this background refresh was in flight.
+      if (!chatHistory.some(function(m){ return m.pendingSend; })) {
+        chatHistory = mapServerChatHistory(uw.chatHistory);
+      }
       const activeTab = document.querySelector('.deal-body').dataset.tab || 'overview';
       renderDetail(activeTab);
     }
@@ -1535,6 +1542,16 @@ function sendChat() {
   });
 }
 
+// Server stores chat as {role:'user'|'assistant', content, timestamp} on the
+// underwrite record itself (uw.chatHistory) — this is the actual persistence,
+// it was just never being read back into the UI on mobile, so every reopen
+// looked like the conversation had vanished even though it was saved fine.
+function mapServerChatHistory(serverHistory) {
+  if (!serverHistory || !serverHistory.length) return [];
+  return serverHistory.map(function(m) {
+    return { role: m.role === 'assistant' ? 'urban' : 'user', text: m.content || '' };
+  });
+}
 function mdToHtml(text) {
   var h = (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
