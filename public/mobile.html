@@ -100,6 +100,16 @@ button,select,input,textarea{font-family:inherit}
 .flag-title{font-size:12.5px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:7px}
 .flag-sev{font-size:8.5px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.5px}
 .flag-detail{font-size:12px;color:var(--muted);line-height:1.55}
+/* ── SEARCH + SORT ───────────────────────────────────────── */
+.search-sort-row{display:flex;gap:8px;padding:11px 16px;background:var(--bg);border-bottom:1px solid var(--border)}
+.search-wrap{flex:1;position:relative;display:flex;align-items:center}
+.search-input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:9px 32px 9px 12px;font-size:14px;font-family:var(--sans);outline:none}
+.search-input:focus{border-color:var(--accent)}
+.search-clear{position:absolute;right:6px;width:22px;height:22px;display:none;align-items:center;justify-content:center;color:var(--muted);font-size:15px;cursor:pointer;background:none;border:none}
+.sort-select{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;color:var(--muted);padding:9px 8px;font-size:12px;font-family:var(--sans);outline:none;flex-shrink:0;max-width:108px}
+/* Stale / age badges on cards */
+.card-age{font-size:10px;font-family:var(--mono);padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.06)}
+.card-stale{font-size:9px;font-weight:700;letter-spacing:.4px;padding:2px 7px;border-radius:3px;background:rgba(255,68,68,.15);color:var(--hot);border:1px solid rgba(255,68,68,.35)}
 /* ── DEAL LIST ───────────────────────────────────────────── */
 #s-list{background:var(--bg)}
 .list-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px;display:flex;flex-direction:column;gap:9px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
@@ -239,6 +249,19 @@ button,select,input,textarea{font-family:inherit}
     <button class="hdr-icon-btn" onclick="loadDeals()">↻</button>
   </div>
   <div class="stats-strip" id="stats-strip"></div>
+  <div class="search-sort-row">
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="search-input" placeholder="Search address, city, wholesaler…" oninput="renderList()">
+      <button class="search-clear" id="search-clear" onclick="document.getElementById('search-input').value='';renderList();this.style.display='none'">✕</button>
+    </div>
+    <select class="sort-select" id="sort-select" onchange="renderList()">
+      <option value="date-new">↓ Newest</option>
+      <option value="date-old">↑ Oldest</option>
+      <option value="score-high">↓ Score</option>
+      <option value="expires">⏰ Expires</option>
+      <option value="ask-low">↑ Price</option>
+    </select>
+  </div>
   <div class="filter-tabs-wrap"><div class="filter-tabs" id="filter-tabs">
     <button class="ftab active" onclick="setFilter('ALL',this)">All</button>
     <button class="ftab" onclick="setFilter('HOT',this)">🔥 Hot</button>
@@ -410,13 +433,33 @@ function setFilter(f, btn) {
 
 function renderList() {
   const verdictOrder = {HOT:0,BUY:1,REVIEW:2,PASS:3,'HARD NO':4,PENDING:5};
+  const q = (document.getElementById('search-input').value || '').toLowerCase().trim();
+  const clearBtn = document.getElementById('search-clear');
+  if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
+  const sortBy = document.getElementById('sort-select').value || 'date-new';
+
   let filtered = allDeals.filter(function(d) {
     const v = d.underwriteStatus || 'PENDING';
-    if (curFilter === 'ALL') return true;
-    if (curFilter === 'PENDING') return v === 'PENDING' || !d.underwriteStatus;
-    return v === curFilter;
+    const matchFilter = curFilter === 'ALL' ? true
+      : curFilter === 'PENDING' ? (v === 'PENDING' || !d.underwriteStatus)
+      : v === curFilter;
+    if (!matchFilter) return false;
+    if (!q) return true;
+    const hay = (d.address+' '+d.city+' '+(d.wholesalerCompany||'')+' '+(d.contact1Name||'')).toLowerCase();
+    return hay.indexOf(q) !== -1;
   });
-  filtered.sort(function(a,b) {
+
+  filtered.sort(function(a, b) {
+    if (sortBy === 'expires') {
+      const ea = a.expires ? new Date(a.expires) : new Date(9999,0,1);
+      const eb = b.expires ? new Date(b.expires) : new Date(9999,0,1);
+      return ea - eb;
+    }
+    if (sortBy === 'date-new') return new Date(b.dateReceived||0) - new Date(a.dateReceived||0);
+    if (sortBy === 'date-old') return new Date(a.dateReceived||0) - new Date(b.dateReceived||0);
+    if (sortBy === 'score-high') return (b.underwriteScore||0) - (a.underwriteScore||0);
+    if (sortBy === 'ask-low') return (parseFloat(a.askingPrice)||999999) - (parseFloat(b.askingPrice)||999999);
+    // Default fallback: verdict priority, then score
     const va = verdictOrder[a.underwriteStatus||'PENDING'] ?? 5;
     const vb = verdictOrder[b.underwriteStatus||'PENDING'] ?? 5;
     if (va !== vb) return va - vb;
@@ -426,7 +469,9 @@ function renderList() {
   document.getElementById('list-count').textContent = filtered.length;
 
   if (!filtered.length) {
-    document.getElementById('deal-list').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>No deals in this filter</div></div>';
+    document.getElementById('deal-list').innerHTML = q
+      ? '<div class="empty"><div class="empty-icon">🔍</div><div>No deals match "' + esc(q) + '"</div></div>'
+      : '<div class="empty"><div class="empty-icon">🔍</div><div>No deals in this filter</div></div>';
     return;
   }
 
@@ -440,6 +485,14 @@ function renderList() {
     const profit = (fi.netProfitAtAsking != null) ? fi.netProfitAtAsking : null;
     const profitColor = profit > 0 ? 'var(--buy)' : profit < 0 ? 'var(--hot)' : 'var(--muted)';
     const uid = d.uid || (d.address + '-' + (d.dateReceived||''));
+
+    // Age + stale — same thresholds desktop uses
+    let ageLabel = '';
+    if (d.daysOld != null) {
+      ageLabel = d.daysOld === 0 ? '🟢 Today' : d.daysOld === 1 ? '🟡 1d' : d.daysOld <= 3 ? '🟡 ' + d.daysOld + 'd' : d.daysOld <= 7 ? '🟠 ' + d.daysOld + 'd' : '🔴 ' + d.daysOld + 'd';
+    }
+    const staleHtml = d.isStale ? '<span class="card-stale">⏰ STALE</span>' : '';
+
     return '<div class="deal-card" data-uid="' + esc(uid) + '">' +
       '<div class="deal-card-accent" style="background:' + accentColor(v) + '"></div>' +
       '<div class="card-addr"><span class="card-addr-text">' + esc(d.address||'Unknown') + '</span><span class="card-chevron">›</span></div>' +
@@ -449,6 +502,8 @@ function renderList() {
         (d.underwriteScore ? '<span class="card-score">' + d.underwriteScore + '/10</span>' : '') +
         (ask > 0 ? '<span class="card-price">' + fmtK(ask) + '</span>' : '') +
         (profit != null ? '<span class="card-profit" style="color:' + profitColor + '">' + (profit>0?'+':'') + fmtK(profit) + '</span>' : '') +
+        (ageLabel ? '<span class="card-age">' + ageLabel + '</span>' : '') +
+        staleHtml +
       '</div>' +
     '</div>';
   }).join('');
@@ -631,6 +686,26 @@ function goBack() {
   curDeal = null;
   curUW = null;
 }
+
+// Edge-swipe to go back, like iOS's native gesture. Only arms when the touch
+// starts within 24px of the left edge — anywhere else on screen is left alone
+// so it never fights the horizontal-scrolling filter/subtab pill strips.
+(function() {
+  let sx = 0, sy = 0, tracking = false;
+  const dealScreen = document.getElementById('s-deal');
+  dealScreen.addEventListener('touchstart', function(e) {
+    const t = e.touches[0];
+    tracking = t.clientX < 24;
+    sx = t.clientX; sy = t.clientY;
+  }, { passive: true });
+  dealScreen.addEventListener('touchend', function(e) {
+    if (!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (dx > 70 && Math.abs(dy) < 50) goBack();
+  }, { passive: true });
+})();
 
 function showTab(tab, btn) {
   document.querySelectorAll('#s-deal .tnav').forEach(function(b){b.classList.remove('active');});
