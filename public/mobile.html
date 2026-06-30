@@ -15,157 +15,183 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" sizes="192x192" href="/icon-192.png">
 <title>Urban · CCG</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 :root{
-  --bg:#0f1117;--bg2:#161b27;--bg3:#1d2436;
-  --border:#252d40;--border2:#2e3a52;
-  --text:#e8eaf0;--muted:#6b7a99;
-  --buy:#3cc882;--hot:#ff8030;--review:#f5a623;--red:#e05454;
-  --accent:#4e9eff;--gold:#f5c842;
-  --mono:'SF Mono',Menlo,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
+  --bg:#0a0a0f;--bg2:#111118;--bg3:#18181f;
+  --border:#22222e;--border2:#2e2e3e;
+  --text:#e8e8f0;--muted:#666680;
+  --accent:#c8a96e;--accent2:#e8c98e;
+  --hot:#ff4444;--buy:#44cc88;--review:#f0a030;--pass:#6688aa;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Bebas Neue',sans-serif;
 }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
+button,select,input,textarea{font-family:inherit}
 /* ── SCREENS ─────────────────────────────────────────────── */
 .screen{position:fixed;inset:0;display:none;flex-direction:column;overflow:hidden}
 .screen.active{display:flex}
 /* ── LOGIN ───────────────────────────────────────────────── */
-#s-login{align-items:center;justify-content:center;gap:24px;padding:32px}
-.logo-m{font-size:32px;font-weight:900;letter-spacing:-1px;color:var(--accent)}
-.logo-m span{color:var(--muted);font-weight:300}
+#s-login{align-items:center;justify-content:center;gap:28px;padding:32px;background:var(--bg)}
+.logo-m{font-family:var(--display);font-size:64px;letter-spacing:5px;color:var(--accent);line-height:1}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:-14px}
 .login-box{width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px}
-.inp{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text);padding:14px 16px;font-size:16px;font-family:var(--sans);width:100%;outline:none}
+.inp{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:15px 16px;font-size:16px;font-family:var(--mono);width:100%;outline:none}
 .inp:focus{border-color:var(--accent)}
-.btn-primary{background:var(--accent);color:#000;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;width:100%;cursor:pointer}
-.login-hint{font-size:12px;color:var(--muted);text-align:center}
+.btn-primary{background:var(--accent);color:#0a0a0f;border:none;border-radius:6px;padding:15px;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;width:100%;cursor:pointer}
+.btn-primary:active{background:var(--accent2)}
+#login-err{color:var(--hot);font-size:12px;text-align:center;display:none}
 /* ── HEADER ─────────────────────────────────────────────── */
-.hdr{padding:12px 16px 10px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;padding-top:env(safe-area-inset-top, 12px)}
-.hdr-back{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--bg2);border:none;color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0}
-.hdr-title{font-size:16px;font-weight:700;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.hdr-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;letter-spacing:.5px}
+.hdr{padding:14px 16px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;padding-top:max(14px, env(safe-area-inset-top))}
+.hdr-back{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--accent);font-size:20px;cursor:pointer;flex-shrink:0}
+.hdr-title{font-family:var(--display);font-size:22px;letter-spacing:1px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1}
+.hdr-icon-btn{width:38px;height:38px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--accent);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 /* ── FILTER TABS ────────────────────────────────────────── */
-.filter-tabs{display:flex;gap:6px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0}
+.filter-tabs{display:flex;gap:7px;padding:11px 16px;background:var(--bg);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0}
 .filter-tabs::-webkit-scrollbar{display:none}
-.ftab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid var(--border2);color:var(--muted);background:transparent;cursor:pointer;white-space:nowrap;flex-shrink:0}
-.ftab.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.ftab{padding:7px 15px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.3px;border:1px solid var(--border2);color:var(--muted);background:transparent;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.ftab.active{background:var(--accent);color:#0a0a0f;border-color:var(--accent);font-weight:700}
 /* ── DEAL LIST ───────────────────────────────────────────── */
 #s-list{background:var(--bg)}
-.list-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 12px;display:flex;flex-direction:column;gap:8px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
-.deal-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:border-color .15s;position:relative;overflow:hidden}
-.deal-card:active{border-color:var(--accent);transform:scale(.99)}
+.list-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px;display:flex;flex-direction:column;gap:9px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
+.deal-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;overflow:hidden}
+.deal-card:active{background:var(--bg3)}
 .deal-card-accent{position:absolute;left:0;top:0;bottom:0;width:3px}
-.card-addr{font-size:14px;font-weight:600;margin-bottom:2px;padding-right:70px;line-height:1.3}
-.card-city{font-size:12px;color:var(--muted);margin-bottom:8px}
+.card-addr{font-size:15px;font-weight:600;margin-bottom:3px;line-height:1.3;color:var(--text)}
+.card-city{font-size:12px;color:var(--muted);margin-bottom:10px}
 .card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.badge{font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:.8px}
-.b-HOT{background:rgba(255,128,48,.2);color:var(--hot);border:1px solid rgba(255,128,48,.3)}
-.b-BUY{background:rgba(60,200,130,.15);color:var(--buy);border:1px solid rgba(60,200,130,.3)}
-.b-REVIEW{background:rgba(245,166,35,.12);color:var(--review);border:1px solid rgba(245,166,35,.3)}
-.b-PASS{background:rgba(107,122,153,.1);color:var(--muted);border:1px solid var(--border2)}
-.b-HARDNO{background:rgba(224,84,84,.15);color:var(--red);border:1px solid rgba(224,84,84,.3)}
-.b-PENDING{background:rgba(78,158,255,.1);color:var(--accent);border:1px solid rgba(78,158,255,.2)}
-.card-price{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--text)}
-.card-score{font-size:11px;color:var(--muted);font-family:var(--mono)}
-.card-profit{font-size:12px;font-weight:700;font-family:var(--mono)}
-.seen-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);opacity:.4;flex-shrink:0}
-.seen-dot.unseen{background:var(--accent);opacity:1}
+.badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:3px;letter-spacing:1px;text-transform:uppercase}
+.b-HOT{background:rgba(255,68,68,.18);color:var(--hot);border:1px solid rgba(255,68,68,.4)}
+.b-BUY{background:rgba(68,204,136,.18);color:var(--buy);border:1px solid rgba(68,204,136,.4)}
+.b-REVIEW{background:rgba(240,160,48,.18);color:var(--review);border:1px solid rgba(240,160,48,.4)}
+.b-PASS{background:rgba(102,136,170,.18);color:var(--pass);border:1px solid rgba(102,136,170,.4)}
+.b-HARDNO{background:rgba(204,68,102,.15);color:#cc4466;border:1px solid rgba(204,68,102,.35)}
+.b-PENDING{background:rgba(100,100,120,.15);color:var(--muted);border:1px solid var(--border2)}
+.card-price{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent)}
+.card-score{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:600}
+.card-profit{font-family:var(--mono);font-size:12px;font-weight:600}
 /* ── DEAL DETAIL ─────────────────────────────────────────── */
 #s-deal{background:var(--bg)}
-.deal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
+.deal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px)}
+.verdict-hdr{padding:18px 16px 4px;display:flex;align-items:center;gap:16px}
+.verdict-score{font-family:var(--display);font-size:46px;letter-spacing:1px;line-height:.85}
+.verdict-badge-big{font-family:var(--display);font-size:22px;letter-spacing:2px;padding:5px 16px;border-radius:5px;border-width:2px;border-style:solid}
+.vb-HOT{background:rgba(255,68,68,.15);color:var(--hot);border-color:rgba(255,68,68,.5)}
+.vb-BUY{background:rgba(68,204,136,.15);color:var(--buy);border-color:rgba(68,204,136,.5)}
+.vb-REVIEW{background:rgba(240,160,48,.15);color:var(--review);border-color:rgba(240,160,48,.5)}
+.vb-PASS{background:rgba(102,136,170,.15);color:var(--pass);border-color:rgba(102,136,170,.5)}
+.vb-HARDNO{background:rgba(204,68,102,.12);color:#cc4466;border-color:rgba(204,68,102,.4)}
+.vb-PENDING{background:var(--bg3);color:var(--muted);border-color:var(--border2)}
+.verdict-reason{font-size:12px;color:var(--muted);line-height:1.5;padding:0 16px 14px}
+/* Section card (mirrors desktop .card) */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;margin:0 16px 12px}
+.ct{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:12px}
+/* Recommendation box (mirrors desktop .rec-box) */
+.rec-box{background:linear-gradient(135deg,rgba(200,169,110,.1),rgba(200,169,110,.03));border:1px solid rgba(200,169,110,.3);border-radius:8px;padding:16px;margin:0 16px 14px;position:relative}
+.rec-box::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);border-radius:8px 0 0 8px}
+.rec-ct{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.rec-txt{font-size:13.5px;line-height:1.65;color:var(--text)}
 /* Metric grid */
-.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}
-.metric-tile{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px}
-.metric-label{font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase}
-.metric-val{font-size:20px;font-weight:800;font-family:var(--mono);line-height:1}
-.metric-sub{font-size:10px;color:var(--muted);font-family:var(--mono)}
-/* Section */
-.section{padding:0 12px 12px}
-.section-hdr{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;padding:12px 0 8px}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 16px 14px}
+.metric-tile{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:13px 14px}
+.metric-label{font-size:9.5px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:5px}
+.metric-val{font-family:var(--display);font-size:24px;letter-spacing:.5px;line-height:1}
+.metric-sub{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px}
+/* Property rows */
+.prow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.prow:last-child{border-bottom:none}
+.plbl{font-size:12px;color:var(--muted)}
+.pval{font-size:12.5px;font-weight:600;color:var(--text);text-align:right}
 /* Seen-by */
-.seen-row{background:var(--bg2);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:12px;font-size:12px;margin-bottom:8px}
+.seen-row{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:11px 14px;display:flex;align-items:center;gap:10px;font-size:12px;margin:14px 16px 10px;flex-wrap:wrap}
 /* Notes */
-.note-bubble{background:var(--bg3);border-radius:8px;padding:10px 12px;border-left:2px solid var(--buy);margin-bottom:6px}
+.note-bubble{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;border-left:3px solid var(--buy);margin-bottom:8px}
 .note-bubble.grant-note{border-left-color:var(--accent)}
-.note-meta{font-size:10px;color:var(--muted);margin-bottom:4px;display:flex;gap:8px;align-items:center}
-.note-author{font-weight:700}
-.note-text{font-size:13px;color:var(--text);line-height:1.5}
-.note-input-wrap{display:flex;gap:8px;margin-top:8px}
-.note-input{flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:10px 12px;font-size:14px;font-family:var(--sans);outline:none;resize:none;min-height:44px}
+.note-meta{font-size:10px;color:var(--muted);margin-bottom:5px;display:flex;gap:8px;align-items:center}
+.note-author{font-weight:700;letter-spacing:.3px}
+.note-text{font-size:13px;color:var(--text);line-height:1.55}
+.note-input-wrap{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.note-input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:11px 12px;font-size:14px;font-family:var(--sans);outline:none;resize:none;min-height:54px}
 .note-input:focus{border-color:var(--accent)}
-.note-btn{background:var(--accent);color:#000;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
-/* Negotiation */
-.nladder{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.ntile{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
-.ntile-label{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
-.ntile-price{font-size:17px;font-weight:800;font-family:var(--mono)}
-.ntile-profit{font-size:10px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
-/* Chat section */
-.chat-messages{display:flex;flex-direction:column;gap:8px;padding:0 0 10px}
-.chat-bubble{border-radius:12px;padding:10px 13px;max-width:90%;font-size:13px;line-height:1.5}
+.note-btn{background:var(--accent);color:#0a0a0f;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer}
+.author-switch{display:flex;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:3px;margin-bottom:14px;width:fit-content}
+.auth-btn{padding:7px 18px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--muted)}
+.auth-btn.active{background:var(--bg2);color:var(--accent)}
+/* Negotiation ladder — stacked full-width rows, not cramped columns */
+.gap-row{margin:0 16px 14px;padding:11px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px}
+.gap-top{display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.gap-pill{font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;letter-spacing:.3px}
+.gap-bar-wrap{margin-top:8px;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.gap-bar{height:5px;border-radius:3px;transition:width .4s}
+.tier-row{margin:0 16px 8px;display:flex;align-items:center;background:var(--bg2);border:1px solid var(--border);border-left-width:4px;border-left-style:solid;border-radius:8px;padding:13px 15px}
+.tier-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;width:62px;flex-shrink:0}
+.tier-price{font-family:var(--display);font-size:21px;letter-spacing:.5px;flex:1}
+.tier-profit{font-family:var(--mono);font-size:12px;font-weight:600;text-align:right}
+.counter-row{margin:14px 16px;padding:13px;background:var(--bg2);border:1px solid var(--border);border-radius:8px}
+.counter-lbl{font-size:11px;color:var(--muted);margin-bottom:8px}
+.counter-input-line{display:flex;align-items:center;gap:6px}
+.counter-inp{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:10px 12px;font-size:15px;font-weight:700;font-family:var(--mono);outline:none;width:100%}
+.counter-result{margin-top:9px;font-size:13px;font-weight:700;text-align:center}
+/* Scripts */
+.script-tabs{display:flex;gap:6px;margin:0 16px 10px}
+.stab{flex:1;padding:8px 4px;border-radius:6px;font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--muted);text-align:center}
+.script-box{margin:0 16px 16px;font-size:13px;color:var(--text);line-height:1.7;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;min-height:60px}
+.script-eyebrow{color:var(--muted);font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;display:block;margin-bottom:6px}
+.copy-btn{margin:0 16px 16px;width:calc(100% - 32px);padding:11px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.3px}
+/* Chat */
+.chat-messages{display:flex;flex-direction:column;gap:10px;padding:14px 16px 0}
+.chat-bubble{border-radius:14px;padding:11px 14px;max-width:88%;font-size:13.5px;line-height:1.55}
 .chat-bubble.urban{background:var(--bg2);border:1px solid var(--border);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px}
-.chat-bubble.user{background:var(--accent);color:#000;font-weight:500;align-self:flex-end;border-bottom-right-radius:4px}
+.chat-bubble.user{background:var(--accent);color:#0a0a0f;font-weight:600;align-self:flex-end;border-bottom-right-radius:4px}
 .chat-bubble.thinking{opacity:.5}
-.chat-input-wrap{display:flex;gap:8px;padding:10px 12px;background:var(--bg);border-top:1px solid var(--border);position:sticky;bottom:0;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 10px)}
-.chat-input{flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:22px;color:var(--text);padding:10px 16px;font-size:15px;font-family:var(--sans);outline:none}
-.chat-send{width:44px;height:44px;background:var(--accent);color:#000;border:none;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-/* Tab nav */
+.chat-input-wrap{display:flex;gap:9px;padding:11px 14px;background:var(--bg);border-top:1px solid var(--border);position:sticky;bottom:0;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 11px)}
+.chat-input{flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:22px;color:var(--text);padding:11px 17px;font-size:15px;font-family:var(--sans);outline:none}
+.chat-send{width:44px;height:44px;background:var(--accent);color:#0a0a0f;border:none;border-radius:50%;font-size:19px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.suggested-chip{cursor:pointer;font-size:11px;padding:6px 12px;border-radius:14px;background:rgba(200,169,110,.1);border:1px solid rgba(200,169,110,.3);color:var(--accent2)}
+/* Tab nav (bottom) */
 .tab-nav{display:flex;background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0px)}
-.tnav{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0;cursor:pointer;color:var(--muted);font-size:9px;font-weight:600;letter-spacing:.4px;border:none;background:none}
+.tnav{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:11px 0 9px;cursor:pointer;color:var(--muted);font-size:9.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;border:none;background:none}
 .tnav.active{color:var(--accent)}
-.tnav-icon{font-size:20px;line-height:1}
-/* Loading */
-.loading{display:flex;align-items:center;justify-content:center;flex:1;flex-direction:column;gap:12px;color:var(--muted);font-size:14px}
-.spin{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+.tnav-icon{font-size:21px;line-height:1}
+/* Loading / Empty */
+.loading{display:flex;align-items:center;justify-content:center;flex:1;flex-direction:column;gap:14px;color:var(--muted);font-size:13px;font-family:var(--mono)}
+.spin{width:30px;height:30px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Empty state */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;color:var(--muted);padding:32px;text-align:center}
-.empty-icon{font-size:48px;opacity:.3}
-/* Verdict header */
-.verdict-hdr{padding:16px 16px 0;display:flex;align-items:center;gap:12px}
-.verdict-score{font-size:40px;font-weight:900;font-family:var(--mono);line-height:1}
-.verdict-info{display:flex;flex-direction:column;gap:4px}
-.verdict-reason{font-size:12px;color:var(--muted);line-height:1.4;margin-top:2px}
-/* Counter input */
-.counter-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding:10px;background:var(--bg3);border-radius:8px}
-.counter-label{font-size:11px;color:var(--muted);white-space:nowrap}
-.counter-inp{flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:8px 10px;font-size:14px;font-weight:700;font-family:var(--mono);outline:none;width:100%}
-.counter-result{font-size:11px;font-weight:700;text-align:right;min-width:90px}
-/* author switch */
-.author-switch{display:flex;background:var(--bg3);border-radius:8px;padding:3px;margin-bottom:8px;width:fit-content}
-.auth-btn{padding:6px 16px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--muted)}
-.auth-btn.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.empty-icon{font-size:44px;opacity:.3}
+/* Phone link */
+.phone-link{display:inline-block;margin-top:10px;font-size:13px;color:var(--accent);text-decoration:none;font-weight:600}
+::-webkit-scrollbar{display:none}
 </style>
 </head>
 <body>
 
 <!-- ── LOGIN SCREEN ────────────────────────────────────────── -->
 <div class="screen active" id="s-login">
-  <div class="logo-m">Urban<span> AI</span></div>
-  <div style="font-size:13px;color:var(--muted);margin-top:-12px">Coralstone Capital Group</div>
+  <div style="text-align:center">
+    <div class="logo-m">URBAN</div>
+    <div class="logo-sub">Coralstone Underwriter</div>
+  </div>
   <div class="login-box">
-    <input class="inp" id="token-inp" type="password" placeholder="Access token" autocomplete="off">
-    <button class="btn-primary" onclick="doLogin()">Sign In</button>
-    <div class="login-hint">Same token as the desktop app</div>
-    <div id="login-err" style="color:var(--red);font-size:12px;text-align:center;display:none">Invalid token</div>
+    <input class="inp" id="token-inp" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="btn-primary" onclick="doLogin()">Enter</button>
+    <div id="login-err">Wrong password</div>
   </div>
 </div>
 
 <!-- ── DEAL LIST SCREEN ────────────────────────────────────── -->
 <div class="screen" id="s-list">
   <div class="hdr">
-    <div class="hdr-title">Urban AI</div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <div id="list-count" style="font-size:11px;color:var(--muted)"></div>
-      <button onclick="loadDeals()" style="width:34px;height:34px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">↻</button>
-    </div>
+    <div class="hdr-title">URBAN</div>
+    <div id="list-count" style="font-size:11px;color:var(--muted);font-family:var(--mono);flex-shrink:0"></div>
+    <button class="hdr-icon-btn" onclick="loadDeals()">↻</button>
   </div>
   <div class="filter-tabs" id="filter-tabs">
     <button class="ftab active" onclick="setFilter('ALL',this)">All</button>
-    <button class="ftab" onclick="setFilter('HOT',this)" style="color:var(--hot)">🔥 HOT</button>
-    <button class="ftab" onclick="setFilter('BUY',this)" style="color:var(--buy)">✅ BUY</button>
-    <button class="ftab" onclick="setFilter('REVIEW',this)">REVIEW</button>
-    <button class="ftab" onclick="setFilter('PASS',this)">PASS</button>
+    <button class="ftab" onclick="setFilter('HOT',this)">🔥 Hot</button>
+    <button class="ftab" onclick="setFilter('BUY',this)">Buy</button>
+    <button class="ftab" onclick="setFilter('REVIEW',this)">Review</button>
+    <button class="ftab" onclick="setFilter('PASS',this)">Pass</button>
     <button class="ftab" onclick="setFilter('PENDING',this)">Pending</button>
   </div>
   <div class="list-body" id="deal-list">
@@ -177,11 +203,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 <div class="screen" id="s-deal">
   <div class="hdr">
     <button class="hdr-back" onclick="goBack()">‹</button>
-    <div class="hdr-title" id="d-addr">—</div>
-    <div class="hdr-badge badge" id="d-badge">—</div>
+    <div class="hdr-title" id="d-addr" style="font-size:16px;font-family:var(--sans);font-weight:700;letter-spacing:0">—</div>
   </div>
-  <!-- Tab nav -->
-  <div class="tab-nav">
+  <div class="tab-nav" style="border-top:none;border-bottom:1px solid var(--border)">
     <button class="tnav active" onclick="showTab('overview',this)"><div class="tnav-icon">📊</div>Overview</button>
     <button class="tnav" onclick="showTab('notes',this)"><div class="tnav-icon">📝</div>Notes</button>
     <button class="tnav" onclick="showTab('ladder',this)"><div class="tnav-icon">📋</div>Offers</button>
@@ -205,9 +229,8 @@ let curUW = null;
 let chatHistory = [];
 
 // ── UTILS ─────────────────────────────────────────────────────
-const fmtK = n => n ? '$' + Math.round(n/1000) + 'K' : '—';
-const fmtM = n => n ? '$' + Math.round(n).toLocaleString() : '—';
-const pct  = n => n != null ? n.toFixed(1) + '%' : '—';
+const fmtK = n => (n || n === 0) ? '$' + (Math.abs(n) >= 1000 ? Math.round(n/1000) + 'K' : Math.round(n)) : '—';
+const fmtM = n => n != null ? '$' + Math.round(n).toLocaleString() : '—';
 const esc  = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function timeAgo(ts) {
   if (!ts) return '';
@@ -218,13 +241,13 @@ function timeAgo(ts) {
   const d = new Date(ts);
   return (d.getMonth()+1)+'/'+(d.getDate());
 }
-function badgeCls(v) {
-  if (!v) return 'b-PENDING';
-  if (v === 'HARD NO') return 'b-HARDNO';
-  return 'b-' + v.replace(/ /g,'');
+function vClass(v) {
+  if (!v || v === 'PENDING') return 'PENDING';
+  if (v === 'HARD NO') return 'HARDNO';
+  return v;
 }
 function accentColor(v) {
-  const m = {HOT:'var(--hot)',BUY:'var(--buy)',REVIEW:'var(--review)',PASS:'var(--muted)','HARD NO':'var(--red)',PENDING:'var(--accent)'};
+  const m = {HOT:'var(--hot)',BUY:'var(--buy)',REVIEW:'var(--review)',PASS:'var(--pass)','HARD NO':'#cc4466',PENDING:'var(--muted)'};
   return m[v] || 'var(--muted)';
 }
 function api(path, opts) {
@@ -252,11 +275,10 @@ function doLogin() {
     show('s-list');
     loadDeals();
   }).catch(function() {
-    document.getElementById('login-err').style.display = '';
+    document.getElementById('login-err').style.display = 'block';
   });
 }
 
-// URL token support — lets a tappable link log straight in, same as desktop
 (function() {
   const p = new URLSearchParams(window.location.search);
   const urlToken = p.get('token');
@@ -266,7 +288,6 @@ function doLogin() {
   }
 })();
 
-// Auto-login if token present (from URL or saved from a prior visit)
 if (TOKEN) {
   api('/api/stats').then(function() {
     localStorage.setItem('urban_token', TOKEN);
@@ -300,19 +321,19 @@ function setFilter(f, btn) {
 function renderList() {
   const verdictOrder = {HOT:0,BUY:1,REVIEW:2,PASS:3,'HARD NO':4,PENDING:5};
   let filtered = allDeals.filter(function(d) {
-    const v = d.underwriteStatus || d.verdict || 'PENDING';
+    const v = d.underwriteStatus || 'PENDING';
     if (curFilter === 'ALL') return true;
     if (curFilter === 'PENDING') return v === 'PENDING' || !d.underwriteStatus;
     return v === curFilter;
   });
   filtered.sort(function(a,b) {
-    const va = verdictOrder[a.underwriteStatus||a.verdict||'PENDING'] ?? 5;
-    const vb = verdictOrder[b.underwriteStatus||b.verdict||'PENDING'] ?? 5;
+    const va = verdictOrder[a.underwriteStatus||'PENDING'] ?? 5;
+    const vb = verdictOrder[b.underwriteStatus||'PENDING'] ?? 5;
     if (va !== vb) return va - vb;
-    return (b.score||0) - (a.score||0);
+    return (b.underwriteScore||0) - (a.underwriteScore||0);
   });
 
-  document.getElementById('list-count').textContent = filtered.length + ' deals';
+  document.getElementById('list-count').textContent = filtered.length;
 
   if (!filtered.length) {
     document.getElementById('deal-list').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>No deals in this filter</div></div>';
@@ -320,21 +341,24 @@ function renderList() {
   }
 
   document.getElementById('deal-list').innerHTML = filtered.map(function(d) {
-    const v = d.underwriteStatus || d.verdict || 'PENDING';
-    const profit = d.financials && d.financials.netProfitAtAsking;
-    const profitColor = profit > 0 ? 'var(--buy)' : profit < 0 ? 'var(--red)' : 'var(--muted)';
-    const ask = d.financials && d.financials.askingPrice
-      ? parseFloat(d.financials.askingPrice) : parseFloat(d.askingPrice) || 0;
+    const v = d.underwriteStatus || 'PENDING';
+    const fi = d.financials || {};
+    const _uvArv = (d.arv && d.arv.urbanARV) || 0;
+    const _fiAsk = fi.askingPrice && parseFloat(fi.askingPrice) > 1000 ? parseFloat(fi.askingPrice) : 0;
+    const _rawAsk = parseFloat(d.askingPrice) || 0;
+    const ask = _fiAsk || (_rawAsk >= 1000 ? _rawAsk : 0);
+    const profit = (fi.netProfitAtAsking != null) ? fi.netProfitAtAsking : null;
+    const profitColor = profit > 0 ? 'var(--buy)' : profit < 0 ? 'var(--hot)' : 'var(--muted)';
     const uid = d.uid || (d.address + '-' + (d.dateReceived||''));
     return '<div class="deal-card" onclick="openDeal(' + JSON.stringify(uid).replace(/'/g,"\\'") + ')" data-uid="' + esc(uid) + '">' +
       '<div class="deal-card-accent" style="background:' + accentColor(v) + '"></div>' +
       '<div class="card-addr">' + esc(d.address||'Unknown') + '</div>' +
       '<div class="card-city">' + esc((d.city||'') + (d.state ? ', '+d.state : '')) + '</div>' +
       '<div class="card-meta">' +
-        '<span class="badge ' + badgeCls(v) + '">' + (v==='HARD NO'?'HARD NO':v) + '</span>' +
-        (d.score ? '<span class="card-score">' + d.score + '/10</span>' : '') +
+        '<span class="badge b-' + vClass(v) + '">' + (v==='HARD NO'?'HARD NO':v) + '</span>' +
+        (d.underwriteScore ? '<span class="card-score">' + d.underwriteScore + '/10</span>' : '') +
         (ask > 0 ? '<span class="card-price">' + fmtK(ask) + '</span>' : '') +
-        (profit ? '<span class="card-profit" style="color:' + profitColor + '">' + (profit>0?'+':'') + fmtK(profit) + '</span>' : '') +
+        (profit != null ? '<span class="card-profit" style="color:' + profitColor + '">' + (profit>0?'+':'') + fmtK(profit) + '</span>' : '') +
       '</div>' +
     '</div>';
   }).join('');
@@ -347,22 +371,15 @@ function openDeal(uid) {
   curUW = null;
   chatHistory = [];
   show('s-deal');
-  // Mark seen
   api('/api/seen/' + encodeURIComponent(uid), {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({author:AUTHOR})
   }).catch(function(){});
   renderDetail('overview');
-  // Load full UW in background
   api('/api/underwrite/' + encodeURIComponent(uid)).then(function(uw) {
     curUW = uw;
-    // Re-render current tab with full data
-    const activeTab = document.querySelector('.tnav.active');
-    if (activeTab) {
-      const tab = activeTab.getAttribute('onclick').match(/showTab\('(\w+)'/);
-      if (tab) renderDetail(tab[1]);
-    }
+    const activeTab = document.querySelector('.deal-body').dataset.tab || 'overview';
+    renderDetail(activeTab);
   }).catch(function(){});
 }
 
@@ -373,57 +390,60 @@ function goBack() {
 }
 
 function showTab(tab, btn) {
-  document.querySelectorAll('.tnav').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('#s-deal .tnav').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
   renderDetail(tab);
 }
 
 function renderDetail(tab) {
   const d = curDeal;
-  const uw = curUW;
   if (!d) return;
   const uid = d.uid || (d.address + '-' + d.dateReceived);
-  const v = d.underwriteStatus || d.verdict || 'PENDING';
-  // Header
+  const v = d.underwriteStatus || 'PENDING';
   document.getElementById('d-addr').textContent = d.address || '—';
-  const badge = document.getElementById('d-badge');
-  badge.textContent = v === 'HARD NO' ? 'HARD NO' : v;
-  badge.className = 'hdr-badge badge ' + badgeCls(v);
+  document.getElementById('deal-body').dataset.tab = tab;
 
-  if (tab === 'overview') renderOverview(d, uw, uid);
-  else if (tab === 'notes') renderNotes(uid);
-  else if (tab === 'ladder') renderLadder(uw);
+  if (tab === 'overview') renderOverview(d, curUW, uid);
+  else if (tab === 'notes') renderNotesTab(uid);
+  else if (tab === 'ladder') renderLadder(curUW);
   else if (tab === 'chat') renderChat();
 }
 
 function renderOverview(d, uw, uid) {
   const fi = (uw && uw.financials) || d.financials || {};
-  const arv = (uw && uw.arv && uw.arv.urbanARV) || 0;
+  const arv = (uw && uw.arv && uw.arv.urbanARV) || (d.arv && d.arv.urbanARV) || 0;
   const rehab = (uw && uw.rehab && uw.rehab.urbanEstimate) || 0;
-  const ask = fi.askingPrice ? parseFloat(fi.askingPrice) : (parseFloat(d.askingPrice)||0);
-  const profit = fi.netProfitAtAsking || 0;
+  const _fiAsk = fi.askingPrice && parseFloat(fi.askingPrice) > 1000 ? parseFloat(fi.askingPrice) : 0;
+  const _rawAsk = parseFloat(d.askingPrice) || 0;
+  const ask = _fiAsk || (_rawAsk >= 1000 ? _rawAsk : 0);
+  const costs = (fi.holdingCosts && fi.holdingCosts.total || 0) + (fi.sellingCosts && fi.sellingCosts.total || (arv*0.075)) +
+                (fi.hardMoney && fi.hardMoney.totalInterest || 0) + (fi.hardMoney && fi.hardMoney.originationPoints || 0);
+  const profit = (arv > 0 && ask > 0) ? Math.round(arv - ask - rehab - costs) : (fi.netProfitAtAsking != null ? fi.netProfitAtAsking : null);
   const mao = fi.mao || (arv ? Math.round(arv*0.7 - rehab) : 0);
-  const score = d.score || (uw && uw.score) || 0;
+  const score = d.underwriteScore || (uw && uw.score) || 0;
   const reason = (uw && uw.verdictReason) || d.verdictReason || '';
-  const v = d.underwriteStatus || d.verdict || 'PENDING';
+  const rec = (uw && uw.recommendation) || '';
+  const v = d.underwriteStatus || 'PENDING';
 
   let html = '';
 
-  // Verdict header
   html += '<div class="verdict-hdr">';
-  if (score) html += '<div class="verdict-score" style="color:' + accentColor(v) + '">' + score + '</div>';
-  html += '<div class="verdict-info"><span class="badge ' + badgeCls(v) + '" style="font-size:11px;padding:4px 10px">' + v + '</span>';
-  if (reason) html += '<div class="verdict-reason">' + esc(reason.slice(0,120)) + (reason.length>120?'…':'') + '</div>';
-  html += '</div></div>';
+  if (score) html += '<div class="verdict-score" style="color:' + accentColor(v) + '">' + score + '<span style="font-size:18px;color:var(--muted);font-family:var(--sans)">/10</span></div>';
+  html += '<span class="verdict-badge-big vb-' + vClass(v) + '">' + (v==='HARD NO'?'HARD NO':v) + '</span>';
+  html += '</div>';
+  if (reason) html += '<div class="verdict-reason">' + esc(reason) + '</div>';
 
-  // Metrics
+  if (rec) {
+    html += '<div class="rec-box"><div class="rec-ct">Urban\'s Take</div><div class="rec-txt">' + esc(rec) + '</div></div>';
+  }
+
   html += '<div class="metric-grid">';
   const tiles = [
     {label:'Asking', val: ask ? fmtK(ask) : '—', sub: ask ? fmtM(ask) : '', color:'var(--text)'},
     {label:'Urban ARV', val: arv ? fmtK(arv) : '—', sub: arv ? fmtM(arv) : '', color:'var(--accent)'},
-    {label:'Rehab Est.', val: rehab ? fmtK(rehab) : '—', sub: '', color:'var(--review)'},
-    {label:'MAO (70%−R)', val: mao ? fmtK(mao) : '—', sub: '', color:'var(--gold)'},
-    {label:'Profit @ Ask', val: profit ? (profit>0?'+':'')+fmtK(profit) : '—', sub:'', color: profit>0?'var(--buy)':profit<0?'var(--red)':'var(--muted)'},
+    {label:'Rehab Est.', val: rehab ? fmtK(rehab) : '—', sub:'', color:'var(--review)'},
+    {label:'MAO (70% − R)', val: mao ? fmtK(mao) : '—', sub:'', color:'var(--accent2)'},
+    {label:'Profit @ Ask', val: profit != null ? (profit>0?'+':'')+fmtK(profit) : '—', sub:'', color: profit>0?'var(--buy)':profit<0?'var(--hot)':'var(--muted)'},
     {label:'ROI', val: fi.roi ? fi.roi+'%' : '—', sub:'', color:'var(--text)'},
   ];
   tiles.forEach(function(t){
@@ -433,42 +453,36 @@ function renderOverview(d, uw, uid) {
   });
   html += '</div>';
 
-  // Property details
-  html += '<div class="section"><div class="section-hdr">Property</div>';
+  html += '<div class="card"><div class="ct">Property</div>';
   const rows = [
     ['City', (d.city||'')+(d.state?', '+d.state:'')+(d.zip?' '+d.zip:'')],
     ['County', d.county],
-    ['Beds/Baths', d.beds && d.baths ? d.beds+' bd / '+d.baths+' ba' : null],
-    ['Sqft', d.sqft ? d.sqft.toLocaleString()+' sf' : null],
+    ['Beds / Baths', d.beds && d.baths ? d.beds+' bd · '+d.baths+' ba' : null],
+    ['Sqft', d.sqft ? parseInt(d.sqft).toLocaleString()+' sf' : null],
     ['Year Built', d.yearBuilt],
     ['Construction', d.construction],
     ['Wholesaler ARV', d.wholesalerARV ? fmtM(d.wholesalerARV) : null],
   ].filter(function(r){return r[1];});
-  html += '<div style="background:var(--bg2);border-radius:8px;overflow:hidden;border:1px solid var(--border)">';
-  rows.forEach(function(r,i){
-    html += '<div style="display:flex;justify-content:space-between;padding:9px 12px;' +
-      (i>0?'border-top:1px solid var(--border)':'') + '">' +
-      '<span style="font-size:12px;color:var(--muted)">' + esc(r[0]) + '</span>' +
-      '<span style="font-size:12px;font-weight:600">' + esc(String(r[1])) + '</span></div>';
+  rows.forEach(function(r){
+    html += '<div class="prow"><span class="plbl">' + esc(r[0]) + '</span><span class="pval">' + esc(String(r[1])) + '</span></div>';
   });
-  html += '</div></div>';
+  html += '</div>';
 
-  // Wholesaler
-  const ws = d.contact1Company || d.contact1Name || d.wholesalerCompany || '';
+  const wsName = d.contact1Company || d.wholesalerCompany || d.contact1Name || '';
   const wsPhone = d.contact1Phone || '';
-  if (ws) {
-    html += '<div class="section"><div class="section-hdr">Source</div>';
-    html += '<div style="background:var(--bg2);border-radius:8px;padding:12px;border:1px solid var(--border)">';
-    html += '<div style="font-size:14px;font-weight:600">' + esc(ws) + '</div>';
-    if (wsPhone) html += '<a href="tel:' + esc(wsPhone) + '" style="display:block;margin-top:6px;font-size:12px;color:var(--accent);text-decoration:none">📞 ' + esc(wsPhone) + '</a>';
-    html += '</div></div>';
+  if (wsName) {
+    html += '<div class="card"><div class="ct">Source</div>';
+    html += '<div style="font-size:14px;font-weight:600">' + esc(wsName) + '</div>';
+    if (d.contact1Name && d.contact1Company) html += '<div style="font-size:12px;color:var(--muted);margin-top:2px">' + esc(d.contact1Name) + '</div>';
+    if (wsPhone) html += '<a class="phone-link" href="tel:' + esc(wsPhone) + '">📞 ' + esc(wsPhone) + '</a>';
+    html += '</div>';
   }
 
   document.getElementById('deal-body').innerHTML = html;
 }
 
 // ── NOTES ─────────────────────────────────────────────────────
-function renderNotes(uid) {
+function renderNotesTab(uid) {
   document.getElementById('deal-body').innerHTML = '<div class="loading"><div class="spin"></div></div>';
   api('/api/notes/' + encodeURIComponent(uid)).then(function(data){
     buildNotesUI(data.notes||[], data.seenBy||{}, uid);
@@ -478,52 +492,48 @@ function renderNotes(uid) {
 }
 
 function buildNotesUI(notes, seenBy, uid) {
-  let html = '<div class="section" style="padding-top:12px">';
+  let html = '';
 
-  // Seen-by
   html += '<div class="seen-row">';
-  html += '<span style="color:var(--muted);font-size:12px">👁 Seen by:</span>';
-  if (seenBy.caleb) html += '<span style="font-size:12px"><strong style="color:var(--buy)">Caleb</strong> <span style="color:var(--muted);font-size:10px">' + timeAgo(seenBy.caleb) + '</span></span>';
-  if (seenBy.grant) html += '<span style="font-size:12px"><strong style="color:var(--accent)">Grant</strong> <span style="color:var(--muted);font-size:10px">' + timeAgo(seenBy.grant) + '</span></span>';
-  if (!seenBy.caleb && !seenBy.grant) html += '<span style="font-size:12px;color:var(--muted)">Nobody yet</span>';
+  html += '<span style="color:var(--muted)">👁 Seen by:</span>';
+  if (seenBy.caleb) html += '<span><strong style="color:var(--buy)">Caleb</strong> <span style="color:var(--muted);font-size:10px">' + timeAgo(seenBy.caleb) + '</span></span>';
+  if (seenBy.grant) html += '<span><strong style="color:var(--accent)">Grant</strong> <span style="color:var(--muted);font-size:10px">' + timeAgo(seenBy.grant) + '</span></span>';
+  if (!seenBy.caleb && !seenBy.grant) html += '<span style="color:var(--muted)">Nobody yet</span>';
   html += '</div>';
 
-  // Author switch
-  html += '<div class="section-hdr">NOTES (' + notes.length + ')</div>';
+  html += '<div style="padding:0 16px">';
   html += '<div class="author-switch">' +
-    '<button class="auth-btn' + (AUTHOR==='caleb'?' active':'') + '" onclick="setAuthor(\'caleb\',this.parentNode)">Caleb</button>' +
-    '<button class="auth-btn' + (AUTHOR==='grant'?' active':'') + '" onclick="setAuthor(\'grant\',this.parentNode)">Grant</button>' +
+    '<button class="auth-btn' + (AUTHOR==='caleb'?' active':'') + '" onclick="setAuthor(\'caleb\')">Caleb</button>' +
+    '<button class="auth-btn' + (AUTHOR==='grant'?' active':'') + '" onclick="setAuthor(\'grant\')">Grant</button>' +
     '</div>';
 
-  // Notes
   if (notes.length === 0) {
-    html += '<div style="font-size:13px;color:var(--muted);padding:16px 0;text-align:center;opacity:.6">No notes yet — add one below.<br>Urban will use it in next analysis.</div>';
+    html += '<div style="font-size:13px;color:var(--muted);padding:10px 0 18px;opacity:.7">No notes yet — add one below. Urban reads these in its next analysis.</div>';
   } else {
-    html += '<div class="chat-messages" id="notes-list">';
     notes.forEach(function(n){
       const isC = (n.author||'').toLowerCase()==='caleb';
       html += '<div class="note-bubble' + (isC?'':' grant-note') + '">' +
-        '<div class="note-meta"><span class="note-author" style="color:' + (isC?'var(--buy)':'var(--accent)') + '">' + (isC?'Caleb':'Grant') + '</span><span>' + timeAgo(n.created_at) + '</span></div>' +
+        '<div class="note-meta"><span class="note-author" style="color:' + (isC?'var(--buy)':'var(--accent)') + '">' + (isC?'CALEB':'GRANT') + '</span><span>' + timeAgo(n.created_at) + '</span></div>' +
         '<div class="note-text">' + esc(n.note) + '</div></div>';
     });
-    html += '</div>';
   }
 
-  // Input
   html += '<div class="note-input-wrap">' +
-    '<textarea class="note-input" id="note-inp" placeholder="Add a note — Urban reads these…" rows="2" data-uid="' + esc(uid) + '"></textarea>' +
-    '<button class="note-btn" onclick="submitNote()">Send</button>' +
-    '</div>';
+    '<textarea class="note-input" id="note-inp" placeholder="Add a note — Urban reads these…" data-uid="' + esc(uid) + '"></textarea>' +
+    '<button class="note-btn" onclick="submitNote()">Add Note</button>' +
+    '</div></div>';
 
-  html += '</div>';
   document.getElementById('deal-body').innerHTML = html;
 }
 
-function setAuthor(a, wrap) {
+function setAuthor(a) {
   AUTHOR = a;
   localStorage.setItem('urban_author', a);
-  wrap.querySelectorAll('.auth-btn').forEach(function(b){b.classList.remove('active');});
-  wrap.querySelector('[onclick="setAuthor(\'' + a + '\',this.parentNode)"]').classList.add('active');
+  document.querySelectorAll('.auth-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelector('.auth-btn.active');
+  var idx = a === 'caleb' ? 0 : 1;
+  var btns = document.querySelectorAll('.auth-btn');
+  if (btns[idx]) btns[idx].classList.add('active');
 }
 
 function submitNote() {
@@ -535,8 +545,7 @@ function submitNote() {
   inp.value = '';
   inp.disabled = true;
   api('/api/notes/' + encodeURIComponent(uid), {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({note:note, author:AUTHOR})
   }).then(function(data){
     buildNotesUI(data.notes||[], data.seenBy||{}, uid);
@@ -550,7 +559,7 @@ function submitNote() {
 function renderLadder(uw) {
   if (!uw || !uw.arv || !uw.arv.urbanARV || !uw.rehab || !uw.rehab.urbanEstimate) {
     document.getElementById('deal-body').innerHTML =
-      '<div class="empty"><div class="empty-icon">⏳</div><div>Run Urban analysis first to see negotiation ladder</div></div>';
+      '<div class="empty"><div class="empty-icon">⏳</div><div>Run a full underwrite first to see the negotiation ladder</div></div>';
     return;
   }
   const arv   = uw.arv.urbanARV;
@@ -565,111 +574,113 @@ function renderLadder(uw) {
   const nudge = Math.round(mao*0.91);
   const hold  = Math.round(mao*0.94);
   const profitAt = function(p){ return Math.round(arv - p - totalCosts); };
-  const ask = fi.askingPrice ? parseFloat(fi.askingPrice) : (parseFloat(curDeal&&curDeal.askingPrice)||0);
+  const _fiAsk = fi.askingPrice && parseFloat(fi.askingPrice) > 1000 ? parseFloat(fi.askingPrice) : 0;
+  const _rawAsk = curDeal ? (parseFloat(curDeal.askingPrice)||0) : 0;
+  const ask = _fiAsk || (_rawAsk >= 1000 ? _rawAsk : 0);
 
-  let html = '<div class="section" style="padding-top:12px">';
+  let html = '';
 
-  // Gap analysis
   if (ask > 0) {
     const gap = ask - open_;
-    const pct2 = Math.round(((ask/mao)-1)*100);
-    let gapLabel, gapColor;
-    if (ask <= mao)        { gapLabel='Ask Under MAO ✅'; gapColor='var(--buy)'; }
-    else if (pct2 <= 10)   { gapLabel='Spread '+fmtK(gap)+' — Closeable'; gapColor='var(--gold)'; }
-    else if (pct2 <= 20)   { gapLabel='Spread '+fmtK(gap)+' — Tight'; gapColor='var(--review)'; }
-    else                   { gapLabel='Spread '+fmtK(gap)+' — Far apart'; gapColor='var(--red)'; }
-    html += '<div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:12px;border:1px solid var(--border)">' +
-      '<div style="display:flex;justify-content:space-between;font-size:12px">' +
+    const pct2 = mao > 0 ? Math.round(((ask/mao)-1)*100) : 0;
+    let gapLabel, gapColor, barW;
+    if (ask <= mao)        { gapLabel='Under MAO ✅'; gapColor='var(--buy)'; barW='20%'; }
+    else if (pct2 <= 10)   { gapLabel=fmtK(gap)+' spread — Closeable'; gapColor='var(--accent)'; barW='40%'; }
+    else if (pct2 <= 20)   { gapLabel=fmtK(gap)+' spread — Tight'; gapColor='var(--review)'; barW='65%'; }
+    else                   { gapLabel=fmtK(gap)+' spread — Far apart'; gapColor='var(--hot)'; barW='90%'; }
+    html += '<div class="gap-row"><div class="gap-top">' +
         '<span style="color:var(--muted)">Ask <strong style="color:var(--text)">' + fmtK(ask) + '</strong></span>' +
-        '<span style="font-weight:700;color:' + gapColor + ';font-size:11px">' + gapLabel + '</span>' +
+        '<span class="gap-pill" style="background:' + gapColor + '22;color:' + gapColor + '">' + gapLabel + '</span>' +
         '<span style="color:var(--muted)">MAO <strong style="color:var(--text)">' + fmtK(mao) + '</strong></span>' +
-      '</div></div>';
+      '</div><div class="gap-bar-wrap"><div class="gap-bar" style="width:' + barW + ';background:' + gapColor + '"></div></div></div>';
   }
 
-  // Tiles
-  html += '<div class="section-hdr">OFFER TIERS</div>';
-  html += '<div class="nladder">';
   const tiers = [
-    {label:'OPEN',  price:open_,  profit:profitAt(open_),  color:'var(--buy)'},
-    {label:'NUDGE', price:nudge,  profit:profitAt(nudge),  color:'var(--gold)'},
-    {label:'HOLD',  price:hold,   profit:profitAt(hold),   color:'var(--review)'},
-    {label:'WALK',  price:mao,    profit:profitAt(mao),    color:'var(--red)'},
+    {label:'Open',  price:open_,  profit:profitAt(open_),  color:'var(--buy)'},
+    {label:'Nudge', price:nudge,  profit:profitAt(nudge),  color:'var(--accent)'},
+    {label:'Hold',  price:hold,   profit:profitAt(hold),   color:'var(--review)'},
+    {label:'Walk',  price:mao,    profit:profitAt(mao),    color:'var(--hot)'},
   ];
   tiers.forEach(function(t){
-    const pColor = t.profit >= 0 ? 'var(--buy)' : 'var(--red)';
-    html += '<div class="ntile" style="border-color:' + t.color + '20">' +
-      '<div class="ntile-label" style="color:' + t.color + '">' + t.label + '</div>' +
-      '<div class="ntile-price" style="color:' + t.color + '">' + fmtK(t.price) + '</div>' +
-      '<div class="ntile-profit" style="color:' + pColor + '">' + (t.profit>0?'+':'') + fmtK(t.profit) + '</div>' +
-    '</div>';
-  });
-  html += '</div>';
-
-  // Counter input
-  html += '<div class="section-hdr" style="margin-top:8px">THEY COUNTER AT</div>';
-  html += '<div class="counter-row">' +
-    '<span class="counter-label">$</span>' +
-    '<input class="counter-inp" type="number" placeholder="Enter their number" oninput="evalCounterM(this.value,' + mao + ',' + nudge + ',' + hold + ',' + open_ + ')" id="m-counter-inp">' +
-    '<div class="counter-result" id="m-counter-res">—</div>' +
-  '</div>';
-
-  // Scripts
-  html += '<div class="section-hdr" style="margin-top:8px">SCRIPTS</div>';
-  const firstName = curDeal && (curDeal.contact1Name || curDeal.contact1Company || '') || 'them';
-  const fn = firstName.split(' ')[0] || 'them';
-  const scripts = [
-    {label:'Open', text:'Hey ' + fn + ' — we ran the numbers. We can do ' + fmtM(open_) + '. Based on our comps, ARV is around ' + fmtM(arv) + ' and we have a real rehab scope here.'},
-    {label:'Nudge', text:'I want to make this work. We can stretch to ' + fmtM(nudge) + '. That is us moving significantly from our opening. Tight for us but if you can get there, we sign today.'},
-    {label:'Hold', text:fn + ', I have pushed as far as I can go. ' + fmtM(hold) + ' is the number. The comps do not support higher. At this price we make it work.'},
-    {label:'Walk', text:fn + ' — does not work for us at that number. No hard feelings — keep us in mind when something else comes through.'},
-  ];
-  scripts.forEach(function(s){
-    html += '<div style="margin-bottom:8px;background:var(--bg2);border-radius:8px;padding:10px 12px;border:1px solid var(--border)">' +
-      '<div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">' + s.label + '</div>' +
-      '<div style="font-size:13px;color:var(--text);line-height:1.6">' + esc(s.text) + '</div>' +
-      '<button onclick="copyScript(this)" data-txt="' + esc(s.text) + '" style="margin-top:8px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:11px;padding:5px 12px;cursor:pointer">Copy</button>' +
+    const pColor = t.profit >= 0 ? 'var(--buy)' : 'var(--hot)';
+    html += '<div class="tier-row" style="border-left-color:' + t.color + '">' +
+      '<div class="tier-label" style="color:' + t.color + '">' + t.label + '</div>' +
+      '<div class="tier-price" style="color:' + t.color + '">' + fmtM(t.price) + '</div>' +
+      '<div class="tier-profit" style="color:' + pColor + '">' + (t.profit>0?'+':'') + fmtK(t.profit) + '</div>' +
     '</div>';
   });
 
-  html += '</div>';
+  html += '<div class="counter-row"><div class="counter-lbl">They counter at</div>' +
+    '<div class="counter-input-line"><span style="color:var(--muted)">$</span>' +
+    '<input class="counter-inp" type="number" placeholder="Enter their number" oninput="evalCounterM(this.value,' + mao + ',' + nudge + ',' + hold + ',' + open_ + ')" id="m-counter-inp"></div>' +
+    '<div class="counter-result" id="m-counter-res">—</div></div>';
+
+  html += '<div class="script-tabs" id="m-script-tabs">' +
+    '<button class="stab" data-s="open" onclick="setScriptTabM(\'open\')">Open</button>' +
+    '<button class="stab" data-s="nudge" onclick="setScriptTabM(\'nudge\')">Nudge</button>' +
+    '<button class="stab" data-s="hold" onclick="setScriptTabM(\'hold\')">Hold</button>' +
+    '<button class="stab" data-s="walk" onclick="setScriptTabM(\'walk\')">Walk</button></div>';
+  html += '<div class="script-box" id="m-script-box"></div>';
+
   document.getElementById('deal-body').innerHTML = html;
+
+  window._mLadder = { open_, nudge, hold, mao, arv };
+  setScriptTabM('open');
 }
 
 function evalCounterM(val, mao, nudge, hold, open_) {
   const num = parseFloat(val) || 0;
   const res = document.getElementById('m-counter-res');
-  if (!res || num <= 0) { if(res) res.innerHTML='—'; return; }
-  if (num <= open_)     res.innerHTML='<span style="color:var(--buy);font-weight:700">✅ Accept</span>';
-  else if (num <= nudge) res.innerHTML='<span style="color:var(--buy);font-weight:700">✅ Accept</span>';
-  else if (num <= hold)  res.innerHTML='<span style="color:var(--gold);font-weight:700">Counter ' + fmtK(nudge) + '</span>';
-  else if (num <= mao)   res.innerHTML='<span style="color:var(--review);font-weight:700">Hold ' + fmtK(hold) + '</span>';
-  else                   res.innerHTML='<span style="color:var(--red);font-weight:700">🚶 Walk</span>';
+  if (!res || num <= 0) { if(res) {res.innerHTML='—'; res.style.color='var(--muted)';} return; }
+  if (num <= nudge)      { res.innerHTML='✅ Accept'; res.style.color='var(--buy)'; }
+  else if (num <= hold)  { res.innerHTML='Counter at ' + fmtK(nudge); res.style.color='var(--accent)'; }
+  else if (num <= mao)   { res.innerHTML='Hold at ' + fmtK(hold); res.style.color='var(--review)'; }
+  else                   { res.innerHTML='🚶 Walk away'; res.style.color='var(--hot)'; }
 }
 
-function copyScript(btn) {
-  const txt = btn.getAttribute('data-txt');
-  navigator.clipboard && navigator.clipboard.writeText(txt).then(function(){
-    btn.textContent = 'Copied!';
-    setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+function setScriptTabM(tab) {
+  document.querySelectorAll('#m-script-tabs .stab').forEach(function(b){
+    const on = b.dataset.s === tab;
+    b.style.background = on ? 'rgba(200,169,110,.15)' : 'transparent';
+    b.style.borderColor = on ? 'var(--accent)' : 'var(--border2)';
+    b.style.color = on ? 'var(--accent)' : 'var(--muted)';
   });
+  const L = window._mLadder || {};
+  const fN = function(n){ return '$' + Math.round(n).toLocaleString(); };
+  const wsName = curDeal && (curDeal.contact1Name || curDeal.wholesalerCompany || '') || '';
+  const fn = wsName.split(' ')[0] || 'them';
+  const scripts = {
+    open: ['OPENING OFFER', '"Hey ' + fn + ' — we ran the numbers. We can do ' + fN(L.open_) + '. Based on our comps, ARV is around ' + fN(L.arv) + ' and we have a real rehab scope here. That\'s where the math puts us."'],
+    nudge: ['IF THEY PUSH BACK', '"I hear you. We can stretch to ' + fN(L.nudge) + '. That\'s us moving significantly off our opening — tight for us, but if you can get there, we sign today."'],
+    hold: ['STANDING FIRM', '"' + fn + ', I\'ve pushed this as far as I can go. ' + fN(L.hold) + ' is the number. The comps don\'t support going higher. At this price we make it work."'],
+    walk: ['WALKING AWAY', '"' + fn + ' — doesn\'t work for us at that number. No hard feelings. Keep us in mind next time something comes through."'],
+  };
+  const s = scripts[tab] || scripts.open;
+  document.getElementById('m-script-box').innerHTML = '<span class="script-eyebrow">' + s[0] + '</span>' + esc(s[1]);
 }
 
 // ── CHAT ──────────────────────────────────────────────────────
 function renderChat() {
-  let html = '<div id="chat-container" style="display:flex;flex-direction:column;min-height:100%">' +
-    '<div id="chat-msgs" class="section" style="flex:1;padding-top:12px;padding-bottom:0">' +
+  let html = '<div style="display:flex;flex-direction:column;min-height:100%">' +
+    '<div style="flex:1">' +
     '<div class="chat-messages" id="chat-list">';
 
   if (chatHistory.length === 0) {
-    html += '<div class="chat-bubble urban">Hey — ask me anything about this deal. I know the comps, the numbers, the rehab scope. What do you want to know?</div>';
+    html += '<div class="chat-bubble urban">Ask me anything about this deal — comps, numbers, rehab scope, what-ifs.</div>';
+    html += '</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:7px;padding:12px 16px 0">' +
+      ['What if repairs are $45K?','Give me 3 better comps','Counter-offer script?'].map(function(q){
+        return '<span class="suggested-chip" onclick="useChip(this)">' + esc(q) + '</span>';
+      }).join('') + '</div>';
   } else {
     chatHistory.forEach(function(m){
       html += '<div class="chat-bubble ' + m.role + (m.thinking?' thinking':'') + '">' + esc(m.text) + '</div>';
     });
+    html += '</div>';
   }
-  html += '</div></div>';
+  html += '</div>';
   html += '<div class="chat-input-wrap">' +
-    '<input class="chat-input" id="chat-inp" type="text" placeholder="Ask Urban about this deal…">' +
+    '<input class="chat-input" id="chat-inp" type="text" placeholder="Message Urban…">' +
     '<button class="chat-send" onclick="sendChat()">↑</button>' +
   '</div></div>';
 
@@ -677,6 +688,11 @@ function renderChat() {
   document.getElementById('chat-inp').addEventListener('keydown', function(e){
     if (e.key === 'Enter') sendChat();
   });
+}
+
+function useChip(el) {
+  document.getElementById('chat-inp').value = el.textContent;
+  sendChat();
 }
 
 function sendChat() {
@@ -692,11 +708,10 @@ function sendChat() {
   refreshChatUI();
 
   api('/api/chat/' + encodeURIComponent(uid), {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({message:msg, author:AUTHOR})
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({message:msg, author:AUTHOR, address:curDeal.address, city:curDeal.city})
   }).then(function(data){
-    chatHistory.pop(); // remove thinking
+    chatHistory.pop();
     chatHistory.push({role:'urban', text: data.reply || data.message || JSON.stringify(data)});
     refreshChatUI();
   }).catch(function(e){
@@ -713,6 +728,8 @@ function refreshChatUI() {
     return '<div class="chat-bubble ' + m.role + (m.thinking?' thinking':'') + '">' + esc(m.text) + '</div>';
   }).join('');
   list.scrollTop = list.scrollHeight;
+  const chips = document.querySelector('.suggested-chip');
+  if (chips) chips.closest('div').remove();
 }
 </script>
 </body>
