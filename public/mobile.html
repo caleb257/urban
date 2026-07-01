@@ -226,6 +226,24 @@ NEEDSADDRESS{background:rgba(155,89,182,.12);color:#9b59b6;border:1px solid rgba
 .phone-link{display:inline-block;margin-top:10px;font-size:13px;color:var(--accent);text-decoration:none;font-weight:600}
 ::-webkit-scrollbar{display:none}
 .offline-banner{position:fixed;top:0;left:0;right:0;background:var(--review);color:#0a0a0f;text-align:center;padding:7px;font-size:12px;font-weight:700;z-index:9999;display:none;padding-top:max(7px, env(safe-area-inset-top))}
+
+/* ── Urban Premium Layer ─────────────────────────────── */
+.deal-card{transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease!important}
+.deal-card:active{transform:scale(.985);box-shadow:0 0 0 1.5px rgba(255,200,80,.3)}
+.card-addr-text{font-size:15px!important;font-weight:700!important;letter-spacing:-.2px!important}
+.badge{font-size:10.5px!important;font-weight:800!important;letter-spacing:.4px!important;padding:3px 8px!important;border-radius:5px!important}
+.metric-val{font-size:24px!important;font-weight:800!important;letter-spacing:-.5px!important}
+.metric-tile{background:linear-gradient(145deg,rgba(255,255,255,.03),transparent),var(--bg2)!important;border-radius:12px!important;transition:border-color .2s}
+.metric-tile:active{border-color:var(--accent)!important}
+.deal-card-accent{width:4px!important;top:8px!important;bottom:8px!important;border-radius:0 3px 3px 0!important}
+.hdr{border-bottom:1px solid rgba(255,255,255,.06)!important}
+.subtab.active{background:rgba(255,255,255,.07)!important;color:var(--text)!important;border-color:rgba(255,255,255,.14)!important;font-weight:700!important}
+/* Score display on summary */
+.score-num{font-weight:900!important;letter-spacing:-1px!important}
+/* Urban take box */
+.take-box,.urban-take{background:linear-gradient(135deg,rgba(255,200,80,.06),rgba(255,200,80,.02))!important;border-left:3px solid var(--accent)!important}
+/* Stat tiles on summary */
+.stat-card,.ov-stat{background:linear-gradient(135deg,rgba(255,255,255,.025),transparent),var(--bg2)!important;border-radius:12px!important}
 </style>
 </head>
 <body>
@@ -1431,7 +1449,6 @@ function submitNote() {
   });
 }
 
-// ── NEGOTIATION LADDER ────────────────────────────────────────
 function renderLadder(uw) {
   if (!uw || !uw.arv || !uw.arv.urbanARV || !uw.rehab || !uw.rehab.urbanEstimate) {
     document.getElementById('deal-body').innerHTML =
