@@ -244,6 +244,8 @@ NEEDSADDRESS{background:rgba(155,89,182,.12);color:#9b59b6;border:1px solid rgba
 .take-box,.urban-take{background:linear-gradient(135deg,rgba(255,200,80,.06),rgba(255,200,80,.02))!important;border-left:3px solid var(--accent)!important}
 /* Stat tiles on summary */
 .stat-card,.ov-stat{background:linear-gradient(135deg,rgba(255,255,255,.025),transparent),var(--bg2)!important;border-radius:12px!important}
+.manual-badge{background:rgba(255,180,0,.15);color:#ffb400;border:1px solid rgba(255,180,0,.3);font-size:9px;font-weight:800;letter-spacing:.5px;padding:2px 5px;border-radius:4px;text-transform:uppercase}
+.manual-badge{background:rgba(255,180,0,.15);color:#ffb400;border:1px solid rgba(255,180,0,.3);font-size:9px;font-weight:800;letter-spacing:.5px;padding:2px 5px;border-radius:4px}
 </style>
 </head>
 <body>
@@ -263,10 +265,28 @@ NEEDSADDRESS{background:rgba(155,89,182,.12);color:#9b59b6;border:1px solid rgba
 </div>
 
 <!-- ── DEAL LIST SCREEN ────────────────────────────────────── -->
+<!-- ADD DEAL MODAL -->
+<div id="add-deal-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center">
+  <div style="background:var(--bg2);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:600px;border:1px solid var(--border);border-bottom:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:800">&#x2795; Add a Deal</div>
+      <button onclick="closeAddDeal()" style="background:transparent;border:none;color:var(--muted);font-size:22px;cursor:pointer">&#x00D7;</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Paste a text, email, or deal info. Urban parses + underwrites it and flags it for Derek to log to the sheet.</div>
+    <textarea id="add-deal-text" placeholder="Paste deal info here..." style="width:100%;height:150px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:13px;padding:12px;box-sizing:border-box;resize:none"></textarea>
+    <button id="add-deal-btn" onclick="submitAddDeal()" style="width:100%;margin-top:12px;padding:14px;background:rgba(255,200,80,.12);border:1px solid rgba(255,200,80,.3);border-radius:10px;color:var(--accent);font-size:14px;font-weight:800;cursor:pointer">&#x26A1; Parse &amp; Underwrite</button>
+    <div id="add-deal-status" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center;min-height:18px"></div>
+  </div>
+</div>
+
 <div class="screen" id="s-list">
   <div class="hdr">
     <div class="hdr-title">URBAN</div>
+    <div id="user-badge" style="display:none;font-size:10px;font-weight:800;letter-spacing:.5px;color:var(--accent);padding:2px 6px;background:rgba(255,200,80,.1);border-radius:4px;border:1px solid rgba(255,200,80,.2)"></div>
+    <div id="user-badge" style="display:none;font-size:10px;font-weight:800;color:var(--accent);padding:2px 6px;background:rgba(255,200,80,.1);border-radius:4px;border:1px solid rgba(255,200,80,.2)"></div>
     <div id="list-count" style="font-size:11px;color:var(--muted);font-family:var(--mono);flex-shrink:0"></div>
+    <button class="hdr-icon-btn" onclick="openAddDeal()" title="Add a Deal" style="background:rgba(255,200,80,.1);border:1px solid rgba(255,200,80,.2);color:var(--accent);font-size:18px;font-weight:700;width:36px;height:36px">+</button>
+    <button class="hdr-icon-btn" onclick="openAddDeal()" title="Add Deal" style="background:rgba(255,200,80,.1);border:1px solid rgba(255,200,80,.2);color:var(--accent);font-weight:900;font-size:18px;width:36px;height:36px">+</button>
     <button class="hdr-icon-btn map-toggle-btn" onclick="openMap()" title="Map view">🗺️</button>
     <button class="hdr-icon-btn" onclick="openProfits()" title="Profits">💰</button>
     <button class="hdr-icon-btn" onclick="loadDeals()">↻</button>
@@ -455,7 +475,7 @@ function doLogin() {
   api('/api/stats').then(function(s) {
     localStorage.setItem('urban_token', TOKEN);
     renderStats(s);
-    show('s-list');
+    show('s-list'); setUserBadge(); setUserBadge();
     loadDeals();
   }).catch(function() {
     document.getElementById('login-err').style.display = 'block';
@@ -1656,6 +1676,84 @@ function refreshChatUI() {
   list.scrollTop = list.scrollHeight;
   const chips = document.querySelector('.suggested-chip');
   if (chips) chips.closest('div').remove();
+}
+
+// ── ADD DEAL ────────────────────────────────────────────────────────────────────
+function openAddDeal() {
+  const m = document.getElementById('add-deal-modal');
+  if(m) { m.style.display='flex'; document.getElementById('add-deal-text')?.focus(); }
+}
+function closeAddDeal() {
+  const m = document.getElementById('add-deal-modal');
+  if(m) { m.style.display='none'; document.getElementById('add-deal-text').value=''; document.getElementById('add-deal-status').textContent=''; }
+}
+async function submitAddDeal() {
+  const text = document.getElementById('add-deal-text')?.value?.trim();
+  if(!text) return;
+  const btn = document.getElementById('add-deal-btn');
+  const status = document.getElementById('add-deal-status');
+  btn.disabled = true; btn.textContent = '⏳ Parsing...';
+  try {
+    const r = await fetch('/api/add-deal', { method:'POST', headers:{'x-urban-token':TOKEN,'Content-Type':'application/json'},
+      body: JSON.stringify({ text, addedBy: AUTHOR }) });
+    const data = await r.json();
+    if(r.ok) {
+      status.style.color = 'var(--buy)';
+      status.textContent = '✓ Deal added: ' + data.uid + ' — underwriting now. Derek will need to log this to the sheet.';
+      btn.textContent = '✓ Done';
+      // Add to local deals list with MANUAL badge
+      if(!allDeals.find(d=>d.uid===data.uid)) { allDeals.unshift({...data.deal, underwriteStatus:'PENDING'}); renderList(); }
+      setTimeout(() => { closeAddDeal(); if(data.uid) openDeal(data.uid); }, 1800);
+    } else if(r.status === 409) {
+      status.style.color = 'var(--accent)';
+      status.textContent = data.error + ' — opening it.';
+      btn.textContent = '⚡ Parse & Underwrite';
+      btn.disabled = false;
+      if(data.existingUid) setTimeout(()=>{ closeAddDeal(); openDeal(data.existingUid); }, 1200);
+    } else {
+      status.style.color='#cc4466'; status.textContent = data.error||'Error parsing deal';
+      btn.textContent='⚡ Parse & Underwrite'; btn.disabled=false;
+    }
+  } catch(e) { status.style.color='#cc4466'; status.textContent='Network error: '+e.message; btn.textContent='⚡ Parse & Underwrite'; btn.disabled=false; }
+}
+// Set user badge after login
+function setUserBadge() {
+  const badge = document.getElementById('user-badge');
+  if(!badge || !TOKEN) return;
+  const isCaleb = TOKEN === 'ccg-caleb-K9x4mP2v';
+  badge.textContent = isCaleb ? 'CB' : 'GP';
+  badge.title = isCaleb ? 'Logged in as Caleb' : 'Logged in as Grant';
+  badge.style.display = 'inline-block';
+}
+
+function openAddDeal() { const m=document.getElementById('add-deal-modal'); if(m){m.style.display='flex';setTimeout(()=>document.getElementById('add-deal-text')?.focus(),100);} }
+function closeAddDeal() { const m=document.getElementById('add-deal-modal'); if(m){m.style.display='none';} const t=document.getElementById('add-deal-text'); if(t)t.value=''; const s=document.getElementById('add-deal-status'); if(s)s.textContent=''; }
+async function submitAddDeal() {
+  const text=(document.getElementById('add-deal-text')?.value||'').trim();
+  if(!text)return;
+  const btn=document.getElementById('add-deal-btn'), status=document.getElementById('add-deal-status');
+  btn.disabled=true; btn.textContent='Parsing...';
+  try {
+    const r=await fetch('/api/add-deal',{method:'POST',headers:{'x-urban-token':TOKEN,'Content-Type':'application/json'},body:JSON.stringify({text,addedBy:AUTHOR})});
+    const data=await r.json();
+    if(r.ok){
+      status.style.color='var(--buy)'; status.textContent='Added: '+data.uid+' — underwriting now. Flag Derek to log it.';
+      btn.textContent='Done';
+      if(data.deal&&!allDeals.find(d=>d.uid===data.uid)){allDeals.unshift({...data.deal,underwriteStatus:'PENDING'});renderList();}
+      setTimeout(()=>{closeAddDeal();if(data.uid)openDeal(data.uid);},1800);
+    } else if(r.status===409){
+      status.style.color='var(--accent)'; status.textContent=data.error;
+      btn.textContent='Parse & Underwrite'; btn.disabled=false;
+      if(data.existingUid)setTimeout(()=>{closeAddDeal();openDeal(data.existingUid);},1200);
+    } else {
+      status.style.color='#cc4466'; status.textContent=data.error||'Error'; btn.textContent='Parse & Underwrite'; btn.disabled=false;
+    }
+  } catch(e){status.style.color='#cc4466';status.textContent='Network error: '+e.message;btn.textContent='Parse & Underwrite';btn.disabled=false;}
+}
+function setUserBadge() {
+  const b=document.getElementById('user-badge'); if(!b||!TOKEN)return;
+  const isCaleb=TOKEN==='ccg-caleb-K9x4mP2v';
+  b.textContent=isCaleb?'CB &#x1F451;':'GP'; b.title=isCaleb?'Caleb':'Grant'; b.style.display='inline-block';
 }
 </script>
 </body>
