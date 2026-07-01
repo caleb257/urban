@@ -481,7 +481,6 @@ a{color:var(--accent)}
             </div>
           </div>
 
-          <!-- NEGOTIATION LADDER -->
             <div id="neg-ladder" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:16px;margin-bottom:16px;display:none">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
                 <div class="ct">Negotiation Ladder</div>
@@ -1523,7 +1522,7 @@ async function selectDeal(d) {
   document.querySelectorAll('.di').forEach(el => el.classList.toggle('active', el.dataset.uid === uid));
   show('main-empty', false);
   show('dv', true);
-  $('dv-addr').textContent = d.address || 'Unknown';
+  $('dv-addr').textContent = d.address || d.city || '';
   const countyPart = d.county ? (d.county.toLowerCase().includes('county') ? d.county : d.county + ' County') : '';
   $('dv-city').textContent = [`${d.city||''}, ${d.state||''} ${d.zip||''}`.trim().replace(/^,\s*/, ''), countyPart, d.propertyType ? (d.propertyType === 'Single Family' ? 'SFR' : d.propertyType) : 'SFR'].filter(Boolean).join(' · ');
 
@@ -2225,89 +2224,7 @@ function renderUW(uw) {
     });
   if (!uw.riskFlags?.length) flagEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No risk flags identified</div>';
 
-  // NEGOTIATION LADDER
-  const ladder = uw.negotiationLadder;
-  const ladderEl = $('neg-ladder');
-  if (ladder?.length) {
-    if (ladderEl) ladderEl.style.display = '';
-    const _nr = $('neg-rows');
-    if (_nr) {
-      // Always sort ascending (lowest price = best deal = top)
-      const _sortedLadder = [...ladder].sort((a, b) => a.price - b.price);
-      // Normalize labels based on position so old DB data displays correctly
-      const _labelMap = {0: 'Opening offer', 1: 'Counter', 2: 'Best counter', 3: 'At asking', 4: 'MAX OFFER'};
-      // Detect if any row is marked as asking price
-      const _askRow = _sortedLadder.findIndex(r => r.label && (r.label.toLowerCase().includes('ask') || r.label === 'ASKING'));
-      _sortedLadder.forEach((r, i) => {
-        if (r.label === 'MAX OFFER' || r.label === 'MAO') r._displayLabel = 'MAX OFFER';
-        else if (r.label === 'At asking' || r.label === 'ASKING' || r.label === 'Asking') r._displayLabel = 'At asking';
-        else if (r.label === 'Opening offer') r._displayLabel = 'Opening offer';
-        else if (i === 0) r._displayLabel = 'Opening offer';
-        else if (i === _sortedLadder.length - 1) r._displayLabel = 'MAX OFFER';
-        else if (_askRow >= 0 && i === _askRow) r._displayLabel = 'At asking';
-        else r._displayLabel = 'Counter';
-      });
-      // Re-calculate profits using consistent formula (match server-side calc)
-      const _lArv = curUW?.arv?.urbanARV || 0;
-      const _lRepairs = curUW?.rehab?.urbanEstimate || 0;
-      const _lCosts = (curUW?.financials?.holdingCosts?.total || 0) +
-                      (curUW?.financials?.sellingCosts?.total || (_lArv * 0.075)) +
-                      (curUW?.financials?.hardMoney?.totalInterest || 0) +
-                      (curUW?.financials?.hardMoney?.originationPoints || 0);
 
-      _nr.innerHTML = _sortedLadder.map((r, i) => {
-        const _lArv = curUW && curUW.arv ? curUW.arv.urbanARV || 0 : 0;
-        const _lRep = curUW && curUW.rehab ? curUW.rehab.urbanEstimate || 0 : 0;
-        const _lHold = curUW && curUW.financials && curUW.financials.holdingCosts ? curUW.financials.holdingCosts.total || 0 : 0;
-        const _lSell = curUW && curUW.financials && curUW.financials.sellingCosts ? curUW.financials.sellingCosts.total || (_lArv * 0.075) : (_lArv * 0.075);
-        const _lInt  = curUW && curUW.financials && curUW.financials.hardMoney ? curUW.financials.hardMoney.totalInterest || 0 : 0;
-        const _lOrig = curUW && curUW.financials && curUW.financials.hardMoney ? curUW.financials.hardMoney.originationPoints || 0 : 0;
-        const _lCosts = _lHold + _lSell + _lInt + _lOrig;
-        const trueProfit = _lArv > 0 ? Math.round(_lArv - r.price - _lRep - _lCosts) : r.profit;
-        const trueRoi = _lArv > 0 && r.price > 0 ? parseFloat((trueProfit / (r.price + _lRep) * 100).toFixed(1)) : (r.roi || 0);
-
-        const lbl = r._displayLabel || r.label || '';
-        const isCeiling = lbl === 'MAX OFFER';
-        const isAsking  = lbl === 'At asking';
-        const isOpen    = lbl === 'Opening offer';
-        const isOver    = lbl.includes('Over') || lbl.includes('over');
-
-        const borderClr = isOpen ? 'var(--buy)' : isAsking ? 'var(--review)' : isCeiling ? '#666' : isOver ? '#cc3344' : 'rgba(100,140,255,.5)';
-        const bgAlpha   = isOpen ? '.15' : isAsking ? '.12' : isCeiling ? '.06' : '.06';
-        const bgClr     = isOpen ? 'rgba(60,200,130,' + bgAlpha + ')' : isAsking ? 'rgba(255,160,32,' + bgAlpha + ')' : isCeiling ? 'rgba(120,120,120,' + bgAlpha + ')' : 'rgba(80,120,240,' + bgAlpha + ')';
-        const textClr   = isOpen ? 'var(--buy)' : isAsking ? 'var(--review)' : isCeiling ? 'var(--muted)' : 'var(--text)';
-        const profitClr = trueProfit > 40000 ? 'var(--buy)' : trueProfit > 20000 ? 'var(--review)' : 'var(--red)';
-
-        const hintText = isOpen ? ' <span style="font-size:9px;opacity:.65;margin-left:4px;font-style:italic">← start here</span>'
-                       : isCeiling ? ' <span style="font-size:9px;opacity:.55;margin-left:4px;font-style:italic">↑ walk away above this</span>'
-                       : isAsking ? ' <span style="font-size:9px;opacity:.6;margin-left:4px">seller ask</span>'
-                       : '';
-
-        const profitStr = (trueProfit >= 0 ? '+$' : '-$') + Math.abs(trueProfit).toLocaleString();
-        const priceStr  = '$' + r.price.toLocaleString();
-        const roiStr    = trueRoi + '%';
-        const boldWt    = (isOpen || isAsking) ? '700' : '500';
-
-        return '<div style="display:flex;align-items:center;gap:0;padding:7px 10px;margin-bottom:3px;border-radius:5px;background:' + bgClr + ';border-left:3px solid ' + borderClr + '">'
-          + '<div style="width:18px;font-size:11px;flex-shrink:0">' + (i + 1) + '</div>'
-          + '<div style="flex:1;min-width:0"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + textClr + '">' + lbl + hintText + '</span></div>'
-          + '<div style="width:100px;text-align:right;font-size:15px;font-weight:' + boldWt + ';color:' + textClr + ';font-variant-numeric:tabular-nums">' + priceStr + '</div>'
-          + '<div style="width:110px;text-align:right;font-size:13px;font-weight:600;color:' + profitClr + ';font-variant-numeric:tabular-nums">' + profitStr + '</div>'
-          + '<div style="width:50px;text-align:right;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums">' + roiStr + '</div>'
-          + '</div>';
-      }).join('');
-
-      // Walk away line below ladder
-      const _mao2 = curUW?.financials?.mao || 0;
-      if (_mao2 > 0) {
-        _nr.insertAdjacentHTML('beforeend', `<div style="margin-top:8px;padding:5px 10px;font-size:10px;color:var(--muted);text-align:center;border-top:1px solid var(--border1)">
-          Walk away above <strong style="color:#cc4455">$${Math.round(_mao2).toLocaleString()}</strong> — below that price, any offer pencils
-        </div>`);
-      }
-    }
-  } else {
-    if (ladderEl) ladderEl.style.display = 'none';
-  }
 
   // EXIT ANALYSIS
   const ex = uw.exitAnalysis;
@@ -3073,7 +2990,6 @@ function copyOfferLadder() {
   var d = _olData;
   if (!d.mao) return;
   var fN = function(n) { return '$' + Math.round(n).toLocaleString(); };
-  var t = 'NEGOTIATION LADDER\n' +
     'Open:  ' + fN(d.open_) + '\n' +
     'Nudge: ' + fN(d.nudge) + '\n' +
     'Hold:  ' + fN(d.hold) + '\n' +
@@ -3376,7 +3292,7 @@ function renderWholesalerScores() {
   if (!list || !deals || !deals.length) return;
   var scores = {};
   deals.forEach(function(d) {
-    var ws = d.wholesalerName || d.source || 'Unknown';
+    var ws = d.wholesalerName || d.source || d.city || '';
     if (!scores[ws]) scores[ws] = { total: 0, buys: 0 };
     scores[ws].total++;
     var v = d.underwriteStatus || '';
