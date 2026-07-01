@@ -251,21 +251,14 @@ a{color:var(--accent)}
       <button id="profits-view-btn" onclick="showProfitsView()" title="Profits" style="width:38px;height:38px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--accent);font-size:16px;cursor:pointer">💰</button>
     </div>
     <div id="stats-bar">
-      <div class="stat-chip"><div class="val" id="st-total">—</div><div class="lbl">Underwritten</div></div>
-      <div class="stat-chip"><div class="val" id="st-avg">—</div><div class="lbl">Avg Score</div></div>
-      <div class="stat-chip"><div class="val" id="st-hot">—</div><div class="lbl">💰 Buy</div></div>
-      <div class="stat-chip"><div class="val" id="st-lessons">—</div><div class="lbl">Lessons</div></div>
-      <div class="stat-chip"><div class="val" id="st-profit">—</div><div class="lbl">Avg Profit</div></div>
-      <div class="stat-chip"><div class="val" id="st-pct">—</div><div class="lbl">BUY %</div></div>
-      <div class="stat-chip" title="Urban ARV vs Wholesaler avg difference"><div class="val" id="st-arv-acc" style="font-size:14px">—</div><div class="lbl">ARV vs WS</div><div style="font-size:9px;color:var(--muted);line-height:1.2" id="st-arv-tot"></div></div>
-      <div class="stat-chip" title="Click to exclude Hard No deals from stats and list" id="hardno-toggle-chip" onclick="toggleHardNo()" style="cursor:pointer;opacity:.7">
-        <div class="val" id="hardno-toggle-icon">⛔</div>
-        <div class="lbl" id="hardno-toggle-lbl">Inc. Hard No</div>
-      </div>
+      <div class="stat-chip" title="Actionable deals — excludes Hard No"><div class="val" id="st-active">—</div><div class="lbl">ACTIVE</div></div>
+      <div class="stat-chip" style="border-color:rgba(255,200,80,.35);background:rgba(255,200,80,.06)"><div class="val" id="st-action" style="color:var(--accent)">—</div><div class="lbl">&#x1F4B0; BUY/REVIEW</div></div>
+      <div class="stat-chip" title="Avg score active deals"><div class="val" id="st-score">—</div><div class="lbl">AVG SCORE</div></div>
+      <div class="stat-chip" style="opacity:.5"><div class="val" id="st-hardno" style="color:#cc4466">—</div><div class="lbl">HARD NO</div></div>
     </div>
     <div id="search-wrap" style="display:flex;gap:6px;align-items:center;padding:10px 18px">
       <input type="text" id="search-input" placeholder="Search..." style="flex:1">
-      <select id="sort-select" title="Sort" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:6px 5px;border-radius:4px;font-size:11px;font-family:var(--sans);outline:none;cursor:pointer;width:82px"><option value="date-new">↓ New</option><option value="date-old">↑ Old</option><option value="score-high">↓ Score</option><option value="expires">⏰ Expires</option><option value="ask-low">↑ Price</option></select>
+      <select id="sort-select" title="Sort" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:6px 5px;border-radius:4px;font-size:11px;font-family:var(--sans);outline:none;cursor:pointer;width:82px"><option value="date-new">↓ New</option><option value="date-old">↑ Old</option><option value="score-high" selected>↓ Score</option><option value="expires">⏰ Expires</option><option value="ask-low">↑ Price</option></select>
     </div>
     <div id="filter-bar">
       <div class="ftab on" data-f="ALL">All</div>
@@ -277,13 +270,14 @@ a{color:var(--accent)}
       <div class="ftab" data-f="NEEDS_ARV" title="Deals without sold comps — click ⚡ to pull live comps on each">Need Comps</div>
       <div class="ftab" data-f="PENDING">Pending</div>
     </div>
-    <div id="deal-list"></div>
+    
     <div style="display:flex;gap:6px;padding:0 12px">
       
         <button id="add-deal-btn-sidebar" onclick="openAddDeal()" style="flex:1;background:rgba(255,200,80,.08);border:1px solid rgba(255,200,80,.25);border-radius:6px;color:var(--accent);font-size:12px;font-weight:700;padding:7px 10px;cursor:pointer;letter-spacing:.2px;white-space:nowrap">&#x2795; Add Deal</button>
-        <button id="ref-btn" style="flex:1">↻ Pull from Derek's Sheet</button>
+        <button id="ref-btn" style="flex:1">↻ Pull Sheet</button>
       <button id="rewrite-all-btn" onclick="doRewriteAll()" title="Re-underwrite all deals with updated brain" style="padding:8px 10px;font-size:10px;background:rgba(255,160,32,.1);border-color:rgba(255,160,32,.3);color:rgba(255,160,32,.8)">⚡ All</button>
     </div>
+    <div id="deal-list"></div>
     <div id="ws-scorecards" style="padding:8px 12px;border-top:1px solid var(--border)">
       <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 0" onclick="toggleWsPanel()">
         <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px">🏆 WHOLESALER SCORES</div>
@@ -1133,6 +1127,17 @@ async function doLogin() {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       doLoadStats();
+
+// Sheet button feedback
+const __sheetBtn = document.getElementById('btn-sheet');
+if(__sheetBtn && !__sheetBtn._feedbackBound) {
+  __sheetBtn._feedbackBound = true;
+  __sheetBtn.addEventListener('click', function() {
+    this.style.background = 'rgba(100,220,100,0.25)';
+    this.textContent = '✓ Opened';
+    setTimeout(() => { this.style.background = ''; this.textContent = '📊 Sheet'; }, 1500);
+  });
+}
       doLoadDeals();
     } else {
       document.getElementById('login-err').style.display = 'block';
@@ -1144,48 +1149,18 @@ async function doLogin() {
   }
 }
 
-// -- STATS ----------------------------------------------------------------------
-async function doLoadStats() {
-  try {
-    const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
-    const s = await r.json();
-    $('st-total').textContent = s.totalUnderwritten || 0;
-    $('st-avg').textContent = s.avgScore ? s.avgScore.toFixed(1) : '—';
-    $('st-hot').textContent = (s.verdicts?.HOT||0) + (s.verdicts?.BUY||0);
-    $('st-lessons').textContent = s.lessonsLearned || 0;
-    if ($('st-profit')) $('st-profit').textContent = s.avgProfit ? '$'+Math.round(s.avgProfit/1000)+'K' : '—';
-    if ($('st-pct')) {
-      const total = s.totalUnderwritten || 1;
-      const good = (s.verdicts?.HOT||0) + (s.verdicts?.BUY||0);
-      $('st-pct').textContent = Math.round(good/total*100) + '% BUY DEALS';
-    }
-    // If HARD NO toggle is on, recalculate stats from client-side deals array
-    if (hideHardNo && deals.length) {
-      const activeDeals = deals.filter(d => d.underwriteStatus !== 'HARD NO' && d.underwriteScore);
-      if (activeDeals.length) {
-        $('st-total').textContent = activeDeals.length;
-        const avgSc = activeDeals.reduce((s,d) => s+(d.underwriteScore||0), 0) / activeDeals.length;
-        $('st-avg').textContent = avgSc.toFixed(1);
-        const buys = activeDeals.filter(d => d.underwriteStatus === 'BUY' || d.underwriteStatus === 'HOT').length;
-        $('st-hot').textContent = buys;
-        if ($('st-pct')) $('st-pct').textContent = Math.round(buys/activeDeals.length*100) + '% BUY DEALS';
-      }
-    }
-    // ARV accuracy: avg Urban vs Wholesaler
-    if (s.arvAccuracy) {
-      const acc = s.arvAccuracy;
-      if ($('st-arv-acc')) {
-        const sign = acc.avgDiffPct >= 0 ? '+' : '';
-        $('st-arv-acc').textContent = sign + acc.avgDiffPct + '%';
-        $('st-arv-acc').style.color = Math.abs(acc.avgDiffPct) <= 5 ? 'var(--buy)' : Math.abs(acc.avgDiffPct) <= 15 ? 'var(--review)' : 'var(--hot)';
-      }
-      if ($('st-arv-tot')) {
-        const totK = Math.round(Math.abs(acc.totalDiffDollars) / 1000);
-        const dir = acc.totalDiffDollars >= 0 ? 'above WS' : 'below WS';
-        $('st-arv-tot').textContent = '$' + totK + 'K ' + dir + ' · ' + acc.dealCount + ' deals';
-      }
-    }
-  } catch {}
+// -- STATS — live from deals, excludes Hard No ───────────────────
+function doLoadStats() {
+  const active = deals.filter(d => d.underwriteStatus && d.underwriteStatus !== 'HARD NO');
+  const hardNo = deals.filter(d => d.underwriteStatus === 'HARD NO');
+  const action = deals.filter(d => ['HOT','BUY','REVIEW'].includes(d.underwriteStatus));
+  const scored = active.filter(d => d.underwriteScore > 0);
+  const avg = scored.length ? (scored.reduce((a,d)=>a+(d.underwriteScore||0),0)/scored.length).toFixed(1) : '—';
+  const el = id => document.getElementById(id);
+  if(el('st-active')) el('st-active').textContent = active.length || '0';
+  if(el('st-action')) el('st-action').textContent = action.length || '0';
+  if(el('st-score'))  el('st-score').textContent  = avg;
+  if(el('st-hardno')) el('st-hardno').textContent = hardNo.length || '0';
 }
 
 // -- DEALS ----------------------------------------------------------------------
@@ -1423,7 +1398,7 @@ function renderList() {
     const status = d.needsAddress ? 'NEEDS ADDRESS' : (d.underwriteStatus || 'PENDING');
     const normStatus = status === 'HARD NO' ? 'HARDNO' : status === 'NEED COMPS' ? 'NEEDCOMPS' : status === 'NEEDS ADDRESS' ? 'NEEDSADDRESS' : status;
     if (hideHardNo && status === 'HARD NO' && curFilter !== 'HARDNO') return false; // HARD NO toggle
-    const matchFilter = curFilter === 'ALL' 
+    const matchFilter = (curFilter === 'ALL' && normStatus !== 'HARD NO' && normStatus !== 'HARD_NO') 
       || normStatus === curFilter
       || (curFilter === 'BUY' && (status === 'BUY' || status === 'HOT'))
       || (curFilter === 'PASS' && status === 'PASS')
@@ -1657,6 +1632,8 @@ function showPending(partialUW) {
 let curTab = 'overview'; // tracks which tab is active for chat context
 function switchTab(name) {
   curTab = name;
+  const __panel = document.getElementById('deal-panel') || document.querySelector('.right-pane') || document.querySelector('.main-panel');
+  if(__panel) __panel.scrollTop = 0;
   document.querySelectorAll('.stab').forEach(t => t.classList.toggle('on', t.dataset.t === name));
   document.querySelectorAll('.tc').forEach(t => t.classList.remove('active'));
   const el = $('t-' + name);
