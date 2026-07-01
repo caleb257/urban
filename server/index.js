@@ -3253,6 +3253,39 @@ app.post('/api/auto-underwrite-batch', auth, async (req, res) => {
   res.end();
 });
 
+// ── SHEET AUDIT — shows exactly what's in Derek's sheet vs what Urban imports ──
+app.get('/api/sheet-audit', auth, async (req, res) => {
+  try {
+    // Pull raw rows directly from the sheet, same call as getDealsFromSheet but unfiltered
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Active Deals!A1:CV2000'
+    });
+    const rows = response.data.values || [];
+    const headers = rows[0] || [];
+    const get = (row, name) => {
+      const idx = headers.findIndex(h => (h||'').toLowerCase().trim() === name.toLowerCase().trim());
+      return idx >= 0 ? (row[idx] || '').toString().trim() : '';
+    };
+    const dataRows = rows.slice(1).filter(row => row.some(cell => (cell||'').toString().trim()));
+    const results = { totalSheetRows: dataRows.length, imported: [], skippedBlankAddr: [], skippedXXXX: [], skippedOther: [] };
+    for (const row of dataRows) {
+      const addr = get(row, 'Property Address') || get(row, 'Address');
+      const city = get(row, 'City');
+      const dateReceived = get(row, 'Date Received') || get(row, 'Date');
+      const asking = get(row, 'Asking Price') || get(row, 'Price');
+      const emailSubj = get(row, 'Email Subject') || get(row, 'Subject');
+      const entry = { addr: addr || '(blank)', city, dateReceived, asking, emailSubj: emailSubj ? emailSubj.slice(0,60) : '' };
+      if (!addr || addr.trim() === '') { results.skippedBlankAddr.push(entry); }
+      else if (addr.trim().toUpperCase().startsWith('XXXX') || addr.trim().toUpperCase() === 'XXXX') { results.skippedXXXX.push(entry); }
+      else { results.imported.push({ ...entry, addr }); }
+    }
+    results.importedCount = results.imported.length;
+    results.skippedCount = results.skippedBlankAddr.length + results.skippedXXXX.length + results.skippedOther.length;
+    res.json(results);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/deals', auth, async (req, res) => {
   try {
     const deals = await getDealsFromSheet();
