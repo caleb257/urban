@@ -381,12 +381,14 @@ async function getDealsFromSheet() {
   return rows.slice(1).filter(r => {
     const addr = r[col['Address']];
     // Skip rows with no address OR redacted XXXX address — Urban can't underwrite without it
-    if (!addr || addr.trim() === '' || addr.trim().toUpperCase() === 'XXXX') return false;
+    if (!addr || addr.trim() === '') return false; // blank — genuinely no data
+    // XXXX rows are logged but address wasn't filled in — keep them so UI can surface them
     return true;
   }).map(r => {
     const get = (h) => r[col[h]] || '';
     return {
       uid: (get('Address') || get('Email UID') || '').trim(), // Use address as primary UID
+      needsAddress: (addr.trim().toUpperCase() === 'XXXX'), // Derek logged this but never filled in the real address
       dateReceived: get('Date Received'),
       propertyType: get('Property Type'),
       address: get('Address'),
@@ -1420,7 +1422,7 @@ async function regenerateVerdict(uw) {
     'Prior verdict: ' + (uw.verdict||'?') + ' (' + (uw.score||0) + '/10)\n\n' +
     'Based ONLY on these corrected numbers, give a new verdict, score, reason, and recommendation.\n' +
     'Respond with ONLY valid JSON (no markdown):\n' +
-    '{"verdict":"<HOT|BUY|REVIEW|PASS|HARD NO>","score":<1-10>,"verdictReason":"<one sentence>","recommendation":"<2-3 hard sentences with specific numbers>","offerStrategy":"<one sentence on what price to offer>"}';
+    '{"verdict":"<HOT|BUY|REVIEW|PASS|NEED COMPS|HARD NO>","score":<1-10>,"verdictReason":"<one sentence>","recommendation":"<2-3 hard sentences with specific numbers>","offerStrategy":"<one sentence on what price to offer>"}';
 
   try {
     const res = await getAnthropic().messages.create({
@@ -2003,6 +2005,16 @@ We are active fix-and-flip operators in Tampa Bay. Our standards:
 
 PROFIT RULE: askingPrice<$1M → profit must be ≥10% of askingPrice (e.g. $300K ask=$30K min, $400K ask=$40K min, $250K ask=$25K min). askingPrice≥$1M → profit must be ≥$100K. Deals below threshold → HARD NO unless negotiable.
 
+MISSING DATA RULE — CRITICAL: If ARV is unknown/uncompable, verdict = NEED COMPS (score 3-5). A deal without ARV is not dead — it needs more information. HARD NO requires enough data to CONFIRM the numbers fail, or a deal-killer independent of missing data (flood AE, zoning, title, price mathematically impossible even at best-case ARV, or outside CCG's 5-county mandate). Missing sqft → NEED COMPS. Missing ARV → NEED COMPS. Missing both → NEED COMPS. Never HARD NO purely because data is absent.
+
+VERDICT SCALE — use exactly one:
+HOT: numbers work well, motivated seller, strong comps, needs fast action.
+BUY: numbers work, solid deal worth pursuing.
+REVIEW: close — one negotiation point or data point away from BUY.
+PASS: technically possible but too many headwinds or soft market.
+NEED COMPS: missing ARV, sqft, or other data Urban needs to underwrite fully. Describe exactly what's missing and ask for it. Score 3-5.
+HARD NO: confirmed dead — math proven not to work, or hard disqualifier (geography, flood, title, etc.) independent of missing data. Score 1-2.
+
 ARV METHODOLOGY — CRITICAL, ALWAYS FOLLOW:
 1. EVERY PROPERTY NEEDS REAL COMPS — MINIMUM 3. If you have fewer than 3 real sold comps, explicitly flag it in arvNotes and set arvConfidence = LOW. Do not guess without comps.
    ⚠️ CRITICAL: Other deals in Urban's pipeline (addresses from Derek's sheet) are NOT comps. They are AS-IS distressed asking prices — typically 15-30% below renovated value. NEVER use asking prices from other pipeline deals as ARV comparables. Only use ACTUAL SOLD transactions from CCG DB, Zillow, Redfin, or county records.
@@ -2055,7 +2067,7 @@ REPAIR BENCHMARKS (Florida 2025 — labor+materials, post-inflation): Roof shing
 
 HARD NO: profit below threshold, flood zone AE/VE, structural/slab issue, knob-tube wiring, <1000sf, mobile/manufactured, title clouds, condemnation.
 BUY CRITERIA: profit ≥10% of askingPrice (if <$1M) OR ≥$100K (if ≥$1M), no hard-no flags, anywhere FL → verdict "BUY".
-REVIEW: close but needs negotiation or more info. PASS: technically works but too many issues.
+REVIEW: close — one point away from BUY. PASS: works technically but too many issues. NEED COMPS: missing data, not dead.
 OUTPUT: ONLY valid JSON, no markdown, no extra text..`;
 
   const system = deep
@@ -3254,6 +3266,30 @@ app.post('/api/auto-underwrite-batch', auth, async (req, res) => {
 });
 
 // ── SHEET AUDIT — shows exactly what's in Derek's sheet vs what Urban imports ──
+// Update address for a deal that Derek logged as XXXX
+app.post('/api/update-address', auth, async (req, res) => {
+  try {
+    const { oldUid, newAddress, author } = req.body || {};
+    if (!oldUid || !newAddress) return res.status(400).json({ error: 'oldUid and newAddress required' });
+    // Find the deal in memory cache
+    let deal = sheetCache.find(d => (d.uid||'').toLowerCase().trim() === (oldUid||'').toLowerCase().trim())
+             || sheetCache.find(d => d.needsAddress && (d.city||'').toLowerCase().trim() === (oldUid||'').toLowerCase().trim());
+    if (!deal) return res.status(404).json({ error: 'Deal not found in sheet cache. Try pulling from Derek\'s sheet first.' });
+    // Update in memory
+    deal.address = newAddress.trim();
+    deal.uid = newAddress.trim();
+    deal.needsAddress = false;
+    // Log to brain
+    urbanBrain.lessons = urbanBrain.lessons || [];
+    urbanBrain.lessons.push({ type: 'address_correction', text: `Address filled in for deal previously logged as XXXX: "${newAddress.trim()}" in ${deal.city||'unknown city'}. Logged by ${author||'user'}.`, ts: new Date().toISOString() });
+    saveBrain().catch(()=>{});
+    // Kick off underwriting for the newly-addressed deal
+    const uid = newAddress.trim();
+    underwrites[uid] = underwrites[uid] || {};
+    res.json({ ok: true, deal, message: `Address set to "${newAddress.trim()}". Click Underwrite to analyze.` });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/sheet-audit', auth, async (req, res) => {
   try {
     // Pull raw rows directly from the sheet, same call as getDealsFromSheet but unfiltered
