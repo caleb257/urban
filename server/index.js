@@ -2007,9 +2007,9 @@ IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other
 
 CRITERIA: Hard money 9.5% IO 90%LTV | MAO=ARV×Repairs | 6% agent+1.5% closing+2pts HML | 4-5mo hold.
 CCG UNDERWRITING PHILOSOPHY — THINK LIKE CORALSTONE CAPITAL GROUP:
-We are active fix-and-flip operators in Tampa Bay. Our standards:
+We are active fix-and-flip operators in Tampa Bay. We work ALL deal types — small, cheap, and distressed included. A $55K house with good margin is a great deal. Our standards:
 • SPEED: We close in 10-21 days cash, no mortgage contingency. This is a competitive advantage.
-• TARGET: $150K-$500K purchase price, SFR or small multifamily (2-4 units), 1,200sf+ preferred.
+• TARGET: $150K-$500K purchase price, SFR, MF 2-4 units, mobile homes w/ land, condos — all sizes welcome. No sqft minimum. CCG buys small and cheap.
 • COUNTIES: Pasco, Hillsborough, Polk, Pinellas, Hernando (AND adjacent: Manatee, Sarasota, Lee for right deals).
 • PROFIT MINIMUM: 10% of asking price (floor $20K). Deals above $1M need $100K+.
 • HOLD TIME: 4-5 months max for fix-and-flip. New construction 12-18 months.
@@ -2029,6 +2029,7 @@ PROFIT RULE: askingPrice<$1M → profit must be ≥10% of askingPrice (e.g. $300
 MISSING DATA RULE — CRITICAL: If ARV is unknown/uncompable, verdict = NEED COMPS (score 3-5). A deal without ARV is not dead — it needs more information. HARD NO requires enough data to CONFIRM the numbers fail, or a deal-killer independent of missing data (flood AE, zoning, title, price mathematically impossible even at best-case ARV, or outside CCG's 5-county mandate). Missing sqft → NEED COMPS. Missing ARV → NEED COMPS. Missing both → NEED COMPS. Never HARD NO purely because data is absent.
 
 VERDICT SCALE — use exactly one:
+CRITICAL — SIZE/PRICE: Small sqft or low price is NEVER alone a reason for HARD NO. Only these qualify as fatal: Flood Zone AE, 55+ that kills exit, title/HOA restrictions blocking resale, math that doesn't work at any reasonable offer. A 700sf $50K house with $120K ARV is a real deal.
 HOT: numbers work well, motivated seller, strong comps, needs fast action.
 BUY: numbers work, solid deal worth pursuing.
 REVIEW: close — one negotiation point or data point away from BUY.
@@ -3347,6 +3348,177 @@ app.get('/api/sheet-audit', auth, async (req, res) => {
     res.json(results);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
+
+
+// ════════════════════════════════════════════════════════════════════════════════
+// ADAM — Autonomous Acquisition Agent
+// Monitors deal inbox, parses emails, underwrites + loads into Urban automatically
+// Configure via Railway env vars: ADAM_IMAP_HOST, ADAM_IMAP_USER, ADAM_IMAP_PASS
+// ════════════════════════════════════════════════════════════════════════════════
+const ADAM_LOG = [];                  // in-memory activity log
+const ADAM_SEEN = new Set();          // email UIDs already processed this session
+let adamRunning = false;
+
+function adamLog(msg, type='info') {
+  const entry = { ts: new Date().toISOString(), msg, type };
+  ADAM_LOG.unshift(entry);
+  if (ADAM_LOG.length > 200) ADAM_LOG.length = 200;
+  console.log(`[ADAM] [${type.toUpperCase()}] ${msg}`);
+  return entry;
+}
+
+// ── Core: parse a raw email into a deal using Claude ─────────────────────────
+async function adamParseEmail(subject, body, fromEmail) {
+  const fullText = `Subject: ${subject}\nFrom: ${fromEmail}\n\n${body}`.slice(0, 4000);
+
+  // Quick pre-filter: skip obvious non-deals
+  const lowerText = fullText.toLowerCase();
+  const dealKeywords = ['asking', 'arv', 'bed', 'bath', 'sqft', 'sq ft', 'flip', 'rehab', 'off-market', 'offmarket', 'wholesale', 'price', 'opportunity', 'block', 'cbs', 'slab', 'sfr'];
+  if (!dealKeywords.some(k => lowerText.includes(k))) {
+    adamLog(`Skipped (no deal keywords): ${subject.slice(0,60)}`, 'skip');
+    return null;
+  }
+
+  // Parse with Claude
+  const parse = await getAnthropic().messages.create({
+    model: 'claude-sonnet-4-6', max_tokens: 600,
+    system: 'Extract FL real estate deal info from email. Return ONLY valid JSON (no markdown): { "isDeal": true/false, "address": "", "city": "", "state": "FL", "zip": "", "askingPrice": 0, "beds": 0, "baths": 0, "sqft": 0, "yearBuilt": 0, "construction": "", "wholesaler": "", "wholesalerPhone": "", "arv": 0, "rehab": 0, "floodZone": "", "notes": "", "isXXXX": false }. Set isDeal=false if this is not a property deal email. Set isXXXX=true if the address is intentionally withheld (shows XXXX or similar).',
+    messages: [{ role: 'user', content: fullText }],
+  });
+  let parsed;
+  try { parsed = JSON.parse(parse.content[0].text.replace(/```json?|```/g,'').trim()); }
+  catch(e) { adamLog(`Parse error: ${e.message}`, 'error'); return null; }
+  if (!parsed.isDeal) { adamLog(`Not a deal: ${subject.slice(0,60)}`, 'skip'); return null; }
+  return parsed;
+}
+
+// ── Core: add a parsed deal to Urban ─────────────────────────────────────────
+async function adamAddDeal(parsed, source) {
+  if (!parsed.address || !parsed.city) {
+    adamLog(`No address extracted from: ${source}`, 'warn');
+    return { ok: false, reason: 'no_address' };
+  }
+  if (parsed.isXXXX) {
+    adamLog(`XXXX address from: ${parsed.wholesaler || source} — skipping, needs call`, 'warn');
+    return { ok: false, reason: 'xxxx_address', wholesaler: parsed.wholesaler };
+  }
+  const uid = (parsed.address + ', ' + parsed.city).trim();
+  if (!sheetCache) global.sheetCache = [];
+  const dupe = sheetCache.find(d => (d.address||'').toLowerCase() === parsed.address.toLowerCase());
+  if (dupe) {
+    adamLog(`Duplicate skipped: ${uid}`, 'skip');
+    return { ok: false, reason: 'duplicate', uid };
+  }
+  const county = inferCounty(parsed.city) || '';
+  const deal = {
+    uid, address: parsed.address, city: parsed.city, state: 'FL', zip: parsed.zip||'',
+    county, beds: parsed.beds||0, baths: parsed.baths||0, sqft: parsed.sqft||0,
+    yearBuilt: parsed.yearBuilt||0, construction: parsed.construction||'',
+    askingPrice: parsed.askingPrice||0, wholesaler: parsed.wholesaler||'',
+    wholesalerPhone: parsed.wholesalerPhone||'', floodZone: parsed.floodZone||'',
+    source: 'adam-auto', addedBy: 'adam', isAdam: true,
+    dateReceived: new Date().toISOString(), needsSheet: true,
+  };
+  sheetCache.push(deal);
+  underwrites[uid] = underwrites[uid] || {};
+  setTimeout(() => runUnderwrite(uid, false).catch(()=>{}), 500);
+  adamLog(`Added: ${uid} (ask: ${parsed.askingPrice||'?'}, ARV: ${parsed.arv||'?'})`, 'add');
+  // Save to brain log
+  urbanBrain.adamDeals = urbanBrain.adamDeals || [];
+  urbanBrain.adamDeals.unshift({ uid, ts: new Date().toISOString(), ask: parsed.askingPrice, arv: parsed.arv });
+  if (urbanBrain.adamDeals.length > 100) urbanBrain.adamDeals.length = 100;
+  saveBrain().catch(()=>{});
+  return { ok: true, uid };
+}
+
+// ── IMAP: poll inbox for new emails ──────────────────────────────────────────
+async function adamCheckInbox() {
+  const host = process.env.ADAM_IMAP_HOST;
+  const user = process.env.ADAM_IMAP_USER;
+  const pass = process.env.ADAM_IMAP_PASS;
+  if (!host || !user || !pass) {
+    adamLog('IMAP not configured — set ADAM_IMAP_HOST, ADAM_IMAP_USER, ADAM_IMAP_PASS in Railway env', 'warn');
+    return { ok: false, reason: 'not_configured' };
+  }
+  try {
+    const { ImapFlow } = require('imapflow');
+    const client = new ImapFlow({ host, port: 993, secure: true, auth: { user, pass }, logger: false, tls: { rejectUnauthorized: false } });
+    await client.connect();
+    const lock = await client.getMailboxLock('INBOX');
+    let processed = 0, added = 0;
+    try {
+      // Get last 20 unseen emails
+      const uids = await client.search({ unseen: true }, { uid: true });
+      const recent = uids.slice(-20);
+      for (const uid of recent) {
+        if (ADAM_SEEN.has(uid)) continue;
+        ADAM_SEEN.add(uid);
+        const msg = await client.fetchOne(uid.toString(), { source: true, envelope: true }, { uid: true });
+        const subject = msg.envelope?.subject || '';
+        const from = msg.envelope?.from?.[0]?.address || '';
+        const raw = msg.source?.toString() || '';
+        // Strip MIME headers to get body text
+        const bodyStart = raw.indexOf('\r\n\r\n') + 4;
+        const body = raw.slice(bodyStart, bodyStart + 5000)
+          .replace(/<[^>]+>/g, ' ').replace(/=\r\n/g, '').replace(/&nbsp;/g, ' ')
+          .replace(/\s+/g, ' ').trim();
+        processed++;
+        const parsed = await adamParseEmail(subject, body, from);
+        if (parsed) { const r = await adamAddDeal(parsed, subject); if (r.ok) added++; }
+        // Mark as seen
+        await client.messageFlagsAdd(uid.toString(), ['\\Seen'], { uid: true });
+      }
+    } finally { lock.release(); }
+    await client.logout();
+    adamLog(`Cycle done: checked ${processed} emails, added ${added} deals`, 'cycle');
+    return { ok: true, processed, added };
+  } catch(e) {
+    adamLog(`IMAP error: ${e.message}`, 'error');
+    return { ok: false, error: e.message };
+  }
+}
+
+// ── Start IMAP polling if configured ─────────────────────────────────────────
+if (process.env.ADAM_IMAP_HOST) {
+  adamLog('IMAP configured — starting 5-minute polling cycle');
+  setTimeout(() => {
+    adamCheckInbox().catch(()=>{});
+    setInterval(() => adamCheckInbox().catch(()=>{}), 5 * 60 * 1000);
+  }, 10000); // 10s delay on startup to let server finish initializing
+}
+
+// ── API endpoints ─────────────────────────────────────────────────────────────
+app.get('/api/adam/status', auth, (req, res) => {
+  res.json({
+    configured: !!(process.env.ADAM_IMAP_HOST),
+    imapHost: process.env.ADAM_IMAP_HOST || 'not set',
+    imapUser: process.env.ADAM_IMAP_USER || 'not set',
+    logCount: ADAM_LOG.length,
+    recentLog: ADAM_LOG.slice(0,10),
+    totalAdamDeals: (urbanBrain.adamDeals||[]).length,
+    recentDeals: (urbanBrain.adamDeals||[]).slice(0,5),
+    seenUIDs: ADAM_SEEN.size,
+  });
+});
+
+app.post('/api/adam/run', auth, async (req, res) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  adamLog('Manual IMAP run triggered by ' + req.author);
+  const result = await adamCheckInbox();
+  res.json(result);
+});
+
+app.post('/api/adam/process', auth, async (req, res) => {
+  // Manually feed Adam an email body (e.g. copied from phone/text)
+  const { subject = 'Manual deal', body, from = req.author } = req.body || {};
+  if (!body || body.trim().length < 10) return res.status(400).json({ error: 'Paste email body' });
+  adamLog(`Manual process by ${req.author}: ${subject.slice(0,60)}`);
+  const parsed = await adamParseEmail(subject, body, from);
+  if (!parsed) return res.status(400).json({ error: 'No deal found in that text', parsed });
+  const result = await adamAddDeal(parsed, subject);
+  res.json({ ...result, parsed });
+});
+
 
 // ── ACCESS LOG (admin only) ──────────────────────────────────────────────────
 app.get('/api/access-log', auth, (req, res) => {
