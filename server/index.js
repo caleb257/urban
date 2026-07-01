@@ -388,7 +388,7 @@ async function getDealsFromSheet() {
     const get = (h) => r[col[h]] || '';
     return {
       uid: (get('Address') || get('Email UID') || '').trim(), // Use address as primary UID
-      needsAddress: (addr.trim().toUpperCase() === 'XXXX'), // Derek logged this but never filled in the real address
+      needsAddress: ((get('Address') || '').trim().toUpperCase() === 'XXXX'), // Derek logged but never filled address
       dateReceived: get('Date Received'),
       propertyType: get('Property Type'),
       address: get('Address'),
