@@ -127,6 +127,8 @@ button,select,input,textarea{font-family:inherit}
 .b-REVIEW{background:rgba(240,160,48,.18);color:var(--review);border:1px solid rgba(240,160,48,.4)}
 .b-PASS{background:rgba(102,136,170,.18);color:var(--pass);border:1px solid rgba(102,136,170,.4)}
 .b-HARDNO{background:rgba(204,68,102,.15);color:#cc4466;border:1px solid rgba(204,68,102,.35)}
+NEEDCOMPS{background:rgba(224,148,32,.12);color:#e09420;border:1px solid rgba(224,148,32,.35)}
+NEEDSADDRESS{background:rgba(155,89,182,.12);color:#9b59b6;border:1px solid rgba(155,89,182,.35)}
 .b-PENDING{background:rgba(100,100,120,.15);color:var(--muted);border:1px solid var(--border2)}
 .card-price{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent)}
 .card-score{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:600}
@@ -405,10 +407,11 @@ function timeAgo(ts) {
 function vClass(v) {
   if (!v || v === 'PENDING') return 'PENDING';
   if (v === 'HARD NO') return 'HARDNO';
+  if (v === 'NEED COMPS') return 'NEEDCOMPS';
   return v;
 }
 function accentColor(v) {
-  const m = {HOT:'var(--hot)',BUY:'var(--buy)',REVIEW:'var(--review)',PASS:'var(--pass)','HARD NO':'#cc4466',PENDING:'var(--muted)'};
+  const m = {HOT:'var(--hot)',BUY:'var(--buy)',REVIEW:'var(--review)',PASS:'var(--pass)','HARD NO':'#cc4466','NEED COMPS':'#e09420','NEEDCOMPS':'#e09420',PENDING:'var(--muted)','NEEDS ADDRESS':'#9b59b6'};
   return m[v] || 'var(--muted)';
 }
 function api(path, opts) {
@@ -549,7 +552,7 @@ function renderList() {
   }
 
   document.getElementById('deal-list').innerHTML = filtered.map(function(d) {
-    const v = d.underwriteStatus || 'PENDING';
+    const v = d.needsAddress ? 'NEEDS ADDRESS' : (d.underwriteStatus || 'PENDING');
     const fi = d.financials || {};
     const _uvArv = (d.arv && d.arv.urbanARV) || 0;
     const _fiAsk = fi.askingPrice && parseFloat(fi.askingPrice) > 1000 ? parseFloat(fi.askingPrice) : 0;
@@ -725,6 +728,12 @@ function geocodeMissingDeals(missing) {
 function openDeal(uid) {
   curDeal = allDeals.find(function(d) { return (d.uid||(d.address+'-'+d.dateReceived)) === uid; });
   if (!curDeal) return;
+  // XXXX deal — address never entered. Show input prompt instead of normal view.
+  if (curDeal.needsAddress) {
+    show('s-deal');
+    document.getElementById('deal-body').innerHTML = '<div style="padding:24px 20px"><div style="font-size:14px;color:var(--accent);font-weight:700;margin-bottom:6px">&#128205; Address Needed</div><div style="font-size:13px;color:var(--muted);margin-bottom:16px">Derek logged this deal from the email below but didn\'t fill in the address. Enter the real address to underwrite it.</div><div style="font-size:12px;color:var(--muted);margin-bottom:8px">Email subject: <em>' + esc(curDeal.emailSubject||curDeal.city||'unknown') + '</em></div><div style="font-size:12px;color:var(--muted);margin-bottom:14px">City logged: <strong>' + esc(curDeal.city||'?') + '</strong></div><input id="addr-input" type="text" placeholder="e.g. 1234 Oak St" style="width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:15px;box-sizing:border-box;margin-bottom:10px"><button onclick="submitAddress()" style="width:100%;padding:12px;background:rgba(100,200,120,.15);border:1px solid rgba(100,200,120,.4);border-radius:8px;color:var(--buy);font-weight:700;font-size:14px;cursor:pointer">&#9889; Set Address &amp; Underwrite</button></div>';
+    return;
+  }
   chatHistory = [];
   show('s-deal');
   api('/api/seen/' + encodeURIComponent(uid), {
@@ -1216,6 +1225,33 @@ function emptyState(icon, msg) {
 }
 
 // -- PURCHASED OUTCOME -----------------------------------------------------
+async function submitAddress() {
+  if (!curDeal) return;
+  const input = document.getElementById('addr-input');
+  const newAddr = input ? input.value.trim() : '';
+  if (!newAddr) { alert('Enter the address first'); return; }
+  const btn = document.querySelector('[onclick="submitAddress()"]');
+  if(btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+  try {
+    const r = await fetch('/api/update-address', {
+      method: 'POST', headers: { 'x-urban-token': TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldUid: curDeal.uid || (curDeal.address+'-'+curDeal.dateReceived), newAddress: newAddr, author: AUTHOR })
+    });
+    const data = await r.json();
+    if(r.ok) {
+      // Update in allDeals cache and re-open as normal deal
+      const idx = allDeals.findIndex(d => d.uid === curDeal.uid || (d.address+'-'+d.dateReceived) === curDeal.uid);
+      if(idx > -1) { allDeals[idx].address = newAddr; allDeals[idx].uid = newAddr; allDeals[idx].needsAddress = false; }
+      curDeal.address = newAddr; curDeal.uid = newAddr; curDeal.needsAddress = false;
+      renderList();
+      // Now trigger underwrite
+      openDeal(newAddr);
+    } else {
+      alert('Error: ' + (data.error||r.status));
+      if(btn) { btn.textContent = '⚡ Set Address & Underwrite'; btn.disabled = false; }
+    }
+  } catch(e) { alert('Network error: ' + e.message); if(btn) { btn.textContent = '⚡ Set Address & Underwrite'; btn.disabled = false; } }
+}
 function showPurchasedFormM() {
   if (!curDeal || !curUW) return;
   var m = document.getElementById('purchased-modal-m');
