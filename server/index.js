@@ -395,7 +395,7 @@ a{color:var(--accent)}
     </div>
     <div id="search-wrap" style="display:flex;gap:6px;align-items:center;padding:10px 18px">
       <input type="text" id="search-input" placeholder="Search..." style="flex:1">
-      <select id="sort-select" title="Sort" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:6px 5px;border-radius:4px;font-size:11px;font-family:var(--sans);outline:none;cursor:pointer;width:82px"><option value="date-new">↓ New</option><option value="date-old">↑ Old</option><option value="score-high" selected>↓ Score</option><option value="expires">⏰ Expires</option><option value="ask-low">↑ Price</option></select>
+      <select id="sort-select" title="Sort" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:6px 5px;border-radius:4px;font-size:11px;font-family:var(--sans);outline:none;cursor:pointer;width:82px"><option value="date-new" selected>↓ New</option><option value="date-old">↑ Old</option><option value="score-high">↓ Score</option><option value="expires">⏰ Expires</option><option value="ask-low">↑ Price</option></select>
     </div>
     <div id="filter-bar">
       <div class="ftab on" data-f="ALL">All</div>
@@ -408,11 +408,10 @@ a{color:var(--accent)}
       <div class="ftab" data-f="PENDING">Pending</div>
     </div>
     
-    <div style="display:flex;gap:6px;padding:0 12px">
-      
-        <button id="add-deal-btn-sidebar" onclick="openAddDeal()" style="flex:1;background:rgba(255,200,80,.08);border:1px solid rgba(255,200,80,.25);border-radius:6px;color:var(--accent);font-size:12px;font-weight:700;padding:7px 10px;cursor:pointer;letter-spacing:.2px;white-space:nowrap">&#x2795; Add Deal</button>
-        <button id="ref-btn" style="flex:1">↻ Pull Sheet</button>
-      <button id="rewrite-all-btn" onclick="doRewriteAll()" title="Re-underwrite all deals with updated brain" style="padding:8px 10px;font-size:10px;background:rgba(255,160,32,.1);border-color:rgba(255,160,32,.3);color:rgba(255,160,32,.8)">⚡ All</button>
+    <div style="display:flex;gap:6px;padding:0 12px 10px">
+      <button id="add-deal-btn-sidebar" onclick="openAddDeal()" title="Add Deal" style="flex:1;background:var(--accent-dim,rgba(255,200,80,.12));border:1px solid var(--accent,#f5c842);color:var(--accent,#f5c842);border-radius:6px;cursor:pointer;font-size:18px;padding:8px 0;line-height:1">➕</button>
+      <button id="ref-btn" title="Pull from Derek's Sheet" style="flex:1;background:var(--bg2);border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-size:18px;padding:8px 0;line-height:1">↻</button>
+      <button id="rewrite-all-btn" onclick="doRewriteAll()" title="Re-underwrite All" style="flex:1;background:rgba(255,200,80,.08);border:1px solid rgba(255,200,80,.3);color:var(--accent,#f5c842);border-radius:6px;cursor:pointer;font-size:18px;padding:8px 0;line-height:1">⚡</button>
     </div>
     <div id="deal-list"></div>
     <div id="ws-scorecards" style="padding:8px 12px;border-top:1px solid var(--border)">
@@ -1535,7 +1534,7 @@ function renderList() {
     const status = d.needsAddress ? 'NEEDS ADDRESS' : (d.underwriteStatus || 'PENDING');
     const normStatus = status === 'HARD NO' ? 'HARDNO' : status === 'NEED COMPS' ? 'NEEDCOMPS' : status === 'NEEDS ADDRESS' ? 'NEEDSADDRESS' : status;
     if (hideHardNo && status === 'HARD NO' && curFilter !== 'HARDNO') return false; // HARD NO toggle
-    const matchFilter = (curFilter === 'ALL' && normStatus !== 'HARD NO' && normStatus !== 'HARD_NO') 
+    const matchFilter = curFilter === 'ALL' 
       || normStatus === curFilter
       || (curFilter === 'BUY' && (status === 'BUY' || status === 'HOT'))
       || (curFilter === 'PASS' && status === 'PASS')
