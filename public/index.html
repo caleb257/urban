@@ -279,7 +279,8 @@ a{color:var(--accent)}
     </div>
     <div id="deal-list"></div>
     <div style="display:flex;gap:6px;padding:0 12px">
-      <button id="ref-btn" style="flex:1">↻ Pull from Derek's Sheet</button>
+      <button onclick="openAddDeal()" style="flex:1;background:rgba(255,200,80,.08);border:1px solid rgba(255,200,80,.2);border-radius:6px;color:var(--accent);font-size:12px;font-weight:700;padding:7px 10px;cursor:pointer;letter-spacing:.2px">&#x2795; Add Deal</button>
+        <button id="ref-btn" style="flex:1">↻ Pull from Derek's Sheet</button>
       <button id="rewrite-all-btn" onclick="doRewriteAll()" title="Re-underwrite all deals with updated brain" style="padding:8px 10px;font-size:10px;background:rgba(255,160,32,.1);border-color:rgba(255,160,32,.3);color:rgba(255,160,32,.8)">⚡ All</button>
     </div>
     <div id="ws-scorecards" style="padding:8px 12px;border-top:1px solid var(--border)">
@@ -3131,7 +3132,7 @@ function showMapView() {
 }
 function hideMapView() {
   document.getElementById('main-map').style.display = 'none';
-  if (curDeal) { show('dv', true); } else { show('main-empty', true); }
+  if (curDeal) { show('dv', true); } else { show('main-empty', true); setUserBadge(); }
 }
 
 // -- PROFITS VIEW -----------------------------------------------------------
@@ -3517,6 +3518,42 @@ window.addEventListener('message', e => {
   if (e.data?.action === 'switchTab') switchTab(e.data.tab);
   if (e.data?.action === 'getDeals') e.source?.postMessage({ deals: deals.map(d=>({address:d.address,status:d.underwriteStatus})) }, '*');
 });
+
+// ── ADD DEAL ─────────────────────────────────────────────────────────────────
+function openAddDeal(){const m=document.getElementById('add-deal-modal');if(m){m.style.display='flex';setTimeout(()=>document.getElementById('add-deal-text')?.focus(),50);}}
+function closeAddDeal(){const m=document.getElementById('add-deal-modal');if(m)m.style.display='none';const t=document.getElementById('add-deal-text');if(t)t.value='';const s=document.getElementById('add-deal-status');if(s)s.textContent='';}
+async function submitAddDeal(){
+  const text=(document.getElementById('add-deal-text')?.value||'').trim();if(!text)return;
+  const btn=document.getElementById('add-deal-btn'),status=document.getElementById('add-deal-status');
+  btn.disabled=true;btn.textContent='Parsing...';
+  try{
+    const r=await fetch('/api/add-deal',{method:'POST',headers:{'x-urban-token':TOKEN,'Content-Type':'application/json'},body:JSON.stringify({text,addedBy:AUTHOR})});
+    const data=await r.json();
+    if(r.ok){status.style.color='var(--buy)';status.textContent='Added: '+data.uid+' — underwriting. Tell Derek to log it.';btn.textContent='Done';
+      if(data.deal){deals.unshift({...data.deal,underwriteStatus:'PENDING'});renderList();}
+      setTimeout(()=>{closeAddDeal();if(data.uid)selectDeal(deals.find(d=>d.uid===data.uid)||{uid:data.uid,address:data.uid});},1800);
+    } else if(r.status===409){status.style.color='var(--accent)';status.textContent=data.error;btn.textContent='Parse & Underwrite';btn.disabled=false;
+      if(data.existingUid)setTimeout(()=>{closeAddDeal();selectDeal(deals.find(d=>d.uid===data.existingUid));},1200);
+    } else{status.style.color='#cc4466';status.textContent=data.error||'Error';btn.textContent='Parse & Underwrite';btn.disabled=false;}
+  }catch(e){status.style.color='#cc4466';status.textContent='Error: '+e.message;btn.textContent='Parse & Underwrite';btn.disabled=false;}
+}
+function setUserBadge(){
+  const isCaleb=TOKEN==='ccg-caleb-K9x4mP2v';
+  document.title=isCaleb?'Urban — Caleb':'Urban — Grant';
+  const logo=document.querySelector('.logo-text,.hdr-brand,h1');if(logo)logo.title=isCaleb?'Logged in: Caleb (Admin)':'Logged in: Grant';
+}
 </script>
+<div id="add-deal-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;width:520px;max-width:95vw">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:800;color:var(--text)">&#x2795; Add a Deal</div>
+      <button onclick="closeAddDeal()" style="background:transparent;border:none;color:var(--muted);font-size:22px;cursor:pointer">&#x00D7;</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Paste a text message, email, or deal sheet. Urban parses + underwrites immediately. Will flag for Derek to log.</div>
+    <textarea id="add-deal-text" placeholder="Paste deal info here..." style="width:100%;height:160px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;padding:12px;box-sizing:border-box;resize:vertical"></textarea>
+    <button id="add-deal-btn" onclick="submitAddDeal()" style="width:100%;margin-top:12px;padding:13px;background:rgba(255,200,80,.1);border:1px solid rgba(255,200,80,.3);border-radius:8px;color:var(--accent);font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.3px">&#x26A1; Parse &amp; Underwrite</button>
+    <div id="add-deal-status" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center;min-height:18px"></div>
+  </div>
+</div>
 </body>
 </html>
