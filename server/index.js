@@ -153,7 +153,28 @@ function getAnthropic() {
 }
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
-const PASSWORD  = process.env.URBAN_PASSWORD || 'coralstone2025';
+// ── USERS — dual login + IP tracking ─────────────────────────────────────────
+const USERS = {
+  [process.env.URBAN_PASSWORD || 'coralstone2025']: { name: 'grant', role: 'user' },
+  [process.env.URBAN_CALEB_TOKEN || 'ccg-caleb-K9x4mP2v']: { name: 'caleb', role: 'admin' },
+};
+const ACCESS_LOG = [];
+function logAccess(user, ip, ua, path) {
+  ACCESS_LOG.unshift({ user, ip, ua: (ua||'').slice(0,80), path, ts: new Date().toISOString() });
+  if (ACCESS_LOG.length > 1000) ACCESS_LOG.length = 1000;
+  if (user === 'grant') {
+    const since = Date.now() - 86400000;
+    const grantIPs = new Set(ACCESS_LOG.filter(e=>e.user==='grant' && new Date(e.ts).getTime()>since).map(e=>e.ip));
+    if (grantIPs.size >= 3) {
+      urbanBrain.securityAlerts = urbanBrain.securityAlerts || [];
+      const key = [...grantIPs].sort().join(',');
+      if (!urbanBrain.securityAlerts.some(a=>a.key===key)) {
+        urbanBrain.securityAlerts.push({ key, type:'multi-ip-grant', ips:[...grantIPs], ts:new Date().toISOString() });
+        saveBrain().catch(()=>{});
+      }
+    }
+  }
+}
 const ADAM_URL  = process.env.ADAM_URL || '';
 const ADAM_TOKEN = process.env.ADAM_TOKEN || 'coralstone2025';
 const BRAIN_FILE = path.join(__dirname, '../data/brain.json');
@@ -2762,8 +2783,12 @@ OUTPUT: ONLY valid JSON, no markdown, no extra text..`;
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function auth(req, res, next) {
   const token = req.headers['x-urban-token'] || req.query.token;
-  if (token === PASSWORD) return next();
-  res.status(401).json({ error: 'Unauthorized' });
+  const user = USERS[token];
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  const ip = (req.headers['x-forwarded-for']||'').split(',')[0].trim() || req.socket?.remoteAddress || '?';
+  logAccess(user.name, ip, req.headers['user-agent'], req.path);
+  req.user = user; req.author = user.name;
+  next();
 }
 
 // ── ROUTES ────────────────────────────────────────────────────────────────────
@@ -3320,6 +3345,39 @@ app.get('/api/sheet-audit', auth, async (req, res) => {
     results.importedCount = results.imported.length;
     results.skippedCount = results.skippedBlankAddr.length + results.skippedXXXX.length + results.skippedOther.length;
     res.json(results);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── ACCESS LOG (admin only) ──────────────────────────────────────────────────
+app.get('/api/access-log', auth, (req, res) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const grantIPs = [...new Set(ACCESS_LOG.filter(e=>e.user==='grant').map(e=>e.ip))];
+  res.json({ log: ACCESS_LOG.slice(0,300), summary: { caleb: ACCESS_LOG.filter(e=>e.user==='caleb').length, grant: ACCESS_LOG.filter(e=>e.user==='grant').length, grantUniqueIPs: grantIPs }, securityAlerts: urbanBrain.securityAlerts||[] });
+});
+
+// ── ADD A DEAL (paste text → Claude parses → underwrite) ─────────────────────
+app.post('/api/add-deal', auth, async (req, res) => {
+  try {
+    const { text, addedBy } = req.body || {};
+    if (!text || text.trim().length < 10) return res.status(400).json({ error: 'Paste deal text first' });
+    const parseRes = await getAnthropic().messages.create({ model: 'claude-sonnet-4-6', max_tokens: 500,
+      system: 'Extract real estate deal info from the text. Return ONLY valid JSON (no markdown, no explanation): { "address":"", "city":"", "state":"FL", "zip":"", "askingPrice":0, "beds":0, "baths":0, "sqft":0, "yearBuilt":0, "construction":"", "wholesaler":"", "wholesalerPhone":"", "arv":0, "rehab":0, "notes":"" }. Use 0 or empty string for missing fields.',
+      messages: [{ role: 'user', content: text.slice(0,3000) }],
+    });
+    let parsed;
+    try { parsed = JSON.parse(parseRes.content[0].text.replace(/```json?|```/g,'').trim()); }
+    catch(e) { return res.status(400).json({ error: 'Could not parse — paste more detail including the full street address' }); }
+    if (!parsed.address || !parsed.city) return res.status(400).json({ error: 'No address found in that text — include the full street address' });
+    const uid = (parsed.address + ', ' + parsed.city).trim();
+    if (!sheetCache) global.sheetCache = [];
+    const existing = sheetCache.find(d => (d.uid||'').toLowerCase()===uid.toLowerCase() || (d.address||'').toLowerCase()===(parsed.address||'').toLowerCase());
+    if (existing) return res.status(409).json({ error: 'Already in Urban: ' + (existing.uid||existing.address), existingUid: existing.uid });
+    const county = inferCounty(parsed.city) || '';
+    const deal = { uid, address: parsed.address, city: parsed.city, state: parsed.state||'FL', zip: parsed.zip||'', county, beds: parsed.beds||0, baths: parsed.baths||0, sqft: parsed.sqft||0, yearBuilt: parsed.yearBuilt||0, construction: parsed.construction||'', askingPrice: parsed.askingPrice||0, wholesaler: parsed.wholesaler||req.author, wholesalerPhone: parsed.wholesalerPhone||'', source: 'manual-upload', addedBy: addedBy||req.author, isManual: true, dateReceived: new Date().toISOString(), needsSheet: true };
+    sheetCache.push(deal);
+    underwrites[uid] = underwrites[uid] || {};
+    setTimeout(() => runUnderwrite(uid, false).catch(()=>{}), 300);
+    res.json({ ok: true, uid, deal });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
