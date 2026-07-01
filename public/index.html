@@ -222,6 +222,8 @@ a{color:var(--accent)}
 .map-pin-meta{display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
 .map-pin-btn{display:block;width:100%;text-align:center;background:var(--accent);color:#000;border:none;border-radius:5px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)}
 .ql-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-weight:600;text-decoration:none;transition:background .15s;white-space:nowrap}.ql-btn:hover{background:var(--bg2)}
+.NEEDCOMPS{background:rgba(224,148,32,.12) !important;color:#e09420 !important;border-color:rgba(224,148,32,.35) !important}
+.NEEDSADDRESS{background:rgba(155,89,182,.12) !important;color:#9b59b6 !important;border-color:rgba(155,89,182,.35) !important}
 </style>
 </head>
 <body>
@@ -1417,8 +1419,8 @@ function renderList() {
     return 0;
   });
   const filtered = deals.filter(d => {
-    const status = d.underwriteStatus || 'PENDING';
-    const normStatus = status === 'HARD NO' ? 'HARDNO' : status;
+    const status = d.needsAddress ? 'NEEDS ADDRESS' : (d.underwriteStatus || 'PENDING');
+    const normStatus = status === 'HARD NO' ? 'HARDNO' : status === 'NEED COMPS' ? 'NEEDCOMPS' : status === 'NEEDS ADDRESS' ? 'NEEDSADDRESS' : status;
     if (hideHardNo && status === 'HARD NO' && curFilter !== 'HARDNO') return false; // HARD NO toggle
     const matchFilter = curFilter === 'ALL' 
       || normStatus === curFilter
@@ -3267,7 +3269,7 @@ function renderProfitsD(data) {
   document.getElementById('profits-content-d').innerHTML = html;
 }
 function mapPinColorD(v) {
-  const m = {HOT:'#ff4444', BUY:'#44cc88', REVIEW:'#f0a030', PASS:'#6688aa', 'HARD NO':'#cc4466', PENDING:'#666680'};
+  const m = {HOT:'#ff4444', BUY:'#44cc88', REVIEW:'#f0a030', PASS:'#6688aa', 'HARD NO':'#cc4466', 'NEED COMPS':'#e09420', 'NEEDS ADDRESS':'#9b59b6', PENDING:'#666680'};
   return m[v] || '#666680';
 }
 function plotMapPinsD() {
