@@ -279,7 +279,8 @@ a{color:var(--accent)}
     </div>
     <div id="deal-list"></div>
     <div style="display:flex;gap:6px;padding:0 12px">
-      <button onclick="openAddDeal()" style="flex:1;background:rgba(255,200,80,.08);border:1px solid rgba(255,200,80,.2);border-radius:6px;color:var(--accent);font-size:12px;font-weight:700;padding:7px 10px;cursor:pointer;letter-spacing:.2px">&#x2795; Add Deal</button>
+      
+        <button id="add-deal-btn-sidebar" onclick="openAddDeal()" style="flex:1;background:rgba(255,200,80,.08);border:1px solid rgba(255,200,80,.25);border-radius:6px;color:var(--accent);font-size:12px;font-weight:700;padding:7px 10px;cursor:pointer;letter-spacing:.2px;white-space:nowrap">&#x2795; Add Deal</button>
         <button id="ref-btn" style="flex:1">↻ Pull from Derek's Sheet</button>
       <button id="rewrite-all-btn" onclick="doRewriteAll()" title="Re-underwrite all deals with updated brain" style="padding:8px 10px;font-size:10px;background:rgba(255,160,32,.1);border-color:rgba(255,160,32,.3);color:rgba(255,160,32,.8)">⚡ All</button>
     </div>
