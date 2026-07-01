@@ -6,7 +6,7 @@ const TAMPA = require('./tampaKnowledge');
 // ── CCG TARGET COUNTIES ────────────────────────────────────────────────────────
 // Only underwrite and display deals in these counties — everything else is ignored
 const CCG_COUNTIES = new Set([
-  'pasco', 'polk', 'hillsborough', 'pinellas', 'sarasota', 'hernando'
+  'pasco', 'polk', 'hillsborough', 'pinellas', 'sarasota', 'hernando', 'citrus'
 ]);
 
 
@@ -83,9 +83,9 @@ function isTargetCounty(county, city) {
   if (city) {
     const inferred = inferCounty(city);
     if (inferred) return CCG_COUNTIES.has(inferred);
-    return true;  // city not in our lookup → include by default (let Urban evaluate)
+    return false; // city not in our lookup → exclude (Derek shouldn't be sending outside CCG area)
   }
-  return true; // no data — include by default
+  return false; // no county + no city → exclude
 }
 
 const express = require('express');
