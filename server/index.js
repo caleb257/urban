@@ -3257,7 +3257,8 @@ app.post('/api/auto-underwrite-batch', auth, async (req, res) => {
 app.get('/api/sheet-audit', auth, async (req, res) => {
   try {
     // Pull raw rows directly from the sheet, same call as getDealsFromSheet but unfiltered
-    const response = await sheets.spreadsheets.values.get({
+    const _s = getSheets();
+    const response = await _s.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: 'Active Deals!A1:CV2000'
     });
