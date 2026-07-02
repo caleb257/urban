@@ -3542,8 +3542,8 @@ app.post('/api/add-deal', auth, async (req, res) => {
     if (!parsed.address || !parsed.city) return res.status(400).json({ error: 'No address found in that text — include the full street address' });
     const uid = (parsed.address + ', ' + parsed.city).trim();
     if (!deals) global.deals = [];
-    const deals = await getDealsFromSheet();
-    const existing = deals.find(d => (d.uid||'').toLowerCase()===uid.toLowerCase() || (d.address||'').toLowerCase()===(parsed.address||'').toLowerCase());
+    const liveDeals = await getDealsFromSheet();
+    const existing = liveDeals.find(d => (d.uid||'').toLowerCase()===uid.toLowerCase() || (d.address||'').toLowerCase()===(parsed.address||'').toLowerCase());
     if (existing) return res.status(409).json({ error: 'Already in Urban: ' + (existing.uid||existing.address), existingUid: existing.uid });
     const county = inferCounty(parsed.city) || '';
     const deal = { uid, address: parsed.address, city: parsed.city, state: parsed.state||'FL', zip: parsed.zip||'', county, beds: parsed.beds||0, baths: parsed.baths||0, sqft: parsed.sqft||0, yearBuilt: parsed.yearBuilt||0, construction: parsed.construction||'', askingPrice: parsed.askingPrice||0, wholesaler: parsed.wholesaler||req.author, wholesalerPhone: parsed.wholesalerPhone||'', source: 'manual-upload', addedBy: addedBy||req.author, isManual: true, dateReceived: new Date().toISOString(), needsSheet: true };
