@@ -149,7 +149,7 @@ app.get('/', (req, res) => {
 // Version endpoint — shows deployed commit for verification
 
 // Public health endpoint — Railway healthcheck uses this (no auth required)
-app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now(), v: 'EMBEDDED_HTML_5a9e0de', htmlLen: EMBEDDED_HTML.length }));
+app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now(), v: 'EMBEDDED_HTML_UPDATED_mr30x6m9', htmlLen: EMBEDDED_HTML.length }));
 const DEPLOY_VERSION = 'b6fb656';
 app.get('/api/version', auth, (req, res) => res.json({ 
   commit: DEPLOY_VERSION, 
