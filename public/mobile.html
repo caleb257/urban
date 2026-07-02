@@ -291,12 +291,12 @@ NEEDSADDRESS{background:rgba(155,89,182,.12);color:#9b59b6;border:1px solid rgba
     <button class="hdr-icon-btn" onclick="openProfits()" title="Profits">💰</button>
     <button class="hdr-icon-btn" onclick="loadDeals()">↻</button>
   </div>
-  <div class="stats-strip" id="stats-strip" style="display:flex;gap:8px;padding:10px 14px;overflow-x:auto">
-  <div class="stat-tile"><span class="stat-val" id="mob-st-active">—</span><span class="stat-lbl">ACTIVE</span></div>
-  <div class="stat-tile" style="border-color:rgba(255,200,80,.3);background:rgba(255,200,80,.05)"><span class="stat-val" id="mob-st-action" style="color:var(--accent)">—</span><span class="stat-lbl">&#x1F4B0; BUY/REV</span></div>
-  <div class="stat-tile"><span class="stat-val" id="mob-st-score">—</span><span class="stat-lbl">AVG SCORE</span></div>
-  <div class="stat-tile" style="opacity:.5"><span class="stat-val" id="mob-st-hardno" style="color:#cc4466">—</span><span class="stat-lbl">HARD NO</span></div>
-</div>
+  <div class="stats-strip" id="stats-strip"></div>
+  <div class="search-sort-row">
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="search-input" placeholder="Search address, city, wholesaler…" oninput="renderList()">
+      <button class="search-clear" id="search-clear" onclick="document.getElementById('search-input').value='';renderList();this.style.display='none'">✕</button>
+    </div>
     <select class="sort-select" id="sort-select" onchange="renderList()">
       <option value="date-new">↓ Newest</option>
       <option value="date-old">↑ Oldest</option>
@@ -312,7 +312,6 @@ NEEDSADDRESS{background:rgba(155,89,182,.12);color:#9b59b6;border:1px solid rgba
     <button class="ftab" onclick="setFilter('REVIEW',this)">Review</button>
     <button class="ftab" onclick="setFilter('PASS',this)">Pass</button>
     <button class="ftab" onclick="setFilter('PENDING',this)">Pending</button>
-    <button class="ftab" onclick="setFilter('HARDNO',this)" style="color:#cc4466">Hard No</button>
   </div></div>
   <div class="list-body" id="deal-list">
     <div class="loading"><div class="spin"></div>Loading deals…</div>
@@ -506,17 +505,21 @@ document.getElementById('token-inp').addEventListener('keydown', function(e) {
 });
 
 // ── STATS STRIP ───────────────────────────────────────────────
-function renderStats() {
-  const active = allDeals.filter(d => d.underwriteStatus && d.underwriteStatus !== 'HARD NO');
-  const hardNo = allDeals.filter(d => d.underwriteStatus === 'HARD NO');
-  const action = allDeals.filter(d => ['HOT','BUY','REVIEW'].includes(d.underwriteStatus));
-  const scored = active.filter(d => d.underwriteScore > 0);
-  const avg = scored.length ? (scored.reduce((a,d)=>a+(d.underwriteScore||0),0)/scored.length).toFixed(1) : '—';
-  const el = id => document.getElementById(id);
-  if(el('mob-st-active')) el('mob-st-active').textContent = active.length||'0';
-  if(el('mob-st-action')) el('mob-st-action').textContent = action.length||'0';
-  if(el('mob-st-score')) el('mob-st-score').textContent = avg;
-  if(el('mob-st-hardno')) el('mob-st-hardno').textContent = hardNo.length||'0';
+function renderStats(s) {
+  const strip = document.getElementById('stats-strip');
+  if (!strip || !s) return;
+  const total = s.totalUnderwritten || 0;
+  const avgScore = s.avgScore ? s.avgScore.toFixed(1) : '—';
+  const buyCount = (s.verdicts && (s.verdicts.HOT||0) + (s.verdicts.BUY||0)) || 0;
+  const avgProfit = s.avgProfit ? fmtK(s.avgProfit) : '—';
+  strip.innerHTML = [
+    ['Underwritten', total],
+    ['Avg Score', avgScore],
+    ['💰 Buy/Hot', buyCount],
+    ['Avg Profit', avgProfit],
+  ].map(function(p) {
+    return '<div class="stat-chip"><div class="stat-chip-val">' + p[1] + '</div><div class="stat-chip-lbl">' + p[0] + '</div></div>';
+  }).join('');
 }
 
 function loadStats() {
@@ -547,12 +550,11 @@ function renderList() {
   const q = (document.getElementById('search-input').value || '').toLowerCase().trim();
   const clearBtn = document.getElementById('search-clear');
   if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
-  const sortBy = document.getElementById('sort-select').value || 'score-high';
+  const sortBy = document.getElementById('sort-select').value || 'date-new';
 
   let filtered = allDeals.filter(function(d) {
     const v = d.underwriteStatus || 'PENDING';
-    const matchFilter = curFilter === 'ALL' ? v !== 'HARD NO'
-      : curFilter === 'HARDNO' ? v === 'HARD NO'
+    const matchFilter = curFilter === 'ALL' ? true
       : curFilter === 'PENDING' ? (v === 'PENDING' || !d.underwriteStatus)
       : v === curFilter;
     if (!matchFilter) return false;
