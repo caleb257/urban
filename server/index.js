@@ -3298,8 +3298,8 @@ app.post('/api/update-address', auth, async (req, res) => {
     const { oldUid, newAddress, author } = req.body || {};
     if (!oldUid || !newAddress) return res.status(400).json({ error: 'oldUid and newAddress required' });
     // Find the deal in memory cache
-    let deal = sheetCache.find(d => (d.uid||'').toLowerCase().trim() === (oldUid||'').toLowerCase().trim())
-             || sheetCache.find(d => d.needsAddress && (d.city||'').toLowerCase().trim() === (oldUid||'').toLowerCase().trim());
+    let deal = deals.find(d => (d.uid||'').toLowerCase().trim() === (oldUid||'').toLowerCase().trim())
+             || deals.find(d => d.needsAddress && (d.city||'').toLowerCase().trim() === (oldUid||'').toLowerCase().trim());
     if (!deal) return res.status(404).json({ error: 'Deal not found in sheet cache. Try pulling from Derek\'s sheet first.' });
     // Update in memory
     deal.address = newAddress.trim();
@@ -3403,8 +3403,8 @@ async function adamAddDeal(parsed, source) {
     return { ok: false, reason: 'xxxx_address', wholesaler: parsed.wholesaler };
   }
   const uid = (parsed.address + ', ' + parsed.city).trim();
-  if (!sheetCache) global.sheetCache = [];
-  const dupe = sheetCache.find(d => (d.address||'').toLowerCase() === parsed.address.toLowerCase());
+  if (!deals) global.deals = [];
+  const dupe = deals.find(d => (d.address||'').toLowerCase() === parsed.address.toLowerCase());
   if (dupe) {
     adamLog(`Duplicate skipped: ${uid}`, 'skip');
     return { ok: false, reason: 'duplicate', uid };
@@ -3419,7 +3419,7 @@ async function adamAddDeal(parsed, source) {
     source: 'adam-auto', addedBy: 'adam', isAdam: true,
     dateReceived: new Date().toISOString(), needsSheet: true,
   };
-  sheetCache.push(deal);
+  deals.push(deal);
   underwrites[uid] = underwrites[uid] || {};
   setTimeout(() => runUnderwrite(uid, false).catch(()=>{}), 500);
   adamLog(`Added: ${uid} (ask: ${parsed.askingPrice||'?'}, ARV: ${parsed.arv||'?'})`, 'add');
@@ -3541,12 +3541,12 @@ app.post('/api/add-deal', auth, async (req, res) => {
     catch(e) { return res.status(400).json({ error: 'Could not parse — paste more detail including the full street address' }); }
     if (!parsed.address || !parsed.city) return res.status(400).json({ error: 'No address found in that text — include the full street address' });
     const uid = (parsed.address + ', ' + parsed.city).trim();
-    if (!sheetCache) global.sheetCache = [];
-    const existing = sheetCache.find(d => (d.uid||'').toLowerCase()===uid.toLowerCase() || (d.address||'').toLowerCase()===(parsed.address||'').toLowerCase());
+    if (!deals) global.deals = [];
+    const existing = deals.find(d => (d.uid||'').toLowerCase()===uid.toLowerCase() || (d.address||'').toLowerCase()===(parsed.address||'').toLowerCase());
     if (existing) return res.status(409).json({ error: 'Already in Urban: ' + (existing.uid||existing.address), existingUid: existing.uid });
     const county = inferCounty(parsed.city) || '';
     const deal = { uid, address: parsed.address, city: parsed.city, state: parsed.state||'FL', zip: parsed.zip||'', county, beds: parsed.beds||0, baths: parsed.baths||0, sqft: parsed.sqft||0, yearBuilt: parsed.yearBuilt||0, construction: parsed.construction||'', askingPrice: parsed.askingPrice||0, wholesaler: parsed.wholesaler||req.author, wholesalerPhone: parsed.wholesalerPhone||'', source: 'manual-upload', addedBy: addedBy||req.author, isManual: true, dateReceived: new Date().toISOString(), needsSheet: true };
-    sheetCache.push(deal);
+    deals.push(deal);
     underwrites[uid] = underwrites[uid] || {};
     setTimeout(() => runUnderwrite(uid, false).catch(()=>{}), 300);
     res.json({ ok: true, uid, deal });
