@@ -3,106 +3,125 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Wholesalers — CCG</title>
+<title>Wholesalers &mdash; CCG</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0d0d0d;color:#e8e2d6;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh}
-header{background:#111;border-bottom:1px solid #222;padding:14px 20px;display:flex;align-items:center;gap:16px}
-header a{color:#7a7060;text-decoration:none;font-size:13px;white-space:nowrap}
-header h1{font-size:17px;font-weight:700;letter-spacing:2px;color:#c8aa60}
-.search{background:#111;border-bottom:1px solid #1a1a1a;padding:10px 16px}
-.search input{width:100%;background:#1a1a1a;border:1px solid #2a2a2a;color:#e8e2d6;border-radius:8px;padding:9px 14px;font-size:14px;outline:none}
+body{background:#0d0d0d;color:#e8e2d6;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+header{background:#111;border-bottom:1px solid #222;padding:14px 18px;display:flex;align-items:center;gap:16px}
+header a{color:#7a7060;text-decoration:none;font-size:13px}
+header h1{font-size:16px;font-weight:700;letter-spacing:2px;color:#c8aa60}
+.search{background:#0f0f0f;border-bottom:1px solid #1a1a1a;padding:10px 14px}
+.search input{width:100%;background:#1a1a1a;border:1px solid #252525;color:#e8e2d6;border-radius:8px;padding:9px 14px;font-size:14px;outline:none}
 .search input:focus{border-color:#c8aa60}
-.company{border-bottom:1px solid #161616}
-.co-hdr{padding:13px 16px;cursor:pointer;display:flex;align-items:center;gap:12px}
-.co-hdr:hover{background:#111}
-.co-name{font-weight:700;font-size:14px;flex:1}
-.co-meta{display:flex;gap:8px;align-items:center;margin-top:2px;flex-wrap:wrap}
-.badge{font-size:11px;padding:2px 7px;border-radius:4px;background:#1a1a1a;color:#666}
-.badge.warn{background:rgba(245,166,35,.1);color:#f5a623}
-.co-count{font-size:18px;font-weight:700;color:#c8aa60;min-width:32px;text-align:right}
-.chevron{color:#333;font-size:16px;transition:transform .2s;flex-shrink:0}
-.open .chevron{transform:rotate(90deg)}
-.agents{display:none;padding-bottom:6px}
+.co{border-bottom:1px solid #141414}
+.co-h{padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px}
+.co-h:hover{background:#0f0f0f}
+.co-name{font-weight:700;font-size:14px;flex:1;min-width:0}
+.meta{display:flex;gap:7px;margin-top:3px;flex-wrap:wrap}
+.badge{font-size:11px;padding:2px 7px;border-radius:4px;background:#1a1a1a;color:#555}
+.warn{background:rgba(245,166,35,.08);color:#f5a623}
+.count{font-size:17px;font-weight:700;color:#c8aa60;flex-shrink:0}
+.chev{color:#2a2a2a;transition:transform .2s;font-size:18px;flex-shrink:0}
+.open .chev{transform:rotate(90deg)}
+.agents{display:none;padding-bottom:4px}
 .open+.agents{display:block}
-.agent{padding:12px 16px 12px 32px;border-top:1px solid #131313;display:flex;gap:10px;align-items:flex-start}
-.av{width:34px;height:34px;border-radius:50%;background:#1e1a12;border:1px solid #2a2408;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#c8aa60;flex-shrink:0}
+.ag{padding:11px 14px 11px 28px;border-top:1px solid #111;display:flex;gap:10px;align-items:flex-start}
+.av{width:34px;height:34px;border-radius:50%;background:#1c1709;border:1px solid #2a2208;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#c8aa60;flex-shrink:0}
 .ai{flex:1;min-width:0}
 .an{font-weight:600;font-size:13px}
 .ac{display:flex;flex-wrap:wrap;gap:8px;margin-top:3px}
-.ac a{color:#6496c8;font-size:12px;text-decoration:none}
+.ac a{color:#5a8ab8;font-size:12px;text-decoration:none}
 .ac a:hover{text-decoration:underline}
-.avs{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.av2{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
 .vp{font-size:11px;padding:2px 6px;border-radius:4px}
-.vb{background:rgba(100,200,130,.12);color:#64c882}
+.vb{background:rgba(80,180,110,.12);color:#50b46e}
 .vr{background:rgba(245,200,80,.08);color:#f5c842}
-.vp2{background:rgba(120,110,90,.12);color:#7a7060}
-.vh{background:rgba(200,60,60,.1);color:#cc4466}
-.vc{background:rgba(100,150,200,.1);color:#6496c8}
+.vp2{background:rgba(120,110,90,.1);color:#6a6050}
+.vh{background:rgba(200,60,60,.1);color:#c04060}
+.vc{background:rgba(80,140,200,.08);color:#5080c8}
 .sc{font-size:12px;margin-top:4px}
-.sc.g{color:#64c882}.sc.y{color:#f5c842}.sc.r{color:#cc4466}
+.sc.g{color:#50b46e}.sc.y{color:#f5c842}.sc.r{color:#c04060}
 .aw{font-size:11px;color:#f5a623;margin-top:3px}
-.dc{font-size:16px;font-weight:700;color:#c8aa60;flex-shrink:0}
-.empty{padding:60px 16px;text-align:center;color:#444;font-size:14px}
+.dc{font-size:15px;font-weight:700;color:#c8aa60;flex-shrink:0;padding-top:2px}
+.empty{padding:50px 14px;text-align:center;color:#333;font-size:14px}
+.loading{padding:50px 14px;text-align:center;color:#444;font-size:14px}
 </style>
 </head>
 <body>
 <header>
-  <a id="back-link">&larr; Back to Urban</a>
+  <a id="bl">&larr; Back</a>
   <h1>WHOLESALERS</h1>
 </header>
-<div class="search"><input id="q" type="text" placeholder="Search company, agent, email, phone..." oninput="filter()"></div>
-<div id="list"></div>
+<div class="search"><input id="q" placeholder="Search company, agent, email, phone..." oninput="filterAll()"></div>
+<div id="list"><div class="loading">Loading wholesalers...</div></div>
 <script>
-var TOKEN = (location.search.match(/[?&]token=([^&]*)/) || [])[1] || '';
-document.getElementById('back-link').href = '/?token=' + TOKEN;
-var data = [];
+var TOKEN = (location.search.match(/[?&]token=([^&]+)/) || [])[1] || '';
+document.getElementById('bl').href = '/?token=' + TOKEN;
+var allData = [];
 
-function vclass(v) {
-  if (v === 'BUY' || v === 'HOT') return 'vb';
-  if (v === 'REVIEW') return 'vr';
-  if (v === 'PASS') return 'vp2';
-  if (v === 'HARD NO') return 'vh';
-  return 'vc';
+function buildData(deals, brain) {
+  var companies = {};
+  var ws = brain.wholesalerStats || {};
+  deals.forEach(function(d) {
+    for (var i = 1; i <= 3; i++) {
+      var name = d['contact' + i + 'Name'];
+      if (!name) continue;
+      var co = (d['contact' + i + 'Company'] || 'Unknown').trim();
+      var email = d['contact' + i + 'Email'] || '';
+      var phone = d['contact' + i + 'Phone'] || '';
+      var phone2 = d['contact' + i + 'Phone2'] || '';
+      var title = d['contact' + i + 'Title'] || '';
+      if (!companies[co]) companies[co] = { company: co, agents: {}, totalDeals: 0 };
+      var key = (name + '|' + email).toLowerCase();
+      if (!companies[co].agents[key]) companies[co].agents[key] = { name: name, email: email, phone: phone, phone2: phone2, title: title, dealCount: 0, verdicts: {}, arv: null, warn: false, _seen: {} };
+      var a = companies[co].agents[key];
+      if (!a._seen[d.uid]) { a._seen[d.uid] = 1; a.dealCount++; companies[co].totalDeals++; var v = d.underwriteStatus || 'PENDING'; a.verdicts[v] = (a.verdicts[v] || 0) + 1; }
+    }
+  });
+  Object.keys(ws).forEach(function(email) {
+    var st = ws[email];
+    var co = (st.company || 'Unknown').trim();
+    if (!companies[co]) companies[co] = { company: co, agents: {}, totalDeals: 0 };
+    var key = ((st.name || email) + '|' + email).toLowerCase();
+    if (!companies[co].agents[key]) companies[co].agents[key] = { name: st.name || email, email: email, phone: '', phone2: '', title: '', dealCount: st.deals || 0, verdicts: st.verdicts || {}, arv: st.avgARVInflation || null, warn: st.inflationWarning || false, _seen: {} };
+    else { var a = companies[co].agents[key]; if (!a.email && email !== 'unknown') a.email = email; if (st.avgARVInflation != null) a.arv = st.avgARVInflation; if (st.inflationWarning) a.warn = true; }
+  });
+  return Object.values(companies).map(function(co) {
+    return { company: co.company, totalDeals: co.totalDeals, agents: Object.values(co.agents).sort(function(a,b){ return b.dealCount - a.dealCount; }) };
+  }).filter(function(co){ return co.totalDeals > 0; }).sort(function(a,b){ return b.totalDeals - a.totalDeals; });
 }
-function vlabel(v) {
-  if (v === 'HARD NO') return 'HARD NO';
-  if (v === 'NEED COMPS') return 'COMPS';
-  return v;
-}
+
+function vcls(v) { return v==='BUY'||v==='HOT'?'vb':v==='REVIEW'?'vr':v==='PASS'?'vp2':v==='HARD NO'?'vh':'vc'; }
+function vlbl(v) { return v==='HARD NO'?'HARD NO':v==='NEED COMPS'?'COMPS':v; }
 
 function agentHtml(a) {
   var init = (a.name || '?').split(' ').map(function(w){ return w[0]||''; }).join('').slice(0,2).toUpperCase();
-  var total = Object.values(a.verdicts || {}).reduce(function(s,n){ return s+n; }, 0);
-  var action = ['BUY','HOT','REVIEW'].reduce(function(s,v){ return s + (a.verdicts[v]||0); }, 0);
-  var pct = total > 0 ? Math.round(action/total*100) : 0;
+  var total = Object.values(a.verdicts).reduce(function(s,n){ return s+n; }, 0);
+  var act = ['BUY','HOT','REVIEW'].reduce(function(s,v){ return s+(a.verdicts[v]||0); }, 0);
+  var pct = total > 0 ? Math.round(act/total*100) : 0;
   var sc = pct >= 30 ? 'g' : pct >= 10 ? 'y' : 'r';
-  var vhtml = Object.keys(a.verdicts||{}).map(function(v){ return '<span class="vp ' + vclass(v) + '">' + (a.verdicts[v]||0) + ' ' + vlabel(v) + '</span>'; }).join('');
+  var vhtml = Object.keys(a.verdicts).filter(function(v){ return a.verdicts[v] > 0; }).map(function(v){ return '<span class="vp ' + vcls(v) + '">' + (a.verdicts[v]||0) + ' ' + vlbl(v) + '</span>'; }).join('');
   var phones = [a.phone, a.phone2].filter(Boolean).map(function(p){ return '<a href="tel:' + p + '">' + p + '</a>'; }).join('');
   var email = a.email ? '<a href="mailto:' + a.email + '">' + a.email + '</a>' : '';
-  var arv = (a.arv && parseFloat(a.arv) > 10) ? '<div class="aw">&#9888;&#65039; ARV inflated avg ' + parseFloat(a.arv).toFixed(1) + '%</div>' : '';
-  return '<div class="agent"><div class="av">' + init + '</div><div class="ai"><div class="an">' + (a.name||'') + '</div><div class="ac">' + email + phones + '</div><div class="avs">' + vhtml + '</div><div class="sc ' + sc + '">' + pct + '% actionable &middot; ' + total + ' deal' + (total!==1?'s':'') + '</div>' + arv + '</div><div class="dc">' + total + '</div></div>';
+  var arv = (a.arv && parseFloat(a.arv) > 10) ? '<div class="aw">&#x26A0;&#xFE0F; Inflated ARV avg ' + parseFloat(a.arv).toFixed(1) + '%</div>' : '';
+  return '<div class="ag"><div class="av">' + init + '</div><div class="ai"><div class="an">' + (a.name||'') + (a.title?' &middot; <span style="color:#555;font-size:11px">'+a.title+'</span>':'') + '</div><div class="ac">' + email + phones + '</div><div class="av2">' + vhtml + '</div><div class="sc ' + sc + '">' + pct + '% actionable &middot; ' + total + ' deal' + (total!==1?'s':'') + '</div>' + arv + '</div><div class="dc">' + total + '</div></div>';
 }
 
 function coHtml(co) {
   var warn = co.agents.some(function(a){ return a.warn; });
-  var wb = warn ? '<span class="badge warn">&#9888;&#65039; ARV Inflation</span>' : '';
-  var id = 'co' + co.company.replace(/[^a-z0-9]/gi,'_');
-  return '<div class="company"><div class="co-hdr" onclick="toggle(this)" id="' + id + '"><div><div class="co-name">' + co.company + '</div><div class="co-meta"><span class="badge">' + co.agents.length + ' agent' + (co.agents.length!==1?'s':'') + '</span><span class="badge">' + co.totalDeals + ' deals</span>' + wb + '</div></div><div style="display:flex;align-items:center;gap:8px"><div class="co-count">' + co.totalDeals + '</div><div class="chevron">&#8250;</div></div></div><div class="agents">' + co.agents.map(agentHtml).join('') + '</div></div>';
+  var wb = warn ? '<span class="badge warn">&#x26A0;&#xFE0F; ARV</span>' : '';
+  return '<div class="co"><div class="co-h" onclick="this.classList.toggle('open');this.nextElementSibling.style.display=this.classList.contains('open')?'block':'none'"><div><div class="co-name">' + co.company + '</div><div class="meta"><span class="badge">' + co.agents.length + ' agent' + (co.agents.length!==1?'s':'') + '</span><span class="badge">' + co.totalDeals + ' deals</span>' + wb + '</div></div><div style="display:flex;align-items:center;gap:8px"><div class="count">' + co.totalDeals + '</div><div class="chev">&#x203A;</div></div></div><div class="agents" style="display:none">' + co.agents.map(agentHtml).join('') + '</div></div>';
 }
 
 function render(d) {
-  var el = document.getElementById('list');
-  el.innerHTML = d.length ? d.map(coHtml).join('') : '<div class="empty">No wholesalers found.</div>';
+  document.getElementById('list').innerHTML = d.length ? d.map(coHtml).join('') : '<div class="empty">No wholesalers found.</div>';
 }
 
-function toggle(el) { el.classList.toggle('open'); }
-
-function filter() {
+function filterAll() {
   var q = document.getElementById('q').value.toLowerCase().trim();
-  if (!q) { render(data); return; }
+  if (!q) { render(allData); return; }
   var r = [];
-  data.forEach(function(co) {
+  allData.forEach(function(co) {
     if (co.company.toLowerCase().includes(q)) { r.push(co); return; }
     var ma = co.agents.filter(function(a){ return (a.name||'').toLowerCase().includes(q)||(a.email||'').toLowerCase().includes(q)||(a.phone||'').includes(q)||(a.phone2||'').includes(q); });
     if (ma.length) r.push({ company: co.company, totalDeals: co.totalDeals, agents: ma });
@@ -110,10 +129,15 @@ function filter() {
   render(r);
 }
 
-fetch('/api/wholesalers', { headers: { 'x-urban-token': TOKEN } })
-  .then(function(r){ return r.json(); })
-  .then(function(d){ data = d; render(d); })
-  .catch(function(){ document.getElementById('list').innerHTML = '<div class="empty">Could not load — invalid token.</div>'; });
+Promise.all([
+  fetch('/api/deals', { headers: { 'x-urban-token': TOKEN } }).then(function(r){ return r.json(); }),
+  fetch('/api/brain', { headers: { 'x-urban-token': TOKEN } }).then(function(r){ return r.json(); })
+]).then(function(results) {
+  allData = buildData(results[0], results[1]);
+  render(allData);
+}).catch(function(e) {
+  document.getElementById('list').innerHTML = '<div class="empty">Error loading data. Check your token.</div>';
+});
 </script>
 </body>
 </html>
