@@ -3419,7 +3419,8 @@ async function adamAddDeal(parsed, source) {
     source: 'adam-auto', addedBy: 'adam', isAdam: true,
     dateReceived: new Date().toISOString(), needsSheet: true,
   };
-  deals.push(deal);
+  if(!global.deals) global.deals = [];
+  global.deals.push(deal);
   underwrites[uid] = underwrites[uid] || {};
   setTimeout(() => runUnderwrite(uid, false).catch(()=>{}), 500);
   adamLog(`Added: ${uid} (ask: ${parsed.askingPrice||'?'}, ARV: ${parsed.arv||'?'})`, 'add');
