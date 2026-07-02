@@ -1999,7 +1999,7 @@ PUT THESE FIELDS FIRST — they are most important:
 
 IMPORTANT: arvNotes, recommendation, and notes fields can be detailed. All other text fields under 150 chars.. Valid JSON only. No markdown.`;
 
-  const model = deep ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
+  const model = deep ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5-20251001';
   console.log(`Underwriting ${deal.address} with ${model}`);
 
   // STATIC_SYSTEM is cached — reused across all underwrites at 90% off after first call
@@ -4874,168 +4874,46 @@ const MOBILE_PATH = require('path').join(__dirname, '../public/mobile.html');
 app.get('/m', (req, res) => res.sendFile(MOBILE_PATH));
 
 
-app.get('/api/wholesalers', requireAuth, (req, res) => {
-  const companies = {};
-  deals.forEach(d => {
-    for (let i = 1; i <= 3; i++) {
-      const name = d['contact' + i + 'Name']; if (!name) continue;
-      const co = (d['contact' + i + 'Company'] || 'Unknown Company').trim();
-      const email = d['contact' + i + 'Email'] || ''; const phone = d['contact' + i + 'Phone'] || ''; const phone2 = d['contact' + i + 'Phone2'] || '';
+// WHOLESALERS API
+app.get('/api/wholesalers', requireAuth, function(req, res) {
+  var companies = {};
+  deals.forEach(function(d) {
+    for (var i = 1; i <= 3; i++) {
+      var name = d['contact' + i + 'Name'];
+      if (!name) continue;
+      var co = (d['contact' + i + 'Company'] || 'Unknown Company').trim();
+      var email = d['contact' + i + 'Email'] || '';
+      var phone = d['contact' + i + 'Phone'] || '';
+      var phone2 = d['contact' + i + 'Phone2'] || '';
       if (!companies[co]) companies[co] = { company: co, agents: {}, totalDeals: 0 };
-      const key = (name + '|' + email).toLowerCase();
-      if (!companies[co].agents[key]) companies[co].agents[key] = { name, email, phone, phone2, company: co, dealCount: 0, verdicts: {}, _s: new Set(), arv: null, warn: false };
-      const a = companies[co].agents[key];
-      if (!a._s.has(d.uid)) { a._s.add(d.uid); a.dealCount++; companies[co].totalDeals++; const v = d.underwriteStatus||'PENDING'; a.verdicts[v]=(a.verdicts[v]||0)+1; }
+      var key = (name + '|' + email).toLowerCase();
+      if (!companies[co].agents[key]) companies[co].agents[key] = { name: name, email: email, phone: phone, phone2: phone2, company: co, dealCount: 0, verdicts: {}, arv: null, warn: false };
+      var a = companies[co].agents[key];
+      if (!a._s) a._s = {};
+      if (!a._s[d.uid]) { a._s[d.uid] = 1; a.dealCount++; companies[co].totalDeals++; var v = d.underwriteStatus || 'PENDING'; a.verdicts[v] = (a.verdicts[v] || 0) + 1; }
     }
   });
-  Object.entries(urbanBrain.wholesalerStats||{}).forEach(([email,st]) => {
-    const co=(st.company||'Unknown Company').trim(); if(!companies[co])companies[co]={company:co,agents:{},totalDeals:0};
-    const key=((st.name||email)+'|'+email).toLowerCase();
-    if(!companies[co].agents[key])companies[co].agents[key]={name:st.name||email,email,phone:'',phone2:'',company:co,dealCount:st.deals||0,verdicts:st.verdicts||{},_s:new Set(),arv:st.avgARVInflation||null,warn:st.inflationWarning||false};
-    else{const a=companies[co].agents[key];if(!a.email&&email!=='unknown')a.email=email;if(st.avgARVInflation!=null)a.arv=st.avgARVInflation;if(st.inflationWarning)a.warn=true;}
+  Object.keys(urbanBrain.wholesalerStats || {}).forEach(function(email) {
+    var st = urbanBrain.wholesalerStats[email];
+    var co = (st.company || 'Unknown Company').trim();
+    if (!companies[co]) companies[co] = { company: co, agents: {}, totalDeals: 0 };
+    var key = ((st.name || email) + '|' + email).toLowerCase();
+    if (!companies[co].agents[key]) {
+      companies[co].agents[key] = { name: st.name || email, email: email, phone: '', phone2: '', company: co, dealCount: st.deals || 0, verdicts: st.verdicts || {}, arv: st.avgARVInflation || null, warn: st.inflationWarning || false };
+    } else {
+      var a = companies[co].agents[key];
+      if (!a.email && email !== 'unknown') a.email = email;
+      if (st.avgARVInflation != null) a.arv = st.avgARVInflation;
+      if (st.inflationWarning) a.warn = true;
+    }
   });
-  const r=Object.values(companies).map(co=>({...co,agents:Object.values(co.agents).map(a=>{const{_s,...rest}=a;return rest;}).sort((a,b)=>b.dealCount-a.dealCount)})).filter(co=>co.totalDeals>0).sort((a,b)=>b.totalDeals-a.totalDeals);
-  res.json(r);
+  var result = Object.values(companies).map(function(co) {
+    return { company: co.company, totalDeals: co.totalDeals, agents: Object.values(co.agents).map(function(a) { var b = {}; Object.keys(a).forEach(function(k){ if(k!=='_s') b[k]=a[k]; }); return b; }).sort(function(a,b){ return b.dealCount - a.dealCount; }) };
+  }).filter(function(co){ return co.totalDeals > 0; }).sort(function(a,b){ return b.totalDeals - a.totalDeals; });
+  res.json(result);
 });
-
-app.get('/wholesalers', requireAuth, (req, res) => {
-  res.type('html').send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wholesalers — CCG</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#0d0d0d;color:#e8e2d6;font-family:-apple-system,sans-serif;min-height:100vh}
-header{background:#111;border-bottom:1px solid #222;padding:14px 20px;display:flex;align-items:center;gap:14px}
-header h1{font-size:18px;font-weight:700;letter-spacing:2px;color:#e8e2d6}
-header a{color:#7a7060;text-decoration:none;font-size:13px}
-.search-bar{background:#111;border-bottom:1px solid #1e1e1e;padding:10px 20px}
-.search-bar input{width:100%;background:#1a1a1a;border:1px solid #333;color:#e8e2d6;border-radius:8px;padding:8px 12px;font-size:14px}
-.company-card{border-bottom:1px solid #1a1a1a;padding:0}
-.company-header{padding:14px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background .15s}
-.company-header:hover{background:#131313}
-.company-name{font-weight:700;font-size:15px}
-.company-meta{display:flex;gap:12px;align-items:center;margin-top:3px}
-.badge{font-size:11px;padding:2px 8px;border-radius:4px;background:#1e1e1e;color:#7a7060}
-.badge.warn{background:rgba(255,160,0,.12);color:#f5a623}
-.chevron{color:#444;transition:transform .2s;font-size:18px;flex-shrink:0}
-.company-header.open .chevron{transform:rotate(90deg)}
-.agents-list{display:none;padding:0 0 8px 0}
-.company-header.open + .agents-list{display:block}
-.agent-row{padding:12px 20px 12px 36px;border-top:1px solid #141414;display:flex;align-items:flex-start;gap:12px}
-.agent-row:first-child{border-top:none}
-.agent-avatar{width:36px;height:36px;border-radius:50%;background:#1e1a12;border:1px solid #333;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#c8aa60;flex-shrink:0}
-.agent-info{flex:1;min-width:0}
-.agent-name{font-weight:600;font-size:14px}
-.agent-contact{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
-.agent-contact a{color:#7a9ec8;font-size:12px;text-decoration:none}
-.agent-contact a:hover{text-decoration:underline}
-.agent-stats{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
-.verdict-pill{font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap}
-.v-buy{background:rgba(100,200,130,.15);color:#64c882}
-.v-review{background:rgba(255,200,80,.1);color:#f5c842}
-.v-pass{background:rgba(120,110,90,.15);color:#7a7060}
-.v-hardno{background:rgba(200,50,50,.1);color:#cc4466}
-.v-comps{background:rgba(100,150,200,.1);color:#6496c8}
-.arv-warn{font-size:11px;color:#f5a623;margin-top:4px}
-.empty{padding:60px 20px;text-align:center;color:#444;font-size:14px}
-.score-bar{display:flex;align-items:center;gap:6px;margin-top:4px}
-.score-val{font-size:12px;font-weight:700}
-.score-val.good{color:#64c882}
-.score-val.med{color:#f5c842}
-.score-val.bad{color:#cc4466}
-.deal-count{font-size:14px;font-weight:700;color:#c8aa60;flex-shrink:0;min-width:36px;text-align:right}
-</style>
-</head>
-<body>
-<header>
-  <a href="/?token=${req.query.token||''}">&larr; Back to Urban</a>
-  <h1>WHOLESALERS</h1>
-</header>
-<div class="search-bar"><input id="q" type="text" placeholder="Search company, agent, email, phone..." oninput="filter()"></div>
-<div id="list"></div>
-<script>
-const TOKEN = '${req.query.token||''}';
-let data = [];
-async function load() {
-  const r = await fetch('/api/wholesalers', { headers: { 'x-urban-token': TOKEN } });
-  if (!r.ok) { document.getElementById('list').innerHTML = '<div class=\"empty\">Could not load — check your token.</div>'; return; }
-  data = await r.json();
-  render(data);
-}
-function verdictHtml(verdicts) {
-  const map = { 'BUY': ['v-buy','BUY'], 'HOT': ['v-buy','HOT'], 'REVIEW': ['v-review','REVIEW'], 'PASS': ['v-pass','PASS'], 'HARD NO': ['v-hardno','HARD NO'], 'NEED COMPS': ['v-comps','COMPS'] };
-  return Object.entries(verdicts).filter(([,n])=>n>0).map(([v,n])=>{const[cls,lbl]=map[v]||['v-pass',v];return \`<span class="verdict-pill ${cls}">${n} ${lbl}</span>\`;}).join('');
-}
-function agentHtml(a) {
-  const initials = (a.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  const scoreRate = a.dealCount > 0 ? Object.entries(a.verdicts).filter(([v])=>['BUY','HOT','REVIEW'].includes(v)).reduce((s,[,n])=>s+n,0)/a.dealCount : 0;
-  const scorePct = Math.round(scoreRate*100);
-  const scoreClass = scorePct>=30?'good':scorePct>=10?'med':'bad';
-  const arvWarn = a.arv && a.arv > 10 ? \`<div class="arv-warn">⚠️ ARV inflated avg ${parseFloat(a.arv).toFixed(1)}%</div>\` : '';
-  const phones = [a.phone,a.phone2].filter(Boolean).map(p=>\`<a href="tel:${p}">${p}</a>\`).join('');
-  const email = a.email ? \`<a href="mailto:${a.email}">${a.email}</a>\` : '';
-  return \`<div class="agent-row">
-    <div class="agent-avatar">${initials}</div>
-    <div class="agent-info">
-      <div class="agent-name">${a.name}</div>
-      <div class="agent-contact">${email}${phones}</div>
-      <div class="agent-stats">${verdictHtml(a.verdicts||{})}</div>
-      <div class="score-bar"><span class="score-val ${scoreClass}">${scorePct}% actionable</span><span style="color:#333">·</span><span style="font-size:12px;color:#555">${a.dealCount} deal${a.dealCount!==1?'s':''}</span></div>
-      ${arvWarn}
-    </div>
-    <div class="deal-count">${a.dealCount}</div>
-  </div>\`;
-}
-function companyHtml(co) {
-  const totalActionable = Object.entries(co.agents[0]?.verdicts||{}).length;
-  const warnAgent = co.agents.find(a=>a.warn);
-  const warnBadge = warnAgent ? '<span class=\"badge warn\">⚠️ Inflated ARV</span>' : '';
-  const agentsHtml = co.agents.map(agentHtml).join('');
-  const id = 'co-' + co.company.replace(/[^a-z0-9]/gi,'_');
-  return \`<div class="company-card">
-    <div class="company-header" onclick="toggle(this)" id="${id}">
-      <div>
-        <div class="company-name">${co.company}</div>
-        <div class="company-meta">
-          <span class="badge">${co.agents.length} agent${co.agents.length!==1?'s':''}</span>
-          <span class="badge">${co.totalDeals} deals</span>
-          ${warnBadge}
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div class="deal-count" style="font-size:20px">${co.totalDeals}</div>
-        <div class="chevron">›</div>
-      </div>
-    </div>
-    <div class="agents-list">${agentsHtml}</div>
-  </div>\`;
-}
-function render(d) {
-  const el = document.getElementById('list');
-  if (!d.length) { el.innerHTML = '<div class=\"empty\">No wholesalers found.</div>'; return; }
-  el.innerHTML = d.map(companyHtml).join('');
-}
-function toggle(el) {
-  el.classList.toggle('open');
-}
-function filter() {
-  const q = document.getElementById('q').value.toLowerCase().trim();
-  if (!q) { render(data); return; }
-  const filtered = data.map(co => {
-    if (co.company.toLowerCase().includes(q)) return co;
-    const matchedAgents = co.agents.filter(a => (a.name||'').toLowerCase().includes(q)||(a.email||'').toLowerCase().includes(q)||(a.phone||'').includes(q)||(a.phone2||'').includes(q));
-    if (matchedAgents.length) return {...co, agents: matchedAgents};
-    return null;
-  }).filter(Boolean);
-  render(filtered);
-}
-load();
-</script>
-</body>
-</html>`);
+app.get('/wholesalers', requireAuth, function(req, res) {
+  res.sendFile(require('path').join(__dirname, '../public/wholesalers.html'));
 });
 
 app.listen(PORT, async () => {
