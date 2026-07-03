@@ -251,14 +251,21 @@ a{color:var(--accent)}
       <button id="profits-view-btn" onclick="showProfitsView()" title="Profits" style="width:38px;height:38px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--accent);font-size:16px;cursor:pointer">💰</button>
     </div>
     <div id="stats-bar">
-      <div class="stat-chip" title="Actionable deals — excludes Hard No"><div class="val" id="st-active">—</div><div class="lbl">ACTIVE</div></div>
-      <div class="stat-chip" style="border-color:rgba(255,200,80,.35);background:rgba(255,200,80,.06)"><div class="val" id="st-action" style="color:var(--accent)">—</div><div class="lbl">&#x1F4B0; BUY/REVIEW</div></div>
-      <div class="stat-chip" title="Avg score active deals"><div class="val" id="st-score">—</div><div class="lbl">AVG SCORE</div></div>
-      <div class="stat-chip" style="opacity:.5"><div class="val" id="st-hardno" style="color:#cc4466">—</div><div class="lbl">HARD NO</div></div>
+      <div class="stat-chip"><div class="val" id="st-total">—</div><div class="lbl">Underwritten</div></div>
+      <div class="stat-chip"><div class="val" id="st-avg">—</div><div class="lbl">Avg Score</div></div>
+      <div class="stat-chip"><div class="val" id="st-hot">—</div><div class="lbl">💰 Buy</div></div>
+      <div class="stat-chip"><div class="val" id="st-lessons">—</div><div class="lbl">Lessons</div></div>
+      <div class="stat-chip"><div class="val" id="st-profit">—</div><div class="lbl">Avg Profit</div></div>
+      <div class="stat-chip"><div class="val" id="st-pct">—</div><div class="lbl">BUY %</div></div>
+      <div class="stat-chip" title="Urban ARV vs Wholesaler avg difference"><div class="val" id="st-arv-acc" style="font-size:14px">—</div><div class="lbl">ARV vs WS</div><div style="font-size:9px;color:var(--muted);line-height:1.2" id="st-arv-tot"></div></div>
+      <div class="stat-chip" title="Click to exclude Hard No deals from stats and list" id="hardno-toggle-chip" onclick="toggleHardNo()" style="cursor:pointer;opacity:.7">
+        <div class="val" id="hardno-toggle-icon">⛔</div>
+        <div class="lbl" id="hardno-toggle-lbl">Inc. Hard No</div>
+      </div>
     </div>
     <div id="search-wrap" style="display:flex;gap:6px;align-items:center;padding:10px 18px">
       <input type="text" id="search-input" placeholder="Search..." style="flex:1">
-      <select id="sort-select" title="Sort" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:6px 5px;border-radius:4px;font-size:11px;font-family:var(--sans);outline:none;cursor:pointer;width:82px"><option value="date-new" selected>↓ New</option><option value="date-old">↑ Old</option><option value="score-high">↓ Score</option><option value="expires">⏰ Expires</option><option value="ask-low">↑ Price</option></select>
+      <select id="sort-select" title="Sort" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:6px 5px;border-radius:4px;font-size:11px;font-family:var(--sans);outline:none;cursor:pointer;width:82px"><option value="date-new">↓ New</option><option value="date-old">↑ Old</option><option value="score-high">↓ Score</option><option value="expires">⏰ Expires</option><option value="ask-low">↑ Price</option></select>
     </div>
     <div id="filter-bar">
       <div class="ftab on" data-f="ALL">All</div>
@@ -270,13 +277,13 @@ a{color:var(--accent)}
       <div class="ftab" data-f="NEEDS_ARV" title="Deals without sold comps — click ⚡ to pull live comps on each">Need Comps</div>
       <div class="ftab" data-f="PENDING">Pending</div>
     </div>
-    
-    <div style="display:flex;gap:6px;padding:0 10px 10px">
-      <button id="add-deal-btn-sidebar" onclick="openAddDeal()" title="Add Deal" style="flex:1;background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.5);color:#f5c842;border-radius:6px;cursor:pointer;font-size:17px;height:36px;line-height:1">➕</button>
-      <button id="ref-btn" title="Pull from Derek's Sheet" style="flex:1;background:#1a1a1a;border:1px solid #333;color:#777;border-radius:6px;cursor:pointer;font-size:17px;height:36px;line-height:1">↻</button>
-      <button id="rewrite-all-btn" onclick="doRewriteAll()" title="Re-underwrite All" style="flex:1;background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.25);color:#f5c842;border-radius:6px;cursor:pointer;font-size:17px;height:36px;line-height:1">⚡</button>
-    </div>
     <div id="deal-list"></div>
+    <div style="display:flex;gap:6px;padding:0 10px 10px">
+      <button id="add-deal-btn-sidebar" onclick="openAddDeal()" title="Add Deal" style="flex:1;background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.35);color:#f5c842;border-radius:6px;cursor:pointer;font-size:17px;height:34px">+</button>
+      <button id="ref-btn" title="Pull from Derek's Sheet\" style="flex:1;background:#111;border:1px solid #222;color:#555;border-radius:6px;cursor:pointer;font-size:17px;height:34px">&#8635;</button>
+      <button id="rewrite-all-btn" onclick="doRewriteAll()" title="Re-underwrite All" style="flex:1;background:rgba(245,200,66,.07);border:1px solid rgba(245,200,66,.2);color:#f5c842;border-radius:6px;cursor:pointer;font-size:17px;height:34px">&#9889;</button>
+    </div>
+
     <div id="ws-scorecards" style="padding:8px 12px;border-top:1px solid var(--border)">
       <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 0" onclick="toggleWsPanel()">
         <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px">🏆 WHOLESALER SCORES</div>
@@ -476,17 +483,17 @@ a{color:var(--accent)}
             </div>
           </div>
 
-            <div id="neg-ladder" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:16px;margin-bottom:16px;display:none">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                <div class="ct">Negotiation Ladder</div>
-                <div style="font-size:10px;color:var(--muted);display:flex;gap:16px">
-                  <span style="width:100px;text-align:right;font-size:9px">OFFER PRICE</span>
-                  <span style="width:110px;text-align:right;font-size:9px">NET PROFIT</span>
-                  <span style="width:50px;text-align:right;font-size:9px">ROI</span>
-                </div>
-              </div>
-              <div id="neg-rows"></div>
-            </div>
+            
+
+
+
+
+
+
+
+
+
+
             <div class="rec-box">
             <div class="ct" style="display:flex;align-items:center;gap:8px">Urban's Recommendation <span style="font-size:9px;opacity:.5;font-weight:400;letter-spacing:.5px">INDEPENDENT ANALYSIS</span></div>
             <div class="rec-txt" id="ov-rec"></div>
@@ -1126,17 +1133,6 @@ async function doLogin() {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       doLoadStats();
-
-// Sheet button feedback
-const __sheetBtn = document.getElementById('btn-sheet');
-if(__sheetBtn && !__sheetBtn._feedbackBound) {
-  __sheetBtn._feedbackBound = true;
-  __sheetBtn.addEventListener('click', function() {
-    this.style.background = 'rgba(100,220,100,0.25)';
-    this.textContent = '✓ Opened';
-    setTimeout(() => { this.style.background = ''; this.textContent = '📊 Sheet'; }, 1500);
-  });
-}
       doLoadDeals();
     } else {
       document.getElementById('login-err').style.display = 'block';
@@ -1148,18 +1144,48 @@ if(__sheetBtn && !__sheetBtn._feedbackBound) {
   }
 }
 
-// -- STATS — live from deals, excludes Hard No ───────────────────
-function doLoadStats() {
-  const active = deals.filter(d => d.underwriteStatus && d.underwriteStatus !== 'HARD NO');
-  const hardNo = deals.filter(d => d.underwriteStatus === 'HARD NO');
-  const action = deals.filter(d => ['HOT','BUY','REVIEW'].includes(d.underwriteStatus));
-  const scored = active.filter(d => d.underwriteScore > 0);
-  const avg = scored.length ? (scored.reduce((a,d)=>a+(d.underwriteScore||0),0)/scored.length).toFixed(1) : '—';
-  const el = id => document.getElementById(id);
-  if(el('st-active')) el('st-active').textContent = active.length || '0';
-  if(el('st-action')) el('st-action').textContent = action.length || '0';
-  if(el('st-score'))  el('st-score').textContent  = avg;
-  if(el('st-hardno')) el('st-hardno').textContent = hardNo.length || '0';
+// -- STATS ----------------------------------------------------------------------
+async function doLoadStats() {
+  try {
+    const r = await fetch('/api/stats', { headers: { 'x-urban-token': TOKEN } });
+    const s = await r.json();
+    $('st-total').textContent = s.totalUnderwritten || 0;
+    $('st-avg').textContent = s.avgScore ? s.avgScore.toFixed(1) : '—';
+    $('st-hot').textContent = (s.verdicts?.HOT||0) + (s.verdicts?.BUY||0);
+    $('st-lessons').textContent = s.lessonsLearned || 0;
+    if ($('st-profit')) $('st-profit').textContent = s.avgProfit ? '$'+Math.round(s.avgProfit/1000)+'K' : '—';
+    if ($('st-pct')) {
+      const total = s.totalUnderwritten || 1;
+      const good = (s.verdicts?.HOT||0) + (s.verdicts?.BUY||0);
+      $('st-pct').textContent = Math.round(good/total*100) + '% BUY DEALS';
+    }
+    // If HARD NO toggle is on, recalculate stats from client-side deals array
+    if (hideHardNo && deals.length) {
+      const activeDeals = deals.filter(d => d.underwriteStatus !== 'HARD NO' && d.underwriteScore);
+      if (activeDeals.length) {
+        $('st-total').textContent = activeDeals.length;
+        const avgSc = activeDeals.reduce((s,d) => s+(d.underwriteScore||0), 0) / activeDeals.length;
+        $('st-avg').textContent = avgSc.toFixed(1);
+        const buys = activeDeals.filter(d => d.underwriteStatus === 'BUY' || d.underwriteStatus === 'HOT').length;
+        $('st-hot').textContent = buys;
+        if ($('st-pct')) $('st-pct').textContent = Math.round(buys/activeDeals.length*100) + '% BUY DEALS';
+      }
+    }
+    // ARV accuracy: avg Urban vs Wholesaler
+    if (s.arvAccuracy) {
+      const acc = s.arvAccuracy;
+      if ($('st-arv-acc')) {
+        const sign = acc.avgDiffPct >= 0 ? '+' : '';
+        $('st-arv-acc').textContent = sign + acc.avgDiffPct + '%';
+        $('st-arv-acc').style.color = Math.abs(acc.avgDiffPct) <= 5 ? 'var(--buy)' : Math.abs(acc.avgDiffPct) <= 15 ? 'var(--review)' : 'var(--hot)';
+      }
+      if ($('st-arv-tot')) {
+        const totK = Math.round(Math.abs(acc.totalDiffDollars) / 1000);
+        const dir = acc.totalDiffDollars >= 0 ? 'above WS' : 'below WS';
+        $('st-arv-tot').textContent = '$' + totK + 'K ' + dir + ' · ' + acc.dealCount + ' deals';
+      }
+    }
+  } catch {}
 }
 
 // -- DEALS ----------------------------------------------------------------------
@@ -1226,7 +1252,8 @@ async function autoUnderwritePending() {
       const { done, value } = await reader.read();
       if (done) break;
       buf += dec.decode(value, { stream: true });
-      const lines = buf.split('\n'); buf = lines.pop();
+      const lines = buf.split('\
+'); buf = lines.pop();
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         try {
@@ -1286,7 +1313,8 @@ async function autoUnderwritePending() {
         const { done, value } = await reader.read();
         if (done) break;
         buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\n'); buf = lines.pop();
+        const lines = buf.split('\
+'); buf = lines.pop();
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           try {
@@ -1334,7 +1362,10 @@ async function doReviewChat() {
       const msg = data.lessonsAdded > 0
         ? `✅ ${data.lessonsAdded} new lessons added to Urban's brain!`
         : '✅ Review complete — no new lessons needed.';
-      alert(msg + (data.lessons?.length ? '\n\n' + data.lessons.join('\n') : ''));
+      alert(msg + (data.lessons?.length ? '\
+\
+' + data.lessons.join('\
+') : ''));
     } else {
       alert('Error: ' + (data.error || 'unknown'));
     }
@@ -1436,7 +1467,7 @@ function renderList() {
     const ageDays = d.dateReceived
       ? Math.floor((Date.now() - new Date(d.dateReceived)) / 86400000)
       : null;
-    const ageLabel = ageDays === null ? '' : ageDays === 0 ? '🟢 Today' : ageDays === 1 ? '🟡 1d' : ageDays <= 3 ? `🟡 ${ageDays}d` : ageDays <= 7 ? `🟠 ${ageDays}d` : `🔴 ${ageDays}d`;
+    const ageLabel = ageDays === null ? '' : ageDays === 0 ? ('🟢 '+Math.floor((Date.now()-new Date(d.dateReceived))/3600000)+'h') : ageDays === 1 ? '🟡 1d' : ageDays <= 3 ? `🟡 ${ageDays}d` : ageDays <= 7 ? `🟠 ${ageDays}d` : `🔴 ${ageDays}d`;
     const staleLabel = d.isStale ? '<span class="stale-badge">⏰ STALE</span>' : '';
     // Expiration warning — show if expires within 7 days
     let expiresLabel = '';
@@ -1565,7 +1596,8 @@ async function selectDeal(d) {
     const r = await fetch(`/api/underwrite/${encodeURIComponent(uid)}`, { headers: { 'x-urban-token': TOKEN } });
     if (r.ok) {
       curUW = await r.json();
-      try { renderUW(curUW); } catch(re) { console.warn('renderUW err:', re.message, re.stack?.split('\n')[1]); showPending(curUW); }
+      try { renderUW(curUW); } catch(re) { console.warn('renderUW err:', re.message, re.stack?.split('\
+')[1]); showPending(curUW); }
     } else {
       const p = (d.underwriteStatus && d.underwriteStatus !== 'PENDING')
         ? { verdict: d.underwriteStatus, score: d.underwriteScore, verdictReason: 'Loading — hit Re-run for full data.' }
@@ -1631,8 +1663,6 @@ function showPending(partialUW) {
 let curTab = 'overview'; // tracks which tab is active for chat context
 function switchTab(name) {
   curTab = name;
-  const __panel = document.getElementById('deal-panel') || document.querySelector('.right-pane') || document.querySelector('.main-panel');
-  if(__panel) __panel.scrollTop = 0;
   document.querySelectorAll('.stab').forEach(t => t.classList.toggle('on', t.dataset.t === name));
   document.querySelectorAll('.tc').forEach(t => t.classList.remove('active'));
   const el = $('t-' + name);
@@ -1697,7 +1727,8 @@ async function doUnderwrite(force, deep) {
       const { done, value } = await reader.read();
       if (done) break;
       buf += dec.decode(value, { stream: true });
-      const lines = buf.split('\n'); buf = lines.pop();
+      const lines = buf.split('\
+'); buf = lines.pop();
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         try {
@@ -2511,10 +2542,13 @@ function mdToHtml(text) {
   let h = (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   h = h.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
-  h = h.replace(/(<li>[\s\S]*?<\/li>(\n(?=<li>))?)+/g, function(m) {
-    return '<ul style="margin:6px 0 6px 18px;padding:0">' + m.replace(/\n/g,'') + '</ul>';
+  h = h.replace(/(<li>[\s\S]*?<\/li>(\
+(?=<li>))?)+/g, function(m) {
+    return '<ul style="margin:6px 0 6px 18px;padding:0">' + m.replace(/\
+/g,'') + '</ul>';
   });
-  h = h.replace(/\n/g, '<br>');
+  h = h.replace(/\
+/g, '<br>');
   return h;
 }
 function addMsg(role, content, ts) {
@@ -2968,10 +3002,14 @@ function copyOfferLadder() {
   var d = _olData;
   if (!d.mao) return;
   var fN = function(n) { return '$' + Math.round(n).toLocaleString(); };
-    'Open:  ' + fN(d.open_) + '\n' +
-    'Nudge: ' + fN(d.nudge) + '\n' +
-    'Hold:  ' + fN(d.hold) + '\n' +
-    'Walk:  ' + fN(d.mao) + '\n' +
+    'Open:  ' + fN(d.open_) + '\
+' +
+    'Nudge: ' + fN(d.nudge) + '\
+' +
+    'Hold:  ' + fN(d.hold) + '\
+' +
+    'Walk:  ' + fN(d.mao) + '\
+' +
     (d.ask > 0 ? 'Ask:   ' + fN(d.ask) + ' (spread: ' + fN(d.ask - d.open_) + ')' : '');
   if (navigator.clipboard) {
     navigator.clipboard.writeText(t).then(function() {
@@ -3504,7 +3542,7 @@ async function submitAddDeal(){
   const btn=document.getElementById('add-deal-btn'),status=document.getElementById('add-deal-status');
   btn.disabled=true;btn.textContent='Parsing...';
   try{
-    const r=await fetch('/api/add-deal',{method:'POST',headers:{'x-urban-token':TOKEN,'Content-Type':'application/json'},body:JSON.stringify({text,addedBy:AUTHOR})});
+    const r=await fetch('/api/add-deal',{method:'POST',headers:{'x-urban-token':TOKEN,'Content-Type':'application/json'},body:JSON.stringify({text,addedBy:TOKEN==='ccg-caleb-K9x4mP2v'?'Caleb':'Grant'})});
     const data=await r.json();
     if(r.ok){status.style.color='var(--buy)';status.textContent='Added: '+data.uid+' — underwriting. Tell Derek to log it.';btn.textContent='Done';
       if(data.deal){deals.unshift({...data.deal,underwriteStatus:'PENDING'});renderList();}
