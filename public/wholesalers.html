@@ -55,6 +55,14 @@ header h1{font-size:16px;font-weight:700;letter-spacing:2px;color:#c8aa60}
 <div class="search"><input id="q" placeholder="Search company, agent, email, phone..." oninput="filterAll()"></div>
 <div id="list"><div class="loading">Loading wholesalers...</div></div>
 <script>
+function toggle(el) {
+  var isOpen = el.getAttribute("data-open") === "1";
+  el.setAttribute("data-open", isOpen ? "" : "1");
+  el.querySelector(".chev").style.transform = isOpen ? "" : "rotate(90deg)";
+  var ag = el.nextElementSibling;
+  if (ag) ag.style.display = isOpen ? "none" : "block";
+}
+
 var TOKEN = (location.search.match(/[?&]token=([^&]+)/) || [])[1] || '';
 document.getElementById('bl').href = '/?token=' + TOKEN;
 var allData = [];
@@ -110,7 +118,7 @@ function agentHtml(a) {
 function coHtml(co) {
   var warn = co.agents.some(function(a){ return a.warn; });
   var wb = warn ? '<span class="badge warn">&#x26A0;&#xFE0F; ARV</span>' : '';
-  return '<div class="co"><div class="co-h" onclick="this.classList.toggle('open');this.nextElementSibling.style.display=this.classList.contains('open')?'block':'none'"><div><div class="co-name">' + co.company + '</div><div class="meta"><span class="badge">' + co.agents.length + ' agent' + (co.agents.length!==1?'s':'') + '</span><span class="badge">' + co.totalDeals + ' deals</span>' + wb + '</div></div><div style="display:flex;align-items:center;gap:8px"><div class="count">' + co.totalDeals + '</div><div class="chev">&#x203A;</div></div></div><div class="agents" style="display:none">' + co.agents.map(agentHtml).join('') + '</div></div>';
+  return '<div class="co"><div class="co-h" onclick="toggle(this)"co-name">' + co.company + '</div><div class="meta"><span class="badge">' + co.agents.length + ' agent' + (co.agents.length!==1?'s':'') + '</span><span class="badge">' + co.totalDeals + ' deals</span>' + wb + '</div></div><div style="display:flex;align-items:center;gap:8px"><div class="count">' + co.totalDeals + '</div><div class="chev">&#x203A;</div></div></div><div class="agents" style="display:none">' + co.agents.map(agentHtml).join('') + '</div></div>';
 }
 
 function render(d) {
