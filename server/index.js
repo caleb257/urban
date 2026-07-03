@@ -3548,7 +3548,8 @@ app.post('/api/add-deal', auth, async (req, res) => {
     if (existing) return res.status(409).json({ error: 'Already in Urban: ' + (existing.uid||existing.address), existingUid: existing.uid });
     const county = inferCounty(parsed.city) || '';
     const deal = { uid, address: parsed.address, city: parsed.city, state: parsed.state||'FL', zip: parsed.zip||'', county, beds: parsed.beds||0, baths: parsed.baths||0, sqft: parsed.sqft||0, yearBuilt: parsed.yearBuilt||0, construction: parsed.construction||'', askingPrice: parsed.askingPrice||0, wholesaler: parsed.wholesaler||req.author, wholesalerPhone: parsed.wholesalerPhone||'', source: 'manual-upload', addedBy: addedBy||req.author, isManual: true, dateReceived: new Date().toISOString(), needsSheet: true };
-    deals.push(deal);
+    if(!global.deals)global.deals=[];
+    global.deals.push(deal);
     underwrites[uid] = underwrites[uid] || {};
     setTimeout(() => runUnderwrite(uid, false).catch(()=>{}), 300);
     res.json({ ok: true, uid, deal });
