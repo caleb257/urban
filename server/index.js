@@ -3403,7 +3403,7 @@ async function adamAddDeal(parsed, source) {
     return { ok: false, reason: 'xxxx_address', wholesaler: parsed.wholesaler };
   }
   const uid = (parsed.address + ', ' + parsed.city).trim();
-  if (!deals) global.deals = [];
+  if (!global.deals) global.deals = [];
   const dupe = deals.find(d => (d.address||'').toLowerCase() === parsed.address.toLowerCase());
   if (dupe) {
     adamLog(`Duplicate skipped: ${uid}`, 'skip');
