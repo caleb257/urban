@@ -1756,5 +1756,5 @@ function setUserBadge() {
   b.textContent=isCaleb?'CB &#x1F451;':'GP'; b.title=isCaleb?'Caleb':'Grant'; b.style.display='inline-block';
 }
 </script>
-</body>
+<script>(function(){var _t=setInterval(function(){var neg=document.getElementById('neg-ladder');if(neg)neg.remove();if(typeof renderList==='function'){var _rl=renderList;window.renderList=function(){_rl.apply(this,arguments);document.querySelectorAll('[data-uid]').forEach(function(row){var uid=row.dataset&&row.dataset.uid;if(!uid)return;var d=window.allDeals&&window.allDeals.find(function(x){return x.uid===uid;});if(!d||!d.dateReceived)return;var hrs=Math.floor((Date.now()-new Date(d.dateReceived))/3600000);if(hrs<24){row.querySelectorAll('*').forEach(function(el){if(el.childNodes.length===1&&el.childNodes[0].nodeType===3&&el.textContent.trim()==='Today'){el.textContent=hrs+'h';}});}});};}clearInterval(_t);},500);})();</script></body>
 </html>
