@@ -4877,6 +4877,40 @@ const MOBILE_PATH = require('path').join(__dirname, '../public/mobile.html');
 app.get('/m', (req, res) => res.sendFile(MOBILE_PATH));
 
 
+// REMOVE DEAL endpoint
+app.post('/api/remove-deal', requireAuth, async (req, res) => {
+  try {
+    const { uid } = req.body || {};
+    if (!uid) return res.status(400).json({ error: 'uid required' });
+    // Remove from Google Sheet by marking as REMOVED
+    const sheets = google.sheets({ version: 'v4', auth: getAuth() });
+    const ss = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Sheet1!A:A',
+    });
+    const rows = ss.data.values || [];
+    const rowIndex = rows.findIndex(r => r[0] === uid);
+    if (rowIndex === -1) return res.status(404).json({ error: 'Deal not found: ' + uid });
+    // Delete the row entirely
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SHEET_ID,
+      requestBody: {
+        requests: [{
+          deleteDimension: {
+            range: { sheetId: 0, dimension: 'ROWS', startIndex: rowIndex, endIndex: rowIndex + 1 }
+          }
+        }]
+      }
+    });
+    // Also remove from in-memory if it exists
+    if (global.deals) global.deals = global.deals.filter(d => d.uid !== uid);
+    res.json({ ok: true, removed: uid });
+  } catch (e) {
+    console.error('remove-deal error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(PORT, async () => {
   console.log(`🏙️ Urban on port ${PORT}`);
 
