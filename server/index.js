@@ -1374,7 +1374,7 @@ async function fetchDeepComps(address, city, state, zip, beds, baths, sqft, prop
 async function regenerateVerdict(uw) {
   const deal = uw.deal || {};
   const arv      = uw.arv?.urbanARV || 0;
-  const repairs  = uw.rehab?.urbanEstimate || 0;
+  const repairs  = uw.financials?.rehabBudget || uw.rehab?.urbanEstimate || uw.rehab?.total || 0;
   const asking   = parseFloat(deal.askingPrice) || 0;
   const mao      = uw.financials?.mao || Math.round(arv * 0.7 - repairs);
   const costs    = (uw.financials?.holdingCosts?.total || 0) + 
@@ -1416,7 +1416,7 @@ async function regenerateVerdict(uw) {
            : price >= Math.round(asking*0.89)
            ? 'Open offer'
            : 'Best case',
-    profit:   Math.round(arv - price - repairs - costs),
+    profit:   uw.financials?.netProfitAtAsking ?? Math.round(arv * 0.96 - price - repairs - costs),
     meetsMin: (() => { const _p=Math.round(arv-price-repairs-costs); const _min=price>=1000000?100000:Math.max(price*0.10,20000); return _p>=_min; })(),
     roi:      arv > 0 ? parseFloat(((Math.round(arv - price - repairs - costs) / (price + repairs)) * 100).toFixed(1)) : 0
   }));
