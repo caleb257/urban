@@ -1374,14 +1374,16 @@ async function fetchDeepComps(address, city, state, zip, beds, baths, sqft, prop
 async function regenerateVerdict(uw) {
   const deal = uw.deal || {};
   const arv      = uw.arv?.urbanARV || 0;
-  const repairs  = uw.financials?.rehabBudget || uw.rehab?.urbanEstimate || uw.rehab?.total || 0;
+  const repairs  = uw.financials?.rehabBudget || uw.rehab?.urbanEstimate || uw.rehab?.total || (typeof uw.rehabEstimate === "number" ? uw.rehabEstimate : 0);
   const asking   = parseFloat(deal.askingPrice) || 0;
   const mao      = uw.financials?.mao || Math.round(arv * 0.7 - repairs);
   const costs    = (uw.financials?.holdingCosts?.total || 0) + 
                    (uw.financials?.sellingCosts?.total || 0) +
                    (uw.financials?.hardMoney?.totalInterest || 0) +
                    (uw.financials?.hardMoney?.originationPoints || 0);
-  const profit   = Math.round(arv - asking - repairs - costs);
+  const sellCosts = Math.round(arv * 0.96 * 0.08);
+  const holdCosts = (uw.financials?.hardMoney?.holdMonths || 6) * 500;
+  const profit   = uw.financials?.netProfitAtAsking ?? Math.round(arv * 0.96 - asking - repairs - costs - sellCosts - holdCosts);
   const roi      = arv > 0 && asking > 0 ? parseFloat(((profit / (asking + repairs)) * 100).toFixed(1)) : 0;
   const wsARV    = uw.arv?.wholesalerARV || 0;
   const arvGap   = wsARV ? Math.round(((wsARV - arv) / arv) * 100) : 0;
