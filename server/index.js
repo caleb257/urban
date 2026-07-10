@@ -1439,7 +1439,7 @@ async function regenerateVerdict(uw) {
     'Repairs: $' + repairs.toLocaleString() + ' | Asking: $' + asking.toLocaleString() + '\n' +
     'MAO (ARV×70%-repairs): $' + mao.toLocaleString() + '\n' +
     'Net Profit @ Ask: $' + profit.toLocaleString() + ' | ROI: ' + roi + '%\n' +
-    'Meets profit min (' + (asking < 1000000 ? Math.round(Math.max(asking*0.10,20000)/1000)+'K' : '$100K') + '): ' + (profit >= Math.max(ask*0.10,20000) ? 'YES' : 'NO') + '\n' +
+    'Meets profit min (' + (asking < 1000000 ? Math.round(Math.max(asking*0.10,20000)/1000)+'K' : '$100K') + '): ' + (profit >= Math.max(asking*0.10,20000) ? 'YES' : 'NO') + '\n' +
     'Prior verdict: ' + (uw.verdict||'?') + ' (' + (uw.score||0) + '/10)\n\n' +
     'Based ONLY on these corrected numbers, give a new verdict, score, reason, and recommendation.\n' +
     'Respond with ONLY valid JSON (no markdown):\n' +
