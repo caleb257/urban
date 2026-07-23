@@ -157,6 +157,7 @@ app.post('/api/admin/clear-seen', requireAdmin, async (req, res) => {
 });
 
 
+app.get('/api/admin/uw-log',requireAdmin,async(req,res)=>{try{const s=getSheets();const r=await s.spreadsheets.values.get({spreadsheetId:SHEET_ID,range:UW_LOG_TAB+'!A:G'});res.json(r.data.values||[]);}catch(e){res.status(500).json({error:e.message})}});
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now(), v: 'EMBEDDED_HTML_5a9e0de', htmlLen: EMBEDDED_HTML.length }));
 const DEPLOY_VERSION = 'b6fb656';
 app.get('/api/version', auth, (req, res) => res.json({ 
