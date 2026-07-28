@@ -3405,7 +3405,7 @@ async function adamAddDeal(parsed, source) {
   }
   const uid = (parsed.address + ', ' + parsed.city).trim();
   if (!global.deals) global.deals = [];
-  const dupe = global.global.deals.find(d => (d.address||'').toLowerCase() === parsed.address.toLowerCase());
+  const dupe = global.deals.find(d => (d.address||'').toLowerCase() === parsed.address.toLowerCase());
   if (dupe) {
     adamLog(`Duplicate skipped: ${uid}`, 'skip');
     return { ok: false, reason: 'duplicate', uid };
@@ -3421,7 +3421,7 @@ async function adamAddDeal(parsed, source) {
     dateReceived: new Date().toISOString(), needsSheet: true,
   };
   if(!global.deals)global.deals=[];
-  global.global.deals.push(deal);
+  global.deals.push(deal);
   underwrites[uid] = underwrites[uid] || {};
   setTimeout(() => runUnderwrite(uid, false).catch(()=>{}), 500);
   adamLog(`Added: ${uid} (ask: ${parsed.askingPrice||'?'}, ARV: ${parsed.arv||'?'})`, 'add');
