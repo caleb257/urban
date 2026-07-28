@@ -3544,7 +3544,7 @@ app.post('/api/add-deal', auth, async (req, res) => {
     catch(e) { return res.status(400).json({ error: 'Could not parse — paste more detail including the full street address' }); }
     if (!parsed.address || !parsed.city) return res.status(400).json({ error: 'No address found in that text — include the full street address' });
     const uid = (parsed.address + ', ' + parsed.city).trim();
-    if (!deals) global.deals = [];
+    if (!global.deals) global.deals = [];
     const liveDeals = await getDealsFromSheet();
     const existing = liveDeals.find(d => (d.uid||'').toLowerCase()===uid.toLowerCase() || (d.address||'').toLowerCase()===(parsed.address||'').toLowerCase());
     if (existing) return res.status(409).json({ error: 'Already in Urban: ' + (existing.uid||existing.address), existingUid: existing.uid });
