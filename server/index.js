@@ -133,7 +133,8 @@ app.get('/', (req, res) => {
 // Version endpoint — shows deployed commit for verification
 
 // Public health endpoint — Railway healthcheck uses this (no auth required)
-// ── ADMIN: Clear Derek's Seen tab to force email reprocessing ────────────────app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now(), v: 'EMBEDDED_HTML_5a9e0de', htmlLen: EMBEDDED_HTML.length }));
+// ── ADMIN: Clear Derek's Seen tab to force email reprocessing ────────────────app.get('/api/debug',requireAdmin,(req,res)=>res.json({globalDealsExists:typeof global.deals!=='undefined',globalDealsCount:Array.isArray(global.deals)?global.deals.length:'not array',liveDealsExists:typeof liveDeals!=='undefined'}));
+app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now(), v: 'EMBEDDED_HTML_5a9e0de', htmlLen: EMBEDDED_HTML.length }));
 const DEPLOY_VERSION = 'b6fb656';
 app.get('/api/version', auth, (req, res) => res.json({ 
   commit: DEPLOY_VERSION, 
