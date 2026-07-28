@@ -3232,7 +3232,7 @@ app.post('/api/auto-underwrite-batch', auth, async (req, res) => {
 
   try {
     const deals = await getDealsFromSheet();
-    const pending = deals.filter(d => {
+    const pending = global.deals.filter(d => {
       if (!d.address || d.address === 'XXXX') return false;
       // Check in-memory cache (fast)
       const uid1 = d.uid;
@@ -3299,8 +3299,8 @@ app.post('/api/update-address', auth, async (req, res) => {
     const { oldUid, newAddress, author } = req.body || {};
     if (!oldUid || !newAddress) return res.status(400).json({ error: 'oldUid and newAddress required' });
     // Find the deal in memory cache
-    let deal = deals.find(d => (d.uid||'').toLowerCase().trim() === (oldUid||'').toLowerCase().trim())
-             || deals.find(d => d.needsAddress && (d.city||'').toLowerCase().trim() === (oldUid||'').toLowerCase().trim());
+    let deal = global.deals.find(d => (d.uid||'').toLowerCase().trim() === (oldUid||'').toLowerCase().trim())
+             || global.deals.find(d => d.needsAddress && (d.city||'').toLowerCase().trim() === (oldUid||'').toLowerCase().trim());
     if (!deal) return res.status(404).json({ error: 'Deal not found in sheet cache. Try pulling from Derek\'s sheet first.' });
     // Update in memory
     deal.address = newAddress.trim();
@@ -3405,7 +3405,7 @@ async function adamAddDeal(parsed, source) {
   }
   const uid = (parsed.address + ', ' + parsed.city).trim();
   if (!global.deals) global.deals = [];
-  const dupe = global.deals.find(d => (d.address||'').toLowerCase() === parsed.address.toLowerCase());
+  const dupe = global.global.deals.find(d => (d.address||'').toLowerCase() === parsed.address.toLowerCase());
   if (dupe) {
     adamLog(`Duplicate skipped: ${uid}`, 'skip');
     return { ok: false, reason: 'duplicate', uid };
@@ -3421,7 +3421,7 @@ async function adamAddDeal(parsed, source) {
     dateReceived: new Date().toISOString(), needsSheet: true,
   };
   if(!global.deals)global.deals=[];
-  global.deals.push(deal);
+  global.global.deals.push(deal);
   underwrites[uid] = underwrites[uid] || {};
   setTimeout(() => runUnderwrite(uid, false).catch(()=>{}), 500);
   adamLog(`Added: ${uid} (ask: ${parsed.askingPrice||'?'}, ARV: ${parsed.arv||'?'})`, 'add');
@@ -3549,7 +3549,7 @@ app.post('/api/add-deal', auth, async (req, res) => {
     if (existing) return res.status(409).json({ error: 'Already in Urban: ' + (existing.uid||existing.address), existingUid: existing.uid });
     const county = inferCounty(parsed.city) || '';
     const deal = { uid, address: parsed.address, city: parsed.city, state: parsed.state||'FL', zip: parsed.zip||'', county, beds: parsed.beds||0, baths: parsed.baths||0, sqft: parsed.sqft||0, yearBuilt: parsed.yearBuilt||0, construction: parsed.construction||'', askingPrice: parsed.askingPrice||0, wholesaler: parsed.wholesaler||req.author, wholesalerPhone: parsed.wholesalerPhone||'', source: 'manual-upload', addedBy: addedBy||req.author, isManual: true, dateReceived: new Date().toISOString(), needsSheet: true };
-    deals.push(deal);
+    global.deals.push(deal);
     underwrites[uid] = underwrites[uid] || {};
     setTimeout(() => runUnderwrite(uid, false).catch(()=>{}), 300);
     res.json({ ok: true, uid, deal });
@@ -3561,7 +3561,7 @@ app.get('/api/deals', auth, async (req, res) => {
     const deals = await getDealsFromSheet();
     // Filter to CCG target counties only
     // Exclude deals without a real address — Adam will chase those via email
-    const targetDeals = deals.filter(d => isTargetCounty(d.county, d.city) && !d.needsAddress);
+    const targetDeals = global.deals.filter(d => isTargetCounty(d.county, d.city) && !d.needsAddress);
 
     // Cache deals to Postgres (non-blocking) — enables fast reload on next boot
     if (targetDeals.length > 0) {
@@ -3722,7 +3722,7 @@ app.post('/api/underwrite/:uid', auth, async (req, res) => {
     let deal = null;
     try {
       const deals = await getDealsFromSheet();
-      deal = deals.find(d => (d.uid || `${d.address}-${d.dateReceived}`) === uid);
+      deal = global.deals.find(d => (d.uid || `${d.address}-${d.dateReceived}`) === uid);
     } catch(sheetErr) {
       console.warn('Sheet lookup failed:', sheetErr.message);
     }
@@ -3765,7 +3765,7 @@ app.post('/api/underwrite-by-address/:address', auth, async (req, res) => {
     const { deep } = req.body;
 
     const deals = await getDealsFromSheet();
-    const deal = deals.find(d => (d.address || '').toLowerCase().trim() === address ||
+    const deal = global.deals.find(d => (d.address || '').toLowerCase().trim() === address ||
       (d.address || '').toLowerCase().includes(address.split(' ').slice(0,2).join(' ')));
     if (!deal) {
       console.log(`Auto-underwrite: no deal for "${address}"`);
@@ -3824,7 +3824,7 @@ app.post('/api/chat/:uid', auth, async (req, res) => {
     if (!uw) {
       // Fall back to fetching the deal from the sheet by address or uid
       const deals = await getDealsFromSheet();
-      const deal = deals.find(d => {
+      const deal = global.deals.find(d => {
         if ((d.uid || `${d.address}-${d.dateReceived}`) === uid) return true;
         if (hintAddress && d.address?.toLowerCase() === hintAddress.toLowerCase()) return true;
         return false;
