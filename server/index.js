@@ -145,13 +145,42 @@ app.get('/api/version', auth, (req, res) => res.json({
 
 // Lazy init Anthropic client
 let _anthropic = null;
+
+// ── DAILY COST TRACKING ───────────────────────────────────────────────────────
+let _dailyCalls = { count: 0, date: new Date().toDateString(), haiku: 0, sonnet: 0 };
+function trackAPICall(model) {
+  const today = new Date().toDateString();
+  if (_dailyCalls.date !== today) { _dailyCalls = { count: 0, date: today, haiku: 0, sonnet: 0 }; }
+  _dailyCalls.count++;
+  if (model && model.includes('sonnet')) _dailyCalls.sonnet++;
+  else _dailyCalls.haiku++;
+  // Log every 10 calls
+  if (_dailyCalls.count % 10 === 0) {
+    const est = (_dailyCalls.haiku * 0.004 + _dailyCalls.sonnet * 0.06).toFixed(2);
+    console.log(`[COST] Today: ${_dailyCalls.count} calls (${_dailyCalls.haiku} haiku + ${_dailyCalls.sonnet} sonnet) ~$${est} est`);
+  }
+  // Hard cap: 300 API calls per day (covers ~300 underwrites + chat without runaway)
+  if (_dailyCalls.count > 300) {
+    console.error(`[COST] DAILY CAP HIT: ${_dailyCalls.count} calls today — halting further API calls`);
+    throw new Error('Daily API call limit reached — Urban will resume tomorrow');
+  }
+}
+
 function getAnthropic() {
   if (!_anthropic) {
     const key = process.env.ANTHROPIC_API_KEY;
     if (!key) throw new Error('ANTHROPIC_API_KEY not set');
     _anthropic = new Anthropic({ apiKey: key });
   }
-  return _anthropic;
+  // Return with call tracking
+  return {
+    messages: {
+      create: (opts) => {
+        trackAPICall(opts.model);
+        return _anthropic.messages.create(opts);
+      }
+    }
+  };
 }
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
