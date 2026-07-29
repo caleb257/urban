@@ -3560,6 +3560,7 @@ app.post('/api/add-deal', auth, async (req, res) => {
 app.get('/api/deals', auth, async (req, res) => {
   try {
     const deals = await getDealsFromSheet();
+    if (!global.deals || global.deals.length === 0) global.deals = deals;
     // Filter to CCG target counties only
     // Exclude deals without a real address — Adam will chase those via email
     const targetDeals = global.deals.filter(d => isTargetCounty(d.county, d.city) && !d.needsAddress);
