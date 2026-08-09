@@ -3736,15 +3736,31 @@ app.get('/api/underwrite/:uid', auth, async (req, res) => {
     }
   }
   if (!uw) return res.status(404).json({ error: 'Not underwritten yet' });
-  // Refresh financials if stale (asking was 0 when originally computed, or rehab now available)
+  // Always refresh financials before serving so rehab+asking are current
   try {
-    const storedAsking = uw.financials?.askingPrice || 0;
-    const dealAsking = parseFloat(uw.deal?.askingPrice || 0);
-    const storedRehab = uw.financials?.rehabBudget || 0;
+    // 1. Sync asking price from live deal list if missing from stored deal
+    const liveDeal = (global.deals||[]).find(d =>
+      d.uid === uw.uid ||
+      (d.address||'').toLowerCase().trim() === (uw.deal?.address||'').toLowerCase().trim()
+    );
+    if (liveDeal?.askingPrice && !uw.deal?.askingPrice) {
+      uw.deal = uw.deal || {};
+      uw.deal.askingPrice = liveDeal.askingPrice;
+    }
+    // 2. Refresh financials with current rehab + asking
     const calcRehab = uw.rehab?.urbanEstimate || 0;
-    if ((dealAsking > 0 && storedAsking === 0) || (calcRehab > 0 && storedRehab === 0)) {
+    const storedRehab = uw.financials?.rehabBudget || 0;
+    const dealAsking = parseFloat(uw.deal?.askingPrice || 0);
+    const storedAsking = uw.financials?.askingPrice || 0;
+    if (calcRehab !== storedRehab || (dealAsking > 0 && storedAsking === 0)) {
       await regenerateVerdict(uw);
       if (calcRehab > 0) uw.financials.rehabBudget = calcRehab;
+      if (dealAsking > 0) uw.financials.askingPrice = dealAsking;
+    }
+    // 3. Sync verdict back to live deal list so UI is consistent
+    if (liveDeal && uw.verdict && liveDeal.underwriteStatus !== uw.verdict) {
+      liveDeal.underwriteStatus = uw.verdict;
+      liveDeal.score = uw.score;
     }
   } catch(_) {}
   res.json(uw);
