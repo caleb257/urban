@@ -3736,16 +3736,6 @@ app.get('/api/underwrite/:uid', auth, async (req, res) => {
     }
   }
   if (!uw) return res.status(404).json({ error: 'Not underwritten yet' });
-  // Always recalculate financials before serving — ensures rehab + asking price are current
-  if (uw.deal) {
-    // Sync asking price from live deal list if stale
-    const liveDeal = (global.deals||[]).find(d => d.uid === uw.uid || (d.address||'').toLowerCase() === (uw.deal?.address||'').toLowerCase());
-    if (liveDeal?.askingPrice) uw.deal.askingPrice = liveDeal.askingPrice;
-    // Rebuild financials + verdict with latest data
-    generateVerdict(uw);
-    // Store rehabBudget in financials for UI display
-    if (uw.rehab?.urbanEstimate) uw.financials.rehabBudget = uw.rehab.urbanEstimate;
-  }
   res.json(uw);
 });
 
