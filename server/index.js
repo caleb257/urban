@@ -1412,7 +1412,16 @@ async function regenerateVerdict(uw) {
                    (uw.financials?.sellingCosts?.total || 0) +
                    (uw.financials?.hardMoney?.totalInterest || 0) +
                    (uw.financials?.hardMoney?.originationPoints || 0);
-  const sellCosts=Math.round(arv*0.96*0.08);const holdCosts=(uw.financials&&uw.financials.hardMoney&&uw.financials.hardMoney.holdMonths||6)*500;const profit=uw.financials&&uw.financials.netProfitAtAsking!=null?uw.financials.netProfitAtAsking:Math.round(arv*0.96-asking-repairs-costs-sellCosts-holdCosts);
+  // Compute costs fresh — never trust stored zeros (stale from initial parse before rehab known)
+  const sellCosts = arv > 0 ? Math.round(arv * 0.96 * 0.08) : 0;  // 8% of net sale price
+  const holdMonths = (uw.financials?.holdMonths) || 4;
+  const loanAmt = asking > 0 ? Math.round(asking * 0.90) : 0;
+  const monthlyInterest = loanAmt > 0 ? Math.round(loanAmt * 0.095 / 12) : 0;
+  const holdCosts = arv > 0 ? Math.round(monthlyInterest * holdMonths + (loanAmt * 0.02) + (holdMonths * 400)) : 0;
+  // Always compute profit fresh from current inputs — never fall back to stored stale value
+  const profit = arv > 0 && asking > 0
+    ? Math.round(arv * 0.96 - asking - repairs - sellCosts - holdCosts)
+    : null;
   const roi      = arv > 0 && asking > 0 ? parseFloat(((profit / (asking + repairs)) * 100).toFixed(1)) : 0;
   const wsARV    = uw.arv?.wholesalerARV || 0;
   const arvGap   = wsARV ? Math.round(((wsARV - arv) / arv) * 100) : 0;
