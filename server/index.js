@@ -3759,10 +3759,19 @@ app.get('/api/underwrite/:uid', auth, async (req, res) => {
     const storedRehab = uw.financials?.rehabBudget || 0;
     const dealAsking = parseFloat(uw.deal?.askingPrice || 0);
     const storedAsking = uw.financials?.askingPrice || 0;
-    // Always run — profit formula no longer has stale fallback, will always be correct
-    await regenerateVerdict(uw);
+    // Create a writable copy of the deal to avoid frozen-object mutation issues
+    const writableDeal = Object.assign({}, uw.deal || {});
+    if (liveDeal?.askingPrice) writableDeal.askingPrice = liveDeal.askingPrice;
+    const uwForRegen = Object.assign({}, uw, { deal: writableDeal });
+    await regenerateVerdict(uwForRegen);
+    // Merge refreshed financials back
+    uw.financials = Object.assign({}, uwForRegen.financials);
+    uw.negotiationLadder = uwForRegen.negotiationLadder;
+    uw.verdict = uwForRegen.verdict;
+    uw.score = uwForRegen.score;
     if (calcRehab > 0) uw.financials.rehabBudget = calcRehab;
-    if (dealAsking > 0) uw.financials.askingPrice = dealAsking;
+    const freshAsking = parseFloat(writableDeal.askingPrice || 0);
+    if (freshAsking > 0) uw.financials.askingPrice = freshAsking;
     // 3. Sync verdict back to live deal list so UI is consistent
     if (liveDeal && uw.verdict && liveDeal.underwriteStatus !== uw.verdict) {
       liveDeal.underwriteStatus = uw.verdict;
