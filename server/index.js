@@ -3749,7 +3749,7 @@ app.get('/api/underwrite/:uid', auth, async (req, res) => {
       d.uid === uw.uid ||
       (d.address||'').toLowerCase().trim() === (uw.deal?.address||'').toLowerCase().trim()
     );
-    if (liveDeal?.askingPrice && !uw.deal?.askingPrice) {
+    if (liveDeal?.askingPrice) {
       uw.deal = uw.deal || {};
       uw.deal.askingPrice = liveDeal.askingPrice;
     }
@@ -3758,11 +3758,10 @@ app.get('/api/underwrite/:uid', auth, async (req, res) => {
     const storedRehab = uw.financials?.rehabBudget || 0;
     const dealAsking = parseFloat(uw.deal?.askingPrice || 0);
     const storedAsking = uw.financials?.askingPrice || 0;
-    if (calcRehab !== storedRehab || (dealAsking > 0 && storedAsking === 0)) {
-      await regenerateVerdict(uw);
-      if (calcRehab > 0) uw.financials.rehabBudget = calcRehab;
-      if (dealAsking > 0) uw.financials.askingPrice = dealAsking;
-    }
+    // Always run — profit formula no longer has stale fallback, will always be correct
+    await regenerateVerdict(uw);
+    if (calcRehab > 0) uw.financials.rehabBudget = calcRehab;
+    if (dealAsking > 0) uw.financials.askingPrice = dealAsking;
     // 3. Sync verdict back to live deal list so UI is consistent
     if (liveDeal && uw.verdict && liveDeal.underwriteStatus !== uw.verdict) {
       liveDeal.underwriteStatus = uw.verdict;
