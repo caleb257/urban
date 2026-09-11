@@ -1408,10 +1408,7 @@ async function regenerateVerdict(uw) {
   const repairs  = uw.rehab?.urbanEstimate || 0;
   const asking   = parseFloat(deal.askingPrice) || 0;
   const mao      = uw.financials?.mao || Math.round(arv * 0.7 - repairs);
-  const costs    = (uw.financials?.holdingCosts?.total || 0) + 
-                   (uw.financials?.sellingCosts?.total || 0) +
-                   (uw.financials?.hardMoney?.totalInterest || 0) +
-                   (uw.financials?.hardMoney?.originationPoints || 0);
+  // costs = sellCosts + holdCosts (computed below with fresh values)
   // Compute costs fresh — never trust stored zeros (stale from initial parse before rehab known)
   const sellCosts = arv > 0 ? Math.round(arv * 0.96 * 0.08) : 0;  // 8% of net sale price
   const holdMonths = (uw.financials?.holdMonths) || 4;
