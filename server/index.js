@@ -1415,6 +1415,7 @@ async function regenerateVerdict(uw) {
   const loanAmt = asking > 0 ? Math.round(asking * 0.90) : 0;
   const monthlyInterest = loanAmt > 0 ? Math.round(loanAmt * 0.095 / 12) : 0;
   const holdCosts = arv > 0 ? Math.round(monthlyInterest * holdMonths + (loanAmt * 0.02) + (holdMonths * 400)) : 0;
+  const costs = sellCosts + holdCosts; // total transaction costs (always computed fresh)
   // Always compute profit fresh from current inputs — never fall back to stored stale value
   const profit = arv > 0 && asking > 0
     ? Math.round(arv * 0.96 - asking - repairs - sellCosts - holdCosts)
